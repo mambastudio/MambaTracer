@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<StackPane fx:id="parentPane" prefHeight="783.0" prefWidth="1153.0" xmlns="http://javafx.com/javafx/8.0.102" xmlns:fx="http://javafx.com/fxml/1" fx:controller="cl.main.RenderWindowController">
+   <children>
+      <BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308">
+         <top>
+            <MenuBar BorderPane.alignment="CENTER">
+              <menus>
+                <Menu mnemonicParsing="false" text="File">
+                  <items>
+                        <MenuItem mnemonicParsing="false" onAction="#open" text="Open" />
+                    <MenuItem mnemonicParsing="false" onAction="#exit" text="Close" />
+                  </items>
+                </Menu>
+              </menus>
+            </MenuBar>
+         </top>
+         <center>
+            <TabPane prefHeight="734.0" prefWidth="959.0" side="BOTTOM" tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
+              <tabs>
+                <Tab text="Render Port">
+                     <content>
+                        <BorderPane fx:id="pane" prefHeight="729.0" prefWidth="724.0" />
+                     </content>
+                  </Tab>
+              </tabs>
+            </TabPane>
+         </center>
+         <left>
+            <HBox prefHeight="758.0" prefWidth="378.0" BorderPane.alignment="CENTER">
+               <children>
+                  <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="758.0" prefWidth="381.0" side="LEFT" tabClosingPolicy="UNAVAILABLE">
+                    <tabs>
+                      <Tab text="Statistics">
+                           <content>
+                              <VBox prefHeight="758.0" prefWidth="306.0">
+                                 <children>
+                                    <Label text="Time">
+                                       <font>
+                                          <Font name="System Bold" size="14.0" />
+                                       </font>
+                                    </Label>
+                                    <Separator prefWidth="200.0" />
+                                    <TextArea fx:id="timeConsole" editable="false" prefHeight="171.0" prefWidth="205.0" wrapText="true" VBox.vgrow="ALWAYS">
+                                       <font>
+                                          <Font name="Consolas" size="12.0" />
+                                       </font></TextArea>
+                                    <Label text="Scene">
+                                       <font>
+                                          <Font name="System Bold" size="14.0" />
+                                       </font>
+                                    </Label>
+                                    <Separator prefWidth="200.0" />
+                                    <TextArea fx:id="sceneConsole" editable="false" prefHeight="171.0" prefWidth="205.0" wrapText="true" VBox.vgrow="ALWAYS">
+                                       <font>
+                                          <Font name="Consolas" size="12.0" />
+                                       </font></TextArea>
+                                    <Label text="Performance">
+                                       <font>
+                                          <Font name="System Bold" size="14.0" />
+                                       </font>
+                                    </Label>
+                                    <Separator prefWidth="200.0" />
+                                    <TextArea fx:id="performanceConsole" editable="false" prefHeight="171.0" prefWidth="205.0" wrapText="true" VBox.vgrow="ALWAYS">
+                                       <font>
+                                          <Font name="Consolas" size="12.0" />
+                                       </font></TextArea>
+                                 </children>
+                                 <padding>
+                                    <Insets bottom="5.0" left="5.0" />
+                                 </padding>
+                              </VBox>
+                           </content></Tab>
+                    </tabs>
+                  </TabPane>
+                  <Separator orientation="VERTICAL" prefHeight="200.0" />
+               </children>
+            </HBox>
+         </left>
+      </BorderPane>
+   </children>
+</StackPane>
