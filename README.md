@@ -9,6 +9,6 @@ A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drive
 * BVH Skip Link
 * Intuitive UI
 
-## Dependacies
+## Dependencies
 
 * JOCL Library http://www.jocl.org/
