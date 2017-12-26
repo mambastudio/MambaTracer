@@ -1,6 +1,6 @@
 # CLTracer
 
-A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drivers. Uses JOCL library.
+A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drivers. 
 
 ![Alt text](screenshot.png?raw=true "Title")
 
@@ -8,3 +8,7 @@ A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drive
 
 * BVH Skip Link
 * Intuitive UI
+
+## Dependacies
+
+* JOCL Library http://www.jocl.org/
