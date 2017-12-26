@@ -6,5 +6,5 @@ A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drive
 
 ## Features
 
-*BVH Skip Link
-*Intuitive UI
+* BVH Skip Link
+* Intuitive UI
