@@ -8,6 +8,8 @@ A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drive
 
 * BVH Skip Link
 * Intuitive UI
+* Memory efficient data storage (use of only Java primitives (float, int) for mesh and bvh)
+* Interactive camera control
 
 ## Dependencies
 
