@@ -1,4 +1,4 @@
-# CLTracer
+# Mamba Tracer
 
 A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drivers. The goal is to have a High Performance Computing (HPC) java ray tracer that utilizes the opencl hardware available in any hardware/platform. Other vectorization hardware support will be considered in the future depending on Java adoption of vector data/operations. Also, the ease of use of the ray tracer is another main goal, whereby the User Interface (UI) will be easy in operation, with the ability to upload wavefront objects (future option is the glTF model scene). Another goal is to attract developers in contribution of the code where improvements are highly necessary in order to grow an ecosystem of developers based on the software and field of ray tracing. 
 
