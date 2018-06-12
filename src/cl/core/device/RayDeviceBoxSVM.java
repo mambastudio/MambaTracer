@@ -16,7 +16,7 @@ import wrapper.core.CKernel;
 import static wrapper.core.CMemory.READ_ONLY;
 import static wrapper.core.CMemory.READ_WRITE;
 import wrapper.core.CallBackFunction;
-import wrapper.core.PlatformConfiguration;
+import wrapper.core.OpenCLPlatform;
 import wrapper.core.svm.CSVMIntBuffer;
 import wrapper.core.svm.CSVMStructBuffer;
 import wrapper.util.CLFileReader;
@@ -28,7 +28,7 @@ import wrapper.util.CLFileReader;
 public class RayDeviceBoxSVM {
     String directory = "C:\\Users\\user\\Documents\\Java\\jocl\\cl\\raytracing/";
    
-    PlatformConfiguration configuration = null; 
+    OpenCLPlatform configuration = null; 
     
     //kernel variables
     CSVMIntBuffer imageBuffer = null;
@@ -50,7 +50,7 @@ public class RayDeviceBoxSVM {
         String source2 = CLFileReader.readFile(directory, "Primitive.cl");
         String source3 = CLFileReader.readFile(directory, "SimpleTrace.cl");
         
-        configuration = PlatformConfiguration.getDefault(source1, source2, source3);
+        configuration = OpenCLPlatform.getDefault(source1, source2, source3);
     }
     
     public void init(int globalSize, int localSize)

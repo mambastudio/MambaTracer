@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
@@ -19,23 +22,43 @@
    <children>
       <BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308">
          <top>
-            <MenuBar BorderPane.alignment="CENTER">
-              <menus>
-                <Menu mnemonicParsing="false" text="File">
-                  <items>
-                        <MenuItem mnemonicParsing="false" onAction="#open" text="Open" />
-                    <MenuItem mnemonicParsing="false" onAction="#exit" text="Close" />
-                  </items>
-                </Menu>
-              </menus>
-            </MenuBar>
+            <VBox BorderPane.alignment="CENTER">
+               <children>
+                  <MenuBar>
+                    <menus>
+                      <Menu mnemonicParsing="false" text="File">
+                        <items>
+                              <MenuItem mnemonicParsing="false" onAction="#open" text="Open" />
+                          <MenuItem mnemonicParsing="false" onAction="#exit" text="Close" />
+                        </items>
+                      </Menu>
+                    </menus>
+                  </MenuBar>
+                  <Separator prefWidth="200.0" />
+               </children>
+            </VBox>
          </top>
          <center>
             <TabPane prefHeight="734.0" prefWidth="959.0" side="BOTTOM" tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
               <tabs>
                 <Tab text="Render Port">
                      <content>
-                        <BorderPane fx:id="pane" prefHeight="729.0" prefWidth="724.0" />
+                        <BorderPane fx:id="pane" prefHeight="729.0" prefWidth="724.0">
+                           <top>
+                              <VBox BorderPane.alignment="CENTER">
+                                 <children>
+                                    <HBox alignment="CENTER" prefHeight="0.0" prefWidth="775.0">
+                                       <children>
+                                          <Button mnemonicParsing="false" prefHeight="24.0" prefWidth="66.0" text="Render" />
+                                       </children>
+                                       <VBox.margin>
+                                          <Insets bottom="2.0" top="2.0" />
+                                       </VBox.margin>
+                                    </HBox>
+                                    <Separator prefWidth="200.0" />
+                                 </children>
+                              </VBox>
+                           </top></BorderPane>
                      </content>
                   </Tab>
               </tabs>
@@ -46,6 +69,48 @@
                <children>
                   <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="758.0" prefWidth="381.0" side="LEFT" tabClosingPolicy="UNAVAILABLE">
                     <tabs>
+                        <Tab text="Materials">
+                           <content>
+                              <SplitPane dividerPositions="0.5316622691292876" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0">
+                                 <items>
+                                    <VBox prefHeight="200.0" prefWidth="100.0">
+                                       <children>
+                                          <Label prefHeight="29.0" prefWidth="104.0" text="Scene Material" underline="true">
+                                             <font>
+                                                <Font name="System Bold" size="15.0" />
+                                             </font>
+                                          </Label>
+                                          <TreeView prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                                          <HBox prefHeight="22.0" prefWidth="343.0">
+                                             <children>
+                                                <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="63.0" text="Edit" />
+                                             </children>
+                                             <VBox.margin>
+                                                <Insets bottom="2.0" left="2.0" top="2.0" />
+                                             </VBox.margin>
+                                          </HBox>
+                                       </children>
+                                       <padding>
+                                          <Insets left="2.0" />
+                                       </padding>
+                                    </VBox>
+                                    <VBox prefHeight="200.0" prefWidth="100.0">
+                                       <children>
+                                          <Label prefHeight="29.0" prefWidth="129.0" text="Material Database" underline="true">
+                                             <font>
+                                                <Font name="System Bold" size="15.0" />
+                                             </font>
+                                          </Label>
+                                          <TreeView prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                                       </children>
+                                       <padding>
+                                          <Insets left="2.0" />
+                                       </padding>
+                                    </VBox>
+                                 </items>
+                              </SplitPane>
+                           </content>
+                        </Tab>
                       <Tab text="Statistics">
                            <content>
                               <VBox prefHeight="758.0" prefWidth="306.0">

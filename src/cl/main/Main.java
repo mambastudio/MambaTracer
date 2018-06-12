@@ -28,6 +28,7 @@ public class Main extends Application {
         
         Scene scene = new Scene(root);        
         primaryStage.setScene(scene);
+        primaryStage.setTitle("Mamba Tracer");
         primaryStage.show();
         primaryStage.setOnCloseRequest(e -> {
             System.exit(0);

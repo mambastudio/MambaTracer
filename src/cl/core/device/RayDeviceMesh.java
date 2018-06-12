@@ -5,12 +5,13 @@
  */
 package cl.core.device;
 
-import cl.core.CBVHAccelerator.CBVHNode;
 import cl.core.CBoundingBox;
 import cl.core.CCamera;
 import cl.core.CRay;
+import cl.core.CNormalBVH;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
+import cl.core.src.CLSource;
 import cl.shapes.CMesh;
 import coordinate.model.OrientationModel;
 import coordinate.parser.OBJParser;
@@ -20,26 +21,25 @@ import java.net.URI;
 import java.nio.IntBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import org.jocl.CL;
 import wrapper.core.CBufferFactory;
 import wrapper.core.CKernel;
 import static wrapper.core.CMemory.READ_ONLY;
 import static wrapper.core.CMemory.WRITE_ONLY;
 import wrapper.core.CResourceFactory;
 import wrapper.core.CallBackFunction;
-import wrapper.core.PlatformConfiguration;
+import wrapper.core.OpenCLPlatform;
 import wrapper.core.buffer.CFloatBuffer;
 import wrapper.core.buffer.CIntBuffer;
 import wrapper.core.buffer.CStructBuffer;
-import wrapper.util.CLFileReader;
 
 /**
  *
  * @author user
  */
 public class RayDeviceMesh {
-    String directory = "raytracing/";
    
-    PlatformConfiguration configuration = null; 
+    OpenCLPlatform configuration = null; 
     
     CCamera camera = new CCamera(new CPoint3(0, 0, 9), new CPoint3(), new CVector3(0, 1, 0), 45);
     
@@ -61,18 +61,14 @@ public class RayDeviceMesh {
     CIntBuffer size = null;
     
     //accelerator
-    CStructBuffer<CBVHNode> nodes = null;
-    CIntBuffer nodesSize = null;
-    CIntBuffer objects = null;
+    CNormalBVH bvhBuild;
     
     
     public RayDeviceMesh()
     {
-        String source1 = CLFileReader.readFile(directory, "Common.cl");
-        String source2 = CLFileReader.readFile(directory, "Primitive.cl");
-        String source3 = CLFileReader.readFile(directory, "SimpleTrace.cl");
-        
-        configuration = PlatformConfiguration.getDefault(source1, source2, source3);        
+        CL.setExceptionsEnabled(true);
+       
+        configuration = OpenCLPlatform.getDefault(CLSource.readFiles());        
         OutputFactory.print("name", configuration.device().getName());
         OutputFactory.print("type", configuration.device().getType());
         OutputFactory.print("vendor", configuration.device().getVendor());
@@ -98,7 +94,7 @@ public class RayDeviceMesh {
         
     public void initMesh(Path path)
     {
-        CMesh mesh = new CMesh();
+        CMesh mesh = new CMesh(configuration);
         OBJParser parser = new OBJParser();
         
         //Time parsing
@@ -117,11 +113,10 @@ public class RayDeviceMesh {
         this.points             = mesh.getCLPointsBuffer("points", configuration.context(), configuration.queue());
         this.faces              = mesh.getCLFacesBuffer("faces", configuration.context(), configuration.queue());
         this.size               = mesh.getCLSizeBuffer("size", configuration.context(), configuration.queue());
-        this.nodes              = mesh.getCLBVHNodeArray("nodes", configuration.context(), configuration.queue());
-        this.nodesSize          = mesh.getCLBVHNodeArraySize("nodesSize", configuration.context(), configuration.queue());
-        this.objects            = mesh.getCLObjectIdBuffer("objects", configuration.context(), configuration.queue());
+        this.bvhBuild = new CNormalBVH(configuration);
+        this.bvhBuild.build(mesh);
         
-        raytracingKernel = configuration.program().createKernel("traceMesh", imageBuffer, cameraBuffer, width, height, points, faces, size, nodes, nodesSize, objects);
+        raytracingKernel = configuration.program().createKernel("traceMesh", imageBuffer, cameraBuffer, width, height, points, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());
     }
     
     public CCamera getCamera(){return camera;}
@@ -170,8 +165,9 @@ public class RayDeviceMesh {
                         "f 4//5 3//5 8//5\n" +
                         "f 5//6 1//6 8//6";
         
-        CMesh mesh = new CMesh();
+        CMesh mesh = new CMesh(configuration);
         OBJParser parser = new OBJParser();
+        //parser.readString(cube, mesh);
         parser.readString(cube, mesh);
         mesh.buildAccelerator();
         OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
@@ -182,10 +178,9 @@ public class RayDeviceMesh {
         this.points             = mesh.getCLPointsBuffer("points", configuration.context(), configuration.queue());
         this.faces              = mesh.getCLFacesBuffer("faces", configuration.context(), configuration.queue());
         this.size               = mesh.getCLSizeBuffer("size", configuration.context(), configuration.queue());
-        this.nodes              = mesh.getCLBVHNodeArray("nodes", configuration.context(), configuration.queue());
-        this.nodesSize          = mesh.getCLBVHNodeArraySize("nodesSize", configuration.context(), configuration.queue());
-        this.objects            = mesh.getCLObjectIdBuffer("objects", configuration.context(), configuration.queue());
+        this.bvhBuild = new CNormalBVH(configuration);
+        this.bvhBuild.build(mesh);
         
-        raytracingKernel = configuration.program().createKernel("traceMesh", imageBuffer, cameraBuffer, width, height, points, faces, size, nodes, nodesSize, objects);
+        raytracingKernel = configuration.program().createKernel("traceMesh", imageBuffer, cameraBuffer, width, height, points, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());
     }
 }

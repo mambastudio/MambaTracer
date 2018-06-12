@@ -14,7 +14,7 @@ import wrapper.core.CKernel;
 import static wrapper.core.CMemory.READ_ONLY;
 import static wrapper.core.CMemory.WRITE_ONLY;
 import wrapper.core.CallBackFunction;
-import wrapper.core.PlatformConfiguration;
+import wrapper.core.OpenCLPlatform;
 import wrapper.core.buffer.CIntBuffer;
 import wrapper.core.buffer.CStructBuffer;
 import wrapper.util.CLFileReader;
@@ -26,7 +26,7 @@ import wrapper.util.CLFileReader;
 public class RayDeviceBox {
     String directory = "C:\\Users\\user\\Documents\\Java\\jocl\\cl\\raytracing/";
    
-    PlatformConfiguration configuration = null; 
+    OpenCLPlatform configuration = null; 
     
     //kernel variables
     CIntBuffer imageBuffer = null;
@@ -47,7 +47,7 @@ public class RayDeviceBox {
         String source2 = CLFileReader.readFile(directory, "Primitive.cl");
         String source3 = CLFileReader.readFile(directory, "SimpleTrace.cl");
         
-        configuration = PlatformConfiguration.getDefault(source1, source2, source3);
+        configuration = OpenCLPlatform.getDefault(source1, source2, source3);
     }
     
     public void init(int globalSize, int localSize)

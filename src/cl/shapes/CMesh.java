@@ -5,8 +5,7 @@
  */
 package cl.shapes;
 
-import cl.core.CBVHAccelerator;
-import cl.core.CBVHAccelerator.CBVHNode;
+import cl.core.CNormalBVH;
 import cl.core.CBoundingBox;
 import cl.core.CIntersection;
 import cl.core.CRay;
@@ -21,9 +20,9 @@ import wrapper.core.CBufferFactory;
 import wrapper.core.CCommandQueue;
 import wrapper.core.CContext;
 import static wrapper.core.CMemory.READ_ONLY;
+import wrapper.core.OpenCLPlatform;
 import wrapper.core.buffer.CFloatBuffer;
 import wrapper.core.buffer.CIntBuffer;
-import wrapper.core.buffer.CStructBuffer;
 import wrapper.core.svm.CSVMFloatBuffer;
 import wrapper.core.svm.CSVMIntBuffer;
 
@@ -35,14 +34,17 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
         <CPoint3,         
          CRay, 
          CIntersection, 
-         CBVHAccelerator, 
+         CNormalBVH, 
          CBoundingBox> {
     
-    CBVHAccelerator accelerator;
+    CNormalBVH accelerator;
     CBoundingBox bounds;
-    
-    public CMesh()
+    OpenCLPlatform configuration;
+        
+    public CMesh(OpenCLPlatform configuration)
     {
+        this.configuration = configuration;
+        
         points = new CoordinateList(CPoint3.class);
         normals = new CoordinateList(CVector3.class);
         texcoords = new CoordinateList(CPoint2.class);
@@ -95,14 +97,14 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
     }
 
     @Override
-    public CBVHAccelerator getAccelerator() {
+    public CNormalBVH getAccelerator() {
         return accelerator;
     }
 
     @Override
     public void buildAccelerator() {
-        this.accelerator = new CBVHAccelerator();
-        this.accelerator.build(this);
+        //this.accelerator = new CNormalBVH();
+        //this.accelerator.build(this);
     }
 
     @Override
@@ -144,36 +146,7 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
         CPoint2 p = new CPoint2(values[0], values[1]);
         texcoords.add(p);
     }
-    
-    public CIntBuffer getCLObjectIdBuffer(String name, CContext context, CCommandQueue queue)
-    {
-        CIntBuffer buffer = CBufferFactory.allocInt(name, context, accelerator.getObjectIDs().length, READ_ONLY);
-        buffer.mapWriteBuffer(queue, intbuffer -> intbuffer.put(accelerator.getObjectIDs()));        
-        return buffer;
-    }
-    
-    public CStructBuffer<CBVHNode> getCLBVHNodeArray(String name, CContext context, CCommandQueue queue)
-    {
-        CStructBuffer<CBVHNode> buffer = CBufferFactory.allocStruct(name, context, CBVHNode.class, accelerator.getBVHNodes().length, READ_ONLY);
-        buffer.mapWriteBuffer(queue, array -> 
-        {
-            CBVHNode[] nodes = accelerator.getBVHNodes();
-            for(int i = 0; i<nodes.length; i++)
-            {
-                if(nodes[i] != null)
-                    array[i] = nodes[i];
-            }            
-        });
-        return buffer;
-    }
-    
-    public CIntBuffer getCLBVHNodeArraySize(String name, CContext context, CCommandQueue queue)
-    {
-        CIntBuffer buffer = CBufferFactory.allocInt(name, context, 1, READ_ONLY);
-        buffer.mapWriteBuffer(queue, intbuffer -> intbuffer.put(accelerator.getBVHNodesSize()));        
-        return buffer;
-    }
-    
+            
     public CFloatBuffer getCLPointsBuffer(String name, CContext context, CCommandQueue queue)
     {
         return CBufferFactory.wrapFloat(name, context, queue, getPointArray(), READ_ONLY);          

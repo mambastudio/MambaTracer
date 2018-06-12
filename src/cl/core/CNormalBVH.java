@@ -5,16 +5,23 @@
  */
 package cl.core;
 
+import cl.core.data.struct.Bound;
+import cl.core.data.struct.Node;
+import cl.core.data.struct.array.CStructFloatArray;
+import cl.core.data.struct.array.CStructIntArray;
 import cl.shapes.CMesh;
 import coordinate.generic.raytrace.AbstractAccelerator;
 import java.util.concurrent.TimeUnit;
-import org.jocl.struct.Struct;
+import static wrapper.core.CMemory.READ_WRITE;
+import wrapper.core.OpenCLPlatform;
+import wrapper.core.buffer.CFloatBuffer;
+import wrapper.core.buffer.CIntBuffer;
 
 /**
  *
  * @author user
  */
-public class CBVHAccelerator implements AbstractAccelerator
+public class CNormalBVH implements AbstractAccelerator
         <CRay, 
          CIntersection, 
          CMesh, 
@@ -22,65 +29,88 @@ public class CBVHAccelerator implements AbstractAccelerator
     
      //Primitive
     CMesh primitives;
-    
-    //Tree, Primitive index, Boundingbox
     int[] objects;
-    CBVHNode[] nodes = null;
-    CBoundingBox bound = null;
     
-    //node counter
-    int nodeCount = 0;
-
+    //Tree, Primitive index, Boundingbox   
+    CStructFloatArray<Bound> bounds;
+    CStructIntArray<Node> nodes;
+    
+    //Node counter
+    int nodesPtr = 0;
+    
+    //Opencl configuration
+    OpenCLPlatform configuration;
+    
+    public CNormalBVH(OpenCLPlatform configuration)
+    {
+        this.configuration = configuration;
+    }
+    
     @Override
     public void build(CMesh primitives) {
         long time1 = System.nanoTime();
         
-        this.primitives = primitives;  
-        objects = new int[this.primitives.getCount()];
+        this.primitives = primitives; 
+        this.objects = new int[primitives.getCount()];
+        
         for(int i = 0; i<this.primitives.getCount(); i++)
             objects[i] = i;
-        bound = this.primitives.getBound();
         
         //Allocate BVH root node
-        nodes = new CBVHNode[this.primitives.getCount() * 2 - 1];
-        CBVHNode root = new CBVHNode();
-        nodes[0] = root;
-        nodeCount = 1;
+        nodes   = new CStructIntArray(configuration, Node.class, this.primitives.getCount() * 2 - 1, "nodes", READ_WRITE);
+        bounds  = new CStructFloatArray(configuration, Bound.class, this.primitives.getCount() * 2 - 1, "nodes", READ_WRITE);
         
-        subdivide(root, 0, objects.length);
+        Node root = new Node();
+        nodes.set(root, 0);        
+        nodesPtr = 1;
+        
+        subdivide(0, 0, primitives.getCount());
         
         long time2 = System.nanoTime();
         
-        System.out.println(nodes.length);
+        System.out.println(nodes.getSize());
         
         long timeDuration = time2 - time1;
         String timeTaken= String.format("BVH build time: %02d min, %02d sec", 
                 TimeUnit.NANOSECONDS.toMinutes(timeDuration), 
                 TimeUnit.NANOSECONDS.toSeconds(timeDuration));
-        System.out.println(timeTaken);        
+        System.out.println(timeTaken);    
+        
+        nodes.transferFromBufferToDevice();
+        bounds.transferFromBufferToDevice();
     }
-    
-    private void subdivide(CBVHNode parent, int start, int end)
+    private void subdivide(int parentIndex, int start, int end)
     {
         //Calculate the bounding box for the root node
         CBoundingBox bb = new CBoundingBox();
         CBoundingBox bc = new CBoundingBox();
         calculateBounds(start, end, bb, bc);
-        parent.bounds = bb;
-                
+        
+        nodes.index(parentIndex, parent -> parent.bound  = parentIndex);
+        bounds.index(parentIndex, bound -> bound.setBound(bb));
+            
         //Initialize leaf
-        if(end - start == 1)
-        {            
-            parent.primOffset = start;                  
+        if(end - start < 2)
+        {        
+            nodes.index(parentIndex, (Node parent) -> {
+                parent.child = objects[start];
+                parent.isLeaf = 1;
+            });            
             return;
         }
         
         //Subdivide parent node        
-        CBVHNode left, right;        
+        Node left, right;  int leftIndex, rightIndex;      
         synchronized(this)
         {
-            left            = new CBVHNode();
-            right           = new CBVHNode();                   
+            left            = new Node();   left.parent = parentIndex;
+            right           = new Node();   right.parent = parentIndex;
+            
+            nodes.set(left, nodesPtr);  leftIndex   = nodesPtr;   nodes.index(parentIndex, parent -> parent.left = nodesPtr++); 
+            nodes.set(right, nodesPtr); rightIndex  = nodesPtr;   nodes.index(parentIndex, parent -> parent.right = nodesPtr++);  
+            
+            nodes.index(leftIndex, leftNode -> leftNode.sibling = rightIndex);
+            nodes.index(rightIndex, rightNode -> rightNode.sibling = leftIndex);                      
         }   
         
         //set the split dimensions
@@ -88,15 +118,10 @@ public class CBVHAccelerator implements AbstractAccelerator
         int mid = getMid(bc, split_dim, start, end);
                 
         //Subdivide
-        nodes[nodeCount++] = left;  
-        subdivide(left, start, mid); 
-        
-        parent.skipIndex = nodeCount; //PLEASE NOTE HERE
-        
-        nodes[nodeCount++] = right; 
-        subdivide(right, mid, end);  
+        subdivide(leftIndex, start, mid);
+        subdivide(rightIndex, mid, end);
     }
-    
+        
     private int getMid(CBoundingBox bc, int split_dim, int start, int end)
     {
         //split on the center of the longest axis
@@ -137,29 +162,27 @@ public class CBVHAccelerator implements AbstractAccelerator
     }
 
     @Override
-    public CBoundingBox getBound() {
-        return bound;
+    public CBoundingBox getBound() {       
+        return bounds.get(0).getCBound();
     }
     
-    public int[] getObjectIDs()
+    public CFloatBuffer getCBounds()
     {
-        return objects;
+        return bounds.getCBuffer();
     }
     
-    public CBVHNode[] getBVHNodes()
+    public CStructFloatArray<Bound> getBounds()
+    {
+        return bounds;
+    }
+    
+    public CIntBuffer getCNodes()
+    {
+        return nodes.getCBuffer();
+    }
+    
+    public CStructIntArray<Node> getNodes()
     {
         return nodes;
-    }
-    
-    public int getBVHNodesSize()
-    {
-        return nodes.length;
-    }
-        
-    public static class CBVHNode extends Struct
-    {
-        public CBoundingBox bounds;
-        public int primOffset, skipIndex;        
-    }
-    
+    }    
 }

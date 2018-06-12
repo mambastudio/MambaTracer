@@ -271,6 +271,43 @@ bool intersectBound(Ray r, BoundingBox bound)
    //float tmax
 }
 
+// ray bounding box intersection
+bool intersectBoundT(Ray r, BoundingBox bound, float* t)
+{
+   //float4 const f = mad(bound.maximum, r.inv_d, r.oxinv_d);
+   //float4 const n = mad(bound.minimum, r.inv_d, r.oxinv_d);
+   //float4 const tmax = max(f, n);
+   //float4 const tmin = min(f, n);
+   //float const t1 = min(min3(tmax.x, tmax.y, tmax.z), r.tMax);
+   //float const t0 = max(max3(tmin.x, tmin.y, tmin.z), 0.f);
+
+   //return t0<=t1;
+   
+    float tmin  = (getExtent(r.sign.x, bound).x - r.o.x) * r.inv_d.x;
+    float tmax  = (getExtent(1-r.sign.x, bound).x - r.o.x) * r.inv_d.x;
+    float tymin = (getExtent(r.sign.y, bound).y - r.o.y) * r.inv_d.y;
+    float tymax = (getExtent(1-r.sign.y, bound).y - r.o.y) * r.inv_d.y;
+    if ( (tmin > tymax) || (tymin > tmax) )
+        return false;
+    if (tymin > tmin)
+        tmin = tymin;
+    if (tymax < tmax)
+        tmax = tymax;
+    float tzmin  = (getExtent(r.sign.z, bound).z - r.o.z) * r.inv_d.z;
+    float tzmax  = (getExtent(1-r.sign.z, bound).z - r.o.z) * r.inv_d.z;
+    if ( (tmin > tzmax) || (tzmin > tmax) )
+        return false;
+    if (tzmin > tmin)
+        tmin = tzmin;
+    if (tzmax < tmax)
+        tmax = tzmax;
+    t[0] = tmin;
+    t[1] = tmax;
+    return ((tmin < r.tMax) && (tmax > r.tMin));
+   //float tmax
+}
+
+
 // print float value
 void printFloat(float v)
 {
