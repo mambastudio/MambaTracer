@@ -10,7 +10,7 @@ import cl.core.data.struct.Bound;
 import cl.core.data.struct.Node;
 import cl.core.data.struct.array.CStructFloatArray;
 import cl.core.data.struct.array.CStructIntArray;
-import cl.core.src.CLSource;
+import cl.core.kernel.CLSource;
 import cl.shapes.CMesh;
 import coordinate.parser.OBJParser;
 import org.jocl.CL;

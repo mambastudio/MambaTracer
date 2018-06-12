@@ -11,7 +11,7 @@ import cl.core.CRay;
 import cl.core.CNormalBVH;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
-import cl.core.src.CLSource;
+import cl.core.kernel.CLSource;
 import cl.shapes.CMesh;
 import coordinate.model.OrientationModel;
 import coordinate.parser.OBJParser;

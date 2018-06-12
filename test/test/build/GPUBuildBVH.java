@@ -9,7 +9,7 @@ import cl.core.CBoundingBox;
 import cl.core.CIntersection;
 import cl.core.CRay;
 import cl.core.data.CPoint3;
-import cl.core.src.CLSource;
+import cl.core.kernel.CLSource;
 import cl.shapes.CMesh;
 import coordinate.generic.raytrace.AbstractAccelerator;
 import coordinate.struct.FloatStruct;

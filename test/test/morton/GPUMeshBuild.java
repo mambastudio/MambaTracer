@@ -6,7 +6,7 @@
 package test.morton;
 
 import cl.core.data.CPoint3;
-import cl.core.src.CLSource;
+import cl.core.kernel.CLSource;
 import cl.shapes.CMesh;
 import coordinate.parser.OBJParser;
 import coordinate.struct.FloatStruct;

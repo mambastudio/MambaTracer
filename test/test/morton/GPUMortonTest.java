@@ -5,7 +5,7 @@
  */
 package test.morton;
 
-import cl.core.src.CLSource;
+import cl.core.kernel.CLSource;
 import org.jocl.CL;
 import wrapper.core.CBufferFactory;
 import wrapper.core.CKernel;
