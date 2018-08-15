@@ -134,6 +134,11 @@ public class RayDeviceMesh {
             });}
     public int getTotalSize(){return globalSize * globalSize;}
     
+    public CBoundingBox getBound()
+    {
+        return bvhBuild.getBound();
+    }
+    
     private void initDefaultMesh()
     {
         String cube =   "o Cube\n" +

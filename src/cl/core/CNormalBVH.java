@@ -114,7 +114,7 @@ public class CNormalBVH implements AbstractAccelerator
         }   
         
         //set the split dimensions
-        int split_dim = bc.maximumExtent();        
+        int split_dim = bc.maximumExtentAxis();        
         int mid = getMid(bc, split_dim, start, end);
                 
         //Subdivide

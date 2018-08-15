@@ -14,6 +14,7 @@
 <?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
@@ -28,12 +29,23 @@
                     <menus>
                       <Menu mnemonicParsing="false" text="File">
                         <items>
-                              <MenuItem mnemonicParsing="false" onAction="#open" text="Open" />
                           <MenuItem mnemonicParsing="false" onAction="#exit" text="Close" />
                         </items>
                       </Menu>
                     </menus>
                   </MenuBar>
+                  <HBox spacing="5.0">
+                     <children>
+                        <Button fx:id="openButton" mnemonicParsing="false" onAction="#open" prefHeight="43.0" prefWidth="102.0" text="Open" />
+                        <Region prefHeight="43.0" prefWidth="36.0" HBox.hgrow="ALWAYS" />
+                        <Button fx:id="renderButton" mnemonicParsing="false" prefHeight="43.0" prefWidth="102.0" text="Render" />
+                        <Button fx:id="pauseButton" mnemonicParsing="false" prefHeight="43.0" prefWidth="102.0" text="Pause" />
+                        <Button fx:id="stopButton" mnemonicParsing="false" prefHeight="43.0" prefWidth="102.0" text="Stop" />
+                     </children>
+                     <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                     </padding>
+                  </HBox>
                   <Separator prefWidth="200.0" />
                </children>
             </VBox>
@@ -45,19 +57,7 @@
                      <content>
                         <BorderPane fx:id="pane" prefHeight="729.0" prefWidth="724.0">
                            <top>
-                              <VBox BorderPane.alignment="CENTER">
-                                 <children>
-                                    <HBox alignment="CENTER" prefHeight="0.0" prefWidth="775.0">
-                                       <children>
-                                          <Button mnemonicParsing="false" prefHeight="24.0" prefWidth="66.0" text="Render" />
-                                       </children>
-                                       <VBox.margin>
-                                          <Insets bottom="2.0" top="2.0" />
-                                       </VBox.margin>
-                                    </HBox>
-                                    <Separator prefWidth="200.0" />
-                                 </children>
-                              </VBox>
+                              <VBox BorderPane.alignment="CENTER" />
                            </top></BorderPane>
                      </content>
                   </Tab>
@@ -75,15 +75,15 @@
                                  <items>
                                     <VBox prefHeight="200.0" prefWidth="100.0">
                                        <children>
-                                          <Label prefHeight="29.0" prefWidth="104.0" text="Scene Material" underline="true">
+                                          <Label prefHeight="29.0" prefWidth="104.0" text="Scene Tree">
                                              <font>
                                                 <Font name="System Bold" size="15.0" />
                                              </font>
                                           </Label>
-                                          <TreeView prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                                          <TreeView fx:id="treeViewScene" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
                                           <HBox prefHeight="22.0" prefWidth="343.0">
                                              <children>
-                                                <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="63.0" text="Edit" />
+                                                <Button mnemonicParsing="false" onAction="#resetSceneTreeMaterial" prefHeight="25.0" prefWidth="125.0" text="Clear Tree Material" />
                                              </children>
                                              <VBox.margin>
                                                 <Insets bottom="2.0" left="2.0" top="2.0" />
@@ -96,12 +96,12 @@
                                     </VBox>
                                     <VBox prefHeight="200.0" prefWidth="100.0">
                                        <children>
-                                          <Label prefHeight="29.0" prefWidth="129.0" text="Material Database" underline="true">
+                                          <Label prefHeight="29.0" prefWidth="129.0" text="Material Database">
                                              <font>
                                                 <Font name="System Bold" size="15.0" />
                                              </font>
                                           </Label>
-                                          <TreeView prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
+                                          <TreeView fx:id="treeViewMaterial" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
                                        </children>
                                        <padding>
                                           <Insets left="2.0" />

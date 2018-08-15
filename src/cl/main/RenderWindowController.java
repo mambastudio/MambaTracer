@@ -7,6 +7,11 @@ package cl.main;
 
 import cl.renderer.SimpleRender;
 import bitmap.display.StaticDisplay;
+import cl.ui.icons.IconAssetManager;
+import cl.ui.mvc.DataModel;
+import cl.ui.mvc.CustomData;
+import cl.ui.tree.view.MaterialVaultTreeCell;
+import cl.ui.tree.view.TargetTreeCell;
 import filesystem.core.OutputFactory;
 import filesystem.util.FileChooserManager;
 import filesystem.util.FileUtility;
@@ -20,8 +25,12 @@ import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Button;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TreeView;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
@@ -50,13 +59,38 @@ public class RenderWindowController implements Initializable {
     TextArea sceneConsole;
     @FXML
     TextArea performanceConsole;
+    
+    @FXML
+    private TreeView treeViewScene;
+    @FXML
+    private TreeView treeViewMaterial;
+    
+    @FXML
+    Button renderButton;
+    @FXML
+    Button pauseButton;
+    @FXML
+    Button stopButton;
+    
+    
+    @FXML
+    Button openButton;
         
     private final StaticDisplay display = new StaticDisplay();
     private final SimpleRender render = new SimpleRender();
     
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // TODO        
+        // TODO     
+        
+        //Init material database and scene tree view   
+        DataModel.initMaterialTreeData(treeViewMaterial);
+        DataModel.initSceneTreeData(treeViewScene);
+        
+        //Set cell renderer for tree cell
+        treeViewScene.setCellFactory(m -> new TargetTreeCell());        
+        treeViewMaterial.setCellFactory(m -> new MaterialVaultTreeCell());  
+        initDragAndDrop();
         
         //Set Console
         Console console = new Console(timeConsole, sceneConsole, performanceConsole);        
@@ -91,11 +125,50 @@ public class RenderWindowController implements Initializable {
             FileUtility.writeLines(dataFile, "scenepath = " +newValue);            
         });
         
+        //icons for buttons (file management)
+        openButton.setGraphic(IconAssetManager.getOpenIcon());
+        
+        //icons for buttons (dealing with rendering)
+        renderButton.setGraphic(IconAssetManager.getRenderIcon());
+        pauseButton.setGraphic(IconAssetManager.getPauseIcon());
+        stopButton.setGraphic(IconAssetManager.getStopIcon());
+        
+        
         //Init rest of gui
         pane.setCenter(display);        
         render.launch(display);
         render.close();        
     } 
+    
+    public void initDragAndDrop()
+    {
+        treeViewScene.setOnDragOver(e ->{
+            if(!(e.getGestureSource() instanceof TargetTreeCell))            
+                if(e.getDragboard().getContent(CustomData.getFormat()) instanceof CustomData)
+                {                    
+                    e.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+                }
+            
+            e.consume();
+        });
+        
+        treeViewScene.setOnDragDropped(e -> {
+            /* data dropped */
+            /* if there is a string data on dragboard, read it and use it */
+            Dragboard db = e.getDragboard();
+            boolean success = false;
+            if(db.hasContent(CustomData.getFormat()))
+            {
+                CustomData data = (CustomData) e.getDragboard().getContent(CustomData.getFormat());
+                DataModel.addSceneMaterial(data);                
+                success = true;
+            }
+             /* let the source know whether the string was successfully 
+              * transferred and used */
+              e.setDropCompleted(success);
+              e.consume();
+        });
+    }
     
     public void exit(ActionEvent e)
     {
@@ -124,5 +197,10 @@ public class RenderWindowController implements Initializable {
     {                
         File file = FileChooserManager.showOpenDialog("objscene");
         return file;
+    }
+    
+    public void resetSceneTreeMaterial(ActionEvent e)
+    {
+        DataModel.clearSceneMaterial();
     }
 }

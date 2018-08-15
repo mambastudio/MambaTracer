@@ -67,12 +67,12 @@ public class SimpleRender extends KernelThread{
     
     public void launch(StaticDisplay display) {
         this.display = display;     
-        display.translationDepth.addListener((observable, old_value, new_value) -> {
-            orientation.translateDistance(device.getCamera(), new_value.floatValue());     
+        display.translationDepth.addListener((observable, old_value, new_value) -> {                        
+            orientation.translateDistance(device.getCamera(), new_value.floatValue() * device.getBound().getMaximumExtent());     
             resumeKernel();
         });
         
-        display.translationXY.addListener((observable, old_value, new_value) -> {
+        display.translationXY.addListener((observable, old_value, new_value) -> {            
             orientation.rotateX(device.getCamera(), (float) new_value.getX());
             orientation.rotateY(device.getCamera(), (float) new_value.getY());
             resumeKernel();
