@@ -3,9 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cl.ui.mvc;
+package cl.ui.mvc.model;
 
-import static cl.ui.mvc.CustomData.Type.LEAF;
+import static cl.ui.mvc.model.CustomData.Type.LEAF;
 import java.io.Serializable;
 import javafx.scene.input.DataFormat;
 

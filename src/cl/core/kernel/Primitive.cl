@@ -53,6 +53,7 @@ bool intersectTriangle(Ray* r, Intersection* isect, TriangleMesh mesh, int primI
         r->tMax = tuv[0];
         isect->p = getPoint(*r, tuv[0]);
         isect->n = n;
+        isect->d = r->d;
         //isect->uv;
         //isect->id;
         //isect->pixel;
@@ -108,6 +109,7 @@ bool intersectBox(Ray* r, Intersection* isect, Box box)
         r->tMax = t;
         isect->p = getPoint(*r, t);
         isect->n = n;
+        isect->d = r->d;
         //isect->uv;
         //isect->id;
         //isect->pixel;

@@ -3,10 +3,15 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cl.ui.mvc;
+package cl.ui.mvc.viewmodel;
 
-import static cl.ui.mvc.CustomData.Type.PARENT;
+import cl.core.device.RayDeviceMesh;
+import cl.ui.mvc.model.CustomData;
+import static cl.ui.mvc.model.CustomData.Type.PARENT;
 import coordinate.parser.attribute.MaterialT;
+import java.util.ArrayList;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 
@@ -14,22 +19,39 @@ import javafx.scene.control.TreeView;
  *
  * @author user
  */
-public class DataModel 
+public class RenderViewModel 
 {
+    //OpenCL mesh (gateway to opencl)
+    private static RayDeviceMesh device;
+    
+    //Javafx data
     private static TreeItem<CustomData> sceneRoot = null;    
     private static TreeItem<CustomData> sceneMaterialTreeItem = null;
+    private static TreeItem<CustomData> sceneGroupTreeItem = null;
     
     private static TreeItem<CustomData<MaterialT>> materialRoot = null;    
     private static TreeItem<CustomData<MaterialT>> diffuseTreeItem = null;
     private static TreeItem<CustomData<MaterialT>> emitterTreeItem = null;
     
+    public static void setDevice(RayDeviceMesh device)
+    {
+        RenderViewModel.device = device;
+    }
+    
+    public static RayDeviceMesh getDevice()
+    {
+        return device;
+    }
+    
     public static void initSceneTreeData(TreeView treeView)
     {
         sceneRoot = new TreeItem(new CustomData("Scene", null));
-        sceneMaterialTreeItem = new TreeItem<>(new CustomData("Material", null, PARENT));        
+        sceneMaterialTreeItem = new TreeItem<>(new CustomData("Material", null, PARENT));     
+        sceneGroupTreeItem = new TreeItem<>(new CustomData("Group", null, PARENT));
         treeView.setRoot(sceneRoot);
         
-        sceneRoot.getChildren().add(sceneMaterialTreeItem);
+        sceneRoot.getChildren().add(sceneGroupTreeItem);
+        sceneRoot.getChildren().add(sceneMaterialTreeItem);        
         sceneRoot.setExpanded(true);
     }
     
@@ -65,6 +87,13 @@ public class DataModel
     public static void addSceneMaterial(CustomData material)
     {
         sceneMaterialTreeItem.getChildren().add(new TreeItem(material));
+        sceneMaterialTreeItem.setExpanded(true);
+    }
+                  
+    public static void setSceneMaterial(ArrayList<MaterialT> materials)
+    {
+        clearSceneMaterial();
+        materials.forEach((mat) -> sceneMaterialTreeItem.getChildren().add(new TreeItem<>(new CustomData(mat.name, mat))));
         sceneMaterialTreeItem.setExpanded(true);
     }
 }

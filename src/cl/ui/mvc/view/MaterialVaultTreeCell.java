@@ -3,11 +3,10 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cl.ui.tree.view;
+package cl.ui.mvc.view;
 
-import cl.ui.icons.IconAssetManager;
-import cl.ui.mvc.CustomData;
-import static cl.ui.mvc.CustomData.Type.PARENT;
+import cl.ui.mvc.view.icons.IconAssetManager;
+import cl.ui.mvc.model.CustomData;
 import coordinate.parser.attribute.MaterialT;
 import filesystem.fx.icons.FileIconManager;
 import javafx.scene.control.TreeCell;
@@ -19,13 +18,13 @@ import javafx.scene.input.TransferMode;
  *
  * @author user
  */
-public class TargetTreeCell extends TreeCell<CustomData>{
-    public TargetTreeCell()
-    {
+public class MaterialVaultTreeCell  extends TreeCell<CustomData<MaterialT>>{
+    public MaterialVaultTreeCell()
+    {       
         setOnDragDetected(e ->{            
             Dragboard db = startDragAndDrop(TransferMode.COPY);
             ClipboardContent content = new ClipboardContent();        
-            TargetTreeCell cell = (TargetTreeCell)e.getSource();
+            MaterialVaultTreeCell cell = (MaterialVaultTreeCell)e.getSource();
             
             if(!cell.getTreeItem().isLeaf()) return;
             
@@ -34,25 +33,29 @@ public class TargetTreeCell extends TreeCell<CustomData>{
             db.setContent(content);
             e.consume();
         });
+                
     }
     @Override
-    public void updateItem(CustomData item, boolean empty)
+    public void updateItem(CustomData<MaterialT> item, boolean empty)
     {
         super.updateItem(item, empty);
         if(empty)
         {
             setGraphic(null);
-            setText(null);            
-        }        
+            setText(null);
+            
+        }
+        
         else
         {
             if(getTreeItem().getParent() == null)
                 setGraphic(FileIconManager.getIcon("home"));
-            else if(item.getType() == PARENT)
+            else if(getTreeItem().getChildren().size() > 0)
                 setGraphic(FileIconManager.getIcon("folder"));
-            else if(item.getData() instanceof MaterialT)                  
-                setGraphic(IconAssetManager.getIcon((MaterialT)item.getData()));
+            else
+                setGraphic(IconAssetManager.getIcon(item.getData()));
             setText(item.getName());
         }            
+            
     }
 }

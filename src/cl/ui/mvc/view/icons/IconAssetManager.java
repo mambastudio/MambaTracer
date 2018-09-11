@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cl.ui.icons;
+package cl.ui.mvc.view.icons;
 
 import coordinate.parser.attribute.MaterialT;
 import filesystem.fx.icons.FileIconManager;

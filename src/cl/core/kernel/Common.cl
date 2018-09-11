@@ -1,5 +1,7 @@
 #define FLOATMAX  3.402823e+38
 #define FLOATMIN -3.402823e+38
+#define HIT_MARKER 1
+#define MISS_MARKER 0
 
 // print float value
 void printFloat(float v)
@@ -94,11 +96,11 @@ typedef struct
    float4 d;
 
    float4 inv_d;
-   float4 oxinv_d;
    float tMin;
    float tMax;
    
    int4 sign;
+   int2 extra;
 }Ray;
 
 // intersection
@@ -106,10 +108,22 @@ typedef struct
 {
    float4 p;
    float4 n;
+   float4 d;
    float2 uv;
    int id;
+   int hit;
    float2 pixel;
 }Intersection;
+
+void setRayActive(Ray* ray, bool type)
+{
+   ray->extra.x = type;
+}
+
+bool isRayActive(Ray ray)
+{
+   return ray.extra.x;
+}
 
 // vertex 1 in mesh
 float4 getP1(TriangleMesh mesh, int primID)
@@ -248,8 +262,7 @@ Ray initRay(float4 position, float4 direction)
    
    ray.o = position;
    ray.d = direction;
-   ray.inv_d = (float4)(1.f/direction.x, 1.f/direction.y, 1.f/direction.z, 0);
-   ray.oxinv_d = -ray.o * ray.inv_d;
+   ray.inv_d = (float4)(1.f/direction.x, 1.f/direction.y, 1.f/direction.z, 0);              
    ray.sign.x = ray.inv_d.x < 0 ? 1 : 0;
    ray.sign.y = ray.inv_d.y < 0 ? 1 : 0;
    ray.sign.z = ray.inv_d.z < 0 ? 1 : 0;
@@ -326,15 +339,6 @@ float max3(float a, float b, float c)
 // ray bounding box intersection
 bool intersectBound(Ray r, BoundingBox bound)
 {
-   //float4 const f = mad(bound.maximum, r.inv_d, r.oxinv_d);
-   //float4 const n = mad(bound.minimum, r.inv_d, r.oxinv_d);
-   //float4 const tmax = max(f, n);
-   //float4 const tmin = min(f, n);
-   //float const t1 = min(min3(tmax.x, tmax.y, tmax.z), r.tMax);
-   //float const t0 = max(max3(tmin.x, tmin.y, tmin.z), 0.f);
-
-   //return t0<=t1;
-   
     float tmin  = (getExtent(r.sign.x, bound).x - r.o.x) * r.inv_d.x;
     float tmax  = (getExtent(1-r.sign.x, bound).x - r.o.x) * r.inv_d.x;
     float tymin = (getExtent(r.sign.y, bound).y - r.o.y) * r.inv_d.y;
@@ -359,16 +363,7 @@ bool intersectBound(Ray r, BoundingBox bound)
 
 // ray bounding box intersection
 bool intersectBoundT(Ray r, BoundingBox bound, float* t)
-{
-   //float4 const f = mad(bound.maximum, r.inv_d, r.oxinv_d);
-   //float4 const n = mad(bound.minimum, r.inv_d, r.oxinv_d);
-   //float4 const tmax = max(f, n);
-   //float4 const tmin = min(f, n);
-   //float const t1 = min(min3(tmax.x, tmax.y, tmax.z), r.tMax);
-   //float const t0 = max(max3(tmin.x, tmin.y, tmin.z), 0.f);
-
-   //return t0<=t1;
-   
+{   
     float tmin  = (getExtent(r.sign.x, bound).x - r.o.x) * r.inv_d.x;
     float tmax  = (getExtent(1-r.sign.x, bound).x - r.o.x) * r.inv_d.x;
     float tymin = (getExtent(r.sign.y, bound).y - r.o.y) * r.inv_d.y;

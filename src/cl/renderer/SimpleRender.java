@@ -12,6 +12,7 @@ import cl.core.CRay;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import cl.core.device.RayDeviceMesh;
+import cl.ui.mvc.viewmodel.RenderViewModel;
 import coordinate.model.OrientationModel;
 import coordinate.utility.Timer;
 import java.nio.file.Path;
@@ -22,7 +23,7 @@ import thread.model.KernelThread;
  * @author user
  */
 public class SimpleRender extends KernelThread{
-    RayDeviceMesh device; 
+     
     
     int globalSize = 700;
     int localSize = 100;
@@ -39,9 +40,9 @@ public class SimpleRender extends KernelThread{
         Timer timer = new Timer();
         timer.start();
         
-        device.updateCamera();
-        device.execute();
-        device.readImageBuffer(buffer-> {
+        RenderViewModel.getDevice().updateCamera();
+        RenderViewModel.getDevice().execute();
+        RenderViewModel.getDevice().readImageBuffer(buffer-> {
             buffer.get(bufferImage);
             bitmap.writeColor(bufferImage, 0, 0, globalSize, globalSize);
             display.imageFill(bitmap);
@@ -56,9 +57,9 @@ public class SimpleRender extends KernelThread{
     }
     
     public boolean init() 
-    {
-        device = new RayDeviceMesh();
-        device.init(globalSize, localSize);
+    {   
+        RenderViewModel.setDevice(new RayDeviceMesh());
+        RenderViewModel.getDevice().init(globalSize, localSize);
         bufferImage = new int[globalSize * globalSize];
         bitmap = new BitmapARGB(globalSize, globalSize);
         
@@ -68,13 +69,13 @@ public class SimpleRender extends KernelThread{
     public void launch(StaticDisplay display) {
         this.display = display;     
         display.translationDepth.addListener((observable, old_value, new_value) -> {                        
-            orientation.translateDistance(device.getCamera(), new_value.floatValue() * device.getBound().getMaximumExtent());     
+            orientation.translateDistance(RenderViewModel.getDevice().getCamera(), new_value.floatValue() * RenderViewModel.getDevice().getBound().getMaximumExtent());     
             resumeKernel();
         });
         
         display.translationXY.addListener((observable, old_value, new_value) -> {            
-            orientation.rotateX(device.getCamera(), (float) new_value.getX());
-            orientation.rotateY(device.getCamera(), (float) new_value.getY());
+            orientation.rotateX(RenderViewModel.getDevice().getCamera(), (float) new_value.getX());
+            orientation.rotateY(RenderViewModel.getDevice().getCamera(), (float) new_value.getY());
             resumeKernel();
         });
         
@@ -90,6 +91,6 @@ public class SimpleRender extends KernelThread{
     
     public void initMesh(Path path)
     {
-        device.initMesh(path);
+        RenderViewModel.getDevice().initMesh(path);
     }
 }

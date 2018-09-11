@@ -9,6 +9,7 @@ import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import coordinate.generic.AbstractRay;
 import org.jocl.struct.CLTypes.cl_float4;
+import org.jocl.struct.CLTypes.cl_int2;
 import org.jocl.struct.CLTypes.cl_int4;
 import org.jocl.struct.Struct;
 
@@ -26,6 +27,7 @@ public class CRay extends Struct implements AbstractRay<CPoint3, CVector3>
     public float tMax;
     
     public cl_int4 sign;
+    public cl_int2 extra;
     
     public CRay() 
     {        

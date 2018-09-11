@@ -13,6 +13,7 @@ import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import cl.core.kernel.CLSource;
 import cl.shapes.CMesh;
+import cl.ui.mvc.viewmodel.RenderViewModel;
 import coordinate.model.OrientationModel;
 import coordinate.parser.OBJParser;
 import coordinate.utility.Timer;
@@ -101,6 +102,9 @@ public class RayDeviceMesh {
         Timer parseTime = Timer.timeThis(() -> parser.read(path.toString(), mesh));
         OutputFactory.print("scene parse time", parseTime.toString());
         
+        //Load scene material to ui
+        RenderViewModel.setSceneMaterial(mesh.getMaterialList());
+        
         //Time building
         Timer buildTime = Timer.timeThis(() -> mesh.buildAccelerator());
         OutputFactory.print("bvh build time", buildTime.toString());
@@ -174,6 +178,7 @@ public class RayDeviceMesh {
         OBJParser parser = new OBJParser();
         //parser.readString(cube, mesh);
         parser.readString(cube, mesh);
+        RenderViewModel.setSceneMaterial(mesh.getMaterialList());
         mesh.buildAccelerator();
         OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
         orientation.reposition(camera, mesh.getBound());

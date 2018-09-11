@@ -11,6 +11,7 @@
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
@@ -71,7 +72,7 @@
                     <tabs>
                         <Tab text="Materials">
                            <content>
-                              <SplitPane dividerPositions="0.5316622691292876" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0">
+                              <SplitPane dividerPositions="0.4757834757834758" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0">
                                  <items>
                                     <VBox prefHeight="200.0" prefWidth="100.0">
                                        <children>
@@ -81,9 +82,17 @@
                                              </font>
                                           </Label>
                                           <TreeView fx:id="treeViewScene" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
-                                          <HBox prefHeight="22.0" prefWidth="343.0">
+                                          <HBox prefHeight="22.0" prefWidth="343.0" spacing="5.0">
                                              <children>
-                                                <Button mnemonicParsing="false" onAction="#resetSceneTreeMaterial" prefHeight="25.0" prefWidth="125.0" text="Clear Tree Material" />
+                                                <Button mnemonicParsing="false" onAction="#resetSceneTreeMaterial" prefHeight="25.0" prefWidth="49.0" text="CTM">
+                                                   <tooltip>
+                                                      <Tooltip text="Clear Tree Material" />
+                                                   </tooltip></Button>
+                                                <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="49.0" text="RTM">
+                                                   <tooltip>
+                                                      <Tooltip text="Reload Tree Material" />
+                                                   </tooltip>
+                                                </Button>
                                              </children>
                                              <VBox.margin>
                                                 <Insets bottom="2.0" left="2.0" top="2.0" />

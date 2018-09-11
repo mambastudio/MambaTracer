@@ -7,11 +7,11 @@ package cl.main;
 
 import cl.renderer.SimpleRender;
 import bitmap.display.StaticDisplay;
-import cl.ui.icons.IconAssetManager;
-import cl.ui.mvc.DataModel;
-import cl.ui.mvc.CustomData;
-import cl.ui.tree.view.MaterialVaultTreeCell;
-import cl.ui.tree.view.TargetTreeCell;
+import cl.ui.mvc.view.icons.IconAssetManager;
+import cl.ui.mvc.viewmodel.RenderViewModel;
+import cl.ui.mvc.model.CustomData;
+import cl.ui.mvc.view.MaterialVaultTreeCell;
+import cl.ui.mvc.view.TargetTreeCell;
 import filesystem.core.OutputFactory;
 import filesystem.util.FileChooserManager;
 import filesystem.util.FileUtility;
@@ -84,8 +84,8 @@ public class RenderWindowController implements Initializable {
         // TODO     
         
         //Init material database and scene tree view   
-        DataModel.initMaterialTreeData(treeViewMaterial);
-        DataModel.initSceneTreeData(treeViewScene);
+        RenderViewModel.initMaterialTreeData(treeViewMaterial);
+        RenderViewModel.initSceneTreeData(treeViewScene);
         
         //Set cell renderer for tree cell
         treeViewScene.setCellFactory(m -> new TargetTreeCell());        
@@ -160,7 +160,7 @@ public class RenderWindowController implements Initializable {
             if(db.hasContent(CustomData.getFormat()))
             {
                 CustomData data = (CustomData) e.getDragboard().getContent(CustomData.getFormat());
-                DataModel.addSceneMaterial(data);                
+                RenderViewModel.addSceneMaterial(data);                
                 success = true;
             }
              /* let the source know whether the string was successfully 
@@ -201,6 +201,6 @@ public class RenderWindowController implements Initializable {
     
     public void resetSceneTreeMaterial(ActionEvent e)
     {
-        DataModel.clearSceneMaterial();
+        RenderViewModel.clearSceneMaterial();
     }
 }

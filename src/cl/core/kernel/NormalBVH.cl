@@ -56,7 +56,12 @@ bool intersect(Ray* ray, Intersection* isect, TriangleMesh mesh, global BVHNode*
         {
             BVHNode node        = nodes[nodeId];
             if(intersectTriangle(ray, isect, mesh, node.child))
+            {
                    hit |= true;
+                   isect->hit = HIT_MARKER;
+            }
+            else
+                   isect->hit = MISS_MARKER;
 
             //This is not in the paper.
             parentId            = node.parent;
