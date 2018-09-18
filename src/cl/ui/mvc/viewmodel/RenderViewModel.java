@@ -8,8 +8,10 @@ package cl.ui.mvc.viewmodel;
 import cl.core.device.RayDeviceMesh;
 import cl.ui.mvc.model.CustomData;
 import static cl.ui.mvc.model.CustomData.Type.PARENT;
+import coordinate.parser.attribute.GroupT;
 import coordinate.parser.attribute.MaterialT;
 import java.util.ArrayList;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.control.TreeItem;
@@ -26,6 +28,8 @@ public class RenderViewModel
     
     //Javafx data
     private static TreeItem<CustomData> sceneRoot = null;    
+    
+    //Javafx data for material & group
     private static TreeItem<CustomData> sceneMaterialTreeItem = null;
     private static TreeItem<CustomData> sceneGroupTreeItem = null;
     
@@ -92,8 +96,32 @@ public class RenderViewModel
                   
     public static void setSceneMaterial(ArrayList<MaterialT> materials)
     {
-        clearSceneMaterial();
-        materials.forEach((mat) -> sceneMaterialTreeItem.getChildren().add(new TreeItem<>(new CustomData(mat.name, mat))));
-        sceneMaterialTreeItem.setExpanded(true);
+       
+        Platform.runLater(() -> {
+             clearSceneMaterial();
+            materials.forEach((mat) -> sceneMaterialTreeItem.getChildren().add(new TreeItem<>(new CustomData(mat.name, mat))));
+            sceneMaterialTreeItem.setExpanded(true);
+        });        
+        
+    }
+    
+     public static void clearSceneGroup()
+    {
+        sceneGroupTreeItem.getChildren().clear();
+    }
+    
+    public static void addSceneGroup(CustomData group)
+    {
+        sceneGroupTreeItem.getChildren().add(new TreeItem(group));
+        sceneGroupTreeItem.setExpanded(true);
+    }
+                  
+    public static void setSceneGroup(ArrayList<GroupT> group)
+    {
+        Platform.runLater(() -> {
+        clearSceneGroup();
+        group.forEach((grp) -> sceneGroupTreeItem.getChildren().add(new TreeItem<>(new CustomData(grp.name, grp))));
+        sceneGroupTreeItem.setExpanded(true);
+        });
     }
 }

@@ -24,11 +24,15 @@ import thread.model.KernelThread;
  */
 public class SimpleRender extends KernelThread{
      
+    int width = 800;
+    int height = 700;
     
-    int globalSize = 700;
+    int globalSize = width * height;
     int localSize = 100;
     
     BitmapARGB bitmap;
+    BitmapARGB selectionBitmap;
+    
     int[] bufferImage;
     StaticDisplay display;
     
@@ -44,8 +48,10 @@ public class SimpleRender extends KernelThread{
         RenderViewModel.getDevice().execute();
         RenderViewModel.getDevice().readImageBuffer(buffer-> {
             buffer.get(bufferImage);
-            bitmap.writeColor(bufferImage, 0, 0, globalSize, globalSize);
+            bitmap.writeColor(bufferImage, 0, 0, width, height);
             display.imageFill(bitmap);
+            display.imageFillSelection(selectionBitmap);
+            
         });
         
         timer.end();
@@ -59,9 +65,10 @@ public class SimpleRender extends KernelThread{
     public boolean init() 
     {   
         RenderViewModel.setDevice(new RayDeviceMesh());
-        RenderViewModel.getDevice().init(globalSize, localSize);
-        bufferImage = new int[globalSize * globalSize];
-        bitmap = new BitmapARGB(globalSize, globalSize);
+        RenderViewModel.getDevice().init(width, height, globalSize, localSize);
+        bufferImage = new int[width * height];
+        bitmap = new BitmapARGB(width, height);
+        selectionBitmap = new BitmapARGB(width, height, false);
         
         return true;
     }

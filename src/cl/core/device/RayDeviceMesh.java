@@ -76,15 +76,15 @@ public class RayDeviceMesh {
         OutputFactory.print("speed", Long.toString(configuration.device().getSpeed()));
     }
     
-    public void init(int globalSize, int localSize)
+    public void init(int width, int height, int globalSize, int localSize)
     {
         this.globalSize  = globalSize; this.localSize = localSize;
         
         //Init constant global variables
-        this.imageBuffer        = CBufferFactory.allocInt("image", configuration.context(), globalSize * globalSize, WRITE_ONLY);
+        this.imageBuffer        = CBufferFactory.allocInt("image", configuration.context(), globalSize, WRITE_ONLY);
         this.cameraBuffer       = CBufferFactory.allocStruct("camera", configuration.context(), CCamera.CameraStruct.class, 1, READ_ONLY);
-        this.width              = CBufferFactory.initIntValue("width", configuration.context(), configuration.queue(), globalSize, READ_ONLY);
-        this.height             = CBufferFactory.initIntValue("height", configuration.context(), configuration.queue(), globalSize, READ_ONLY);
+        this.width              = CBufferFactory.initIntValue("width", configuration.context(), configuration.queue(), width, READ_ONLY);
+        this.height             = CBufferFactory.initIntValue("height", configuration.context(), configuration.queue(), height, READ_ONLY);
         
         //read mesh and position camera
         initDefaultMesh();  
@@ -102,8 +102,9 @@ public class RayDeviceMesh {
         Timer parseTime = Timer.timeThis(() -> parser.read(path.toString(), mesh));
         OutputFactory.print("scene parse time", parseTime.toString());
         
-        //Load scene material to ui
+        //Load scene material and group to ui
         RenderViewModel.setSceneMaterial(mesh.getMaterialList());
+        RenderViewModel.setSceneGroup(mesh.getGroupList());
         
         //Time building
         Timer buildTime = Timer.timeThis(() -> mesh.buildAccelerator());
@@ -125,7 +126,7 @@ public class RayDeviceMesh {
     
     public CCamera getCamera(){return camera;}
     
-    public void execute(){configuration.queue().put1DRangeKernel(raytracingKernel, globalSize * globalSize, localSize);}
+    public void execute(){configuration.queue().put1DRangeKernel(raytracingKernel, globalSize, localSize);}
     
     public void readImageBuffer(CallBackFunction<IntBuffer> callback) {imageBuffer.mapReadBuffer(configuration.queue(), callback);}
     public void updateCamera(){this.cameraBuffer.mapWriteBuffer(configuration.queue(), cameraStruct -> 
@@ -136,7 +137,7 @@ public class RayDeviceMesh {
                 OutputFactory.print("fov", Float.toString(camera.fov));
                 
             });}
-    public int getTotalSize(){return globalSize * globalSize;}
+    public int getTotalSize(){return globalSize;}
     
     public CBoundingBox getBound()
     {
@@ -179,6 +180,7 @@ public class RayDeviceMesh {
         //parser.readString(cube, mesh);
         parser.readString(cube, mesh);
         RenderViewModel.setSceneMaterial(mesh.getMaterialList());
+        RenderViewModel.setSceneGroup(mesh.getGroupList());
         mesh.buildAccelerator();
         OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
         orientation.reposition(camera, mesh.getBound());

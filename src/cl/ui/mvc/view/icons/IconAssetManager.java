@@ -25,6 +25,10 @@ public class IconAssetManager {
         else
             return new Circle(10, new Color(material.dr, material.dg, material.db, 1));
     }
+    public static Node getGroupIcon()            
+    {
+        return FileIconManager.getIcon(IconAssetManager.class, "Fancy20x20.png");
+    }
     
     public static Node getOpenIcon()
     {

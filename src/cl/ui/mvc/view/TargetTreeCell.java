@@ -8,6 +8,7 @@ package cl.ui.mvc.view;
 import cl.ui.mvc.view.icons.IconAssetManager;
 import cl.ui.mvc.model.CustomData;
 import static cl.ui.mvc.model.CustomData.Type.PARENT;
+import coordinate.parser.attribute.GroupT;
 import coordinate.parser.attribute.MaterialT;
 import filesystem.fx.icons.FileIconManager;
 import javafx.scene.control.TreeCell;
@@ -30,6 +31,9 @@ public class TargetTreeCell extends TreeCell<CustomData>{
             if(!cell.getTreeItem().isLeaf()) return;
             
             CustomData data = cell.getItem();
+            
+            if(!(data.getData() instanceof MaterialT)) return;
+            
             content.put(CustomData.getFormat(), data);
             db.setContent(content);
             e.consume();
@@ -52,6 +56,8 @@ public class TargetTreeCell extends TreeCell<CustomData>{
                 setGraphic(FileIconManager.getIcon("folder"));
             else if(item.getData() instanceof MaterialT)                  
                 setGraphic(IconAssetManager.getIcon((MaterialT)item.getData()));
+            else if(item.getData() instanceof GroupT)                  
+                setGraphic(IconAssetManager.getGroupIcon());
             setText(item.getName());
         }            
     }
