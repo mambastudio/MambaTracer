@@ -20,6 +20,10 @@ A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drive
 ## Future Implementation
 
 * Fast Acceleration Structure   
+  - Fast Build BVH
+    - Parallel Locally-Ordered Clustering for Bounding Volume Hierarchy Construction
+      - https://dcgi.felk.cvut.cz/projects/ploc/ploc-tvcg.pdf
+      - http://www.tut.fi/vga/publications/PLOCTree_A_Fast_High-Quality_Hardware_BVH_Builder.html
   - Fast Traversal & Build
     - GPU Ray Tracing using Irregular Grids (solves teapot in a stadium problem) - https://graphics.cg.uni-saarland.de/index.php?id=939
     
