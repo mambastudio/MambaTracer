@@ -6,8 +6,8 @@
 package test;
 
 import cl.core.CNormalBVH;
-import cl.core.data.struct.Bound;
-import cl.core.data.struct.Node;
+import cl.core.data.struct.CBound;
+import cl.core.data.struct.CNode;
 import cl.core.data.struct.array.CStructFloatArray;
 import cl.core.data.struct.array.CStructIntArray;
 import cl.core.kernel.CLSource;
@@ -51,8 +51,8 @@ public class Test2 {
         CNormalBVH bvh = new CNormalBVH(configuration);
         bvh.build(mesh);
         
-        CStructIntArray<Node> nodes = bvh.getNodes();
-        CStructFloatArray<Bound> bounds = bvh.getBounds();
+        CStructIntArray<CNode> nodes = bvh.getNodes();
+        CStructFloatArray<CBound> bounds = bvh.getBounds();
         
         for(int i = 0; i<bounds.getSize(); i++)
             System.out.println(bounds.get(i));

@@ -13,12 +13,12 @@ import coordinate.struct.FloatStruct;
  *
  * @author user
  */
-public class Bound  extends FloatStruct
+public class CBound  extends FloatStruct
 {
     CPoint3 minimum;
     CPoint3 maximum;
 
-    public Bound()
+    public CBound()
     {
         this.minimum = new CPoint3();
         this.maximum = new CPoint3();

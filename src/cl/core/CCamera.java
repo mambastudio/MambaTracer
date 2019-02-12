@@ -5,6 +5,7 @@
  */
 package cl.core;
 
+import cl.core.data.struct.CRay;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import coordinate.model.CameraModel;

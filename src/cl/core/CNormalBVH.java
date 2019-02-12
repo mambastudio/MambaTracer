@@ -5,8 +5,10 @@
  */
 package cl.core;
 
-import cl.core.data.struct.Bound;
-import cl.core.data.struct.Node;
+import cl.core.data.struct.CIntersection;
+import cl.core.data.struct.CRay;
+import cl.core.data.struct.CBound;
+import cl.core.data.struct.CNode;
 import cl.core.data.struct.array.CStructFloatArray;
 import cl.core.data.struct.array.CStructIntArray;
 import cl.shapes.CMesh;
@@ -32,8 +34,8 @@ public class CNormalBVH implements AbstractAccelerator
     int[] objects;
     
     //Tree, Primitive index, Boundingbox   
-    CStructFloatArray<Bound> bounds;
-    CStructIntArray<Node> nodes;
+    CStructFloatArray<CBound> bounds;
+    CStructIntArray<CNode> nodes;
     
     //Node counter
     int nodesPtr = 0;
@@ -57,10 +59,10 @@ public class CNormalBVH implements AbstractAccelerator
             objects[i] = i;
         
         //Allocate BVH root node
-        nodes   = new CStructIntArray(configuration, Node.class, this.primitives.getCount() * 2 - 1, "nodes", READ_WRITE);
-        bounds  = new CStructFloatArray(configuration, Bound.class, this.primitives.getCount() * 2 - 1, "nodes", READ_WRITE);
+        nodes   = new CStructIntArray(configuration, CNode.class, this.primitives.getCount() * 2 - 1, "nodes", READ_WRITE);
+        bounds  = new CStructFloatArray(configuration, CBound.class, this.primitives.getCount() * 2 - 1, "nodes", READ_WRITE);
         
-        Node root = new Node();
+        CNode root = new CNode();
         nodes.set(root, 0);        
         nodesPtr = 1;
         
@@ -92,19 +94,21 @@ public class CNormalBVH implements AbstractAccelerator
         //Initialize leaf
         if(end - start < 2)
         {        
-            nodes.index(parentIndex, (Node parent) -> {
+            nodes.index(parentIndex, (CNode parent) -> {
                 parent.child = objects[start];
                 parent.isLeaf = 1;
             });            
             return;
         }
         
-        //Subdivide parent node        
-        Node left, right;  int leftIndex, rightIndex;      
+         //Subdivide parent node
+        CNode left;      
+        CNode right;
+int leftIndex, rightIndex;      
         synchronized(this)
         {
-            left            = new Node();   left.parent = parentIndex;
-            right           = new Node();   right.parent = parentIndex;
+            left            = new CNode();   left.parent = parentIndex;
+            right           = new CNode();   right.parent = parentIndex;
             
             nodes.set(left, nodesPtr);  leftIndex   = nodesPtr;   nodes.index(parentIndex, parent -> parent.left = nodesPtr++); 
             nodes.set(right, nodesPtr); rightIndex  = nodesPtr;   nodes.index(parentIndex, parent -> parent.right = nodesPtr++);  
@@ -171,7 +175,7 @@ public class CNormalBVH implements AbstractAccelerator
         return bounds.getCBuffer();
     }
     
-    public CStructFloatArray<Bound> getBounds()
+    public CStructFloatArray<CBound> getBounds()
     {
         return bounds;
     }
@@ -181,7 +185,7 @@ public class CNormalBVH implements AbstractAccelerator
         return nodes.getCBuffer();
     }
     
-    public CStructIntArray<Node> getNodes()
+    public CStructIntArray<CNode> getNodes()
     {
         return nodes;
     }    

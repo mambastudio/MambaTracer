@@ -7,10 +7,11 @@ package cl.core.device;
 
 import cl.core.CBoundingBox;
 import cl.core.CCamera;
-import cl.core.CRay;
+import cl.core.data.struct.CRay;
 import cl.core.CNormalBVH;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
+import cl.core.data.struct.CIntersection;
 import cl.core.kernel.CLSource;
 import cl.shapes.CMesh;
 import cl.ui.mvc.viewmodel.RenderViewModel;
@@ -26,7 +27,7 @@ import org.jocl.CL;
 import wrapper.core.CBufferFactory;
 import wrapper.core.CKernel;
 import static wrapper.core.CMemory.READ_ONLY;
-import static wrapper.core.CMemory.WRITE_ONLY;
+import static wrapper.core.CMemory.READ_WRITE;
 import wrapper.core.CResourceFactory;
 import wrapper.core.CallBackFunction;
 import wrapper.core.OpenCLPlatform;
@@ -44,17 +45,30 @@ public class RayDeviceMesh {
     
     CCamera camera = new CCamera(new CPoint3(0, 0, 9), new CPoint3(), new CVector3(0, 1, 0), 45);
     
-    //kernel variables
+    //image variables
     CIntBuffer imageBuffer = null;
+    CIntBuffer groupBuffer = null;
+    
+    //viewport variables
     CStructBuffer<CCamera.CameraStruct> cameraBuffer = null;
     CIntBuffer width = null;
     CIntBuffer height = null;
     
+    //Ray & intersects
+    CStructBuffer<CRay> raysBuffer;
+    CStructBuffer<CIntersection> isectBuffer;
+    
+    //global count
+    CIntBuffer count = null;
+    
     //global and local size
     private int globalSize, localSize;
     
-    //kernel
-    CKernel raytracingKernel = null;
+    //kernel    
+    CKernel generateCameraRaysKernel = null;
+    CKernel intersectPrimitivesKernel = null;
+    CKernel updateShadeImageKernel = null;
+    CKernel groupBufferPassKernel = null;
     
     //mesh
     CFloatBuffer points = null;
@@ -81,11 +95,15 @@ public class RayDeviceMesh {
         this.globalSize  = globalSize; this.localSize = localSize;
         
         //Init constant global variables
-        this.imageBuffer        = CBufferFactory.allocInt("image", configuration.context(), globalSize, WRITE_ONLY);
+        this.imageBuffer        = CBufferFactory.allocInt("image", configuration.context(), globalSize, READ_WRITE);
+        this.groupBuffer        = CBufferFactory.allocInt("group", configuration.context(), globalSize, READ_WRITE);
+        this.isectBuffer        = CBufferFactory.allocStruct("intersctions", configuration.context(), CIntersection.class, globalSize, READ_ONLY);
+        this.raysBuffer         = CBufferFactory.allocStruct("rays", configuration.context(), CRay.class, globalSize, READ_WRITE);
         this.cameraBuffer       = CBufferFactory.allocStruct("camera", configuration.context(), CCamera.CameraStruct.class, 1, READ_ONLY);
         this.width              = CBufferFactory.initIntValue("width", configuration.context(), configuration.queue(), width, READ_ONLY);
         this.height             = CBufferFactory.initIntValue("height", configuration.context(), configuration.queue(), height, READ_ONLY);
-        
+        this.count              = CBufferFactory.initIntValue("count", configuration.context(), configuration.queue(), 0, READ_WRITE);
+                
         //read mesh and position camera
         initDefaultMesh();  
     }
@@ -121,14 +139,34 @@ public class RayDeviceMesh {
         this.bvhBuild = new CNormalBVH(configuration);
         this.bvhBuild.build(mesh);
         
-        raytracingKernel = configuration.program().createKernel("traceMesh", imageBuffer, cameraBuffer, width, height, points, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());
+       
+        generateCameraRaysKernel = configuration.program().createKernel("generateCameraRays", cameraBuffer, raysBuffer, isectBuffer, width, height);
+        intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, count, points, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());
+        updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", imageBuffer, width, height, isectBuffer);
+        groupBufferPassKernel = configuration.program().createKernel("groupBufferPass", isectBuffer, groupBuffer);
+        //update the kernels here
     }
     
     public CCamera getCamera(){return camera;}
     
-    public void execute(){configuration.queue().put1DRangeKernel(raytracingKernel, globalSize, localSize);}
+    public void execute()
+    {                      
+       configuration.queue().put1DRangeKernel(generateCameraRaysKernel, globalSize, localSize); 
+       configuration.queue().put1DRangeKernel(intersectPrimitivesKernel, globalSize, localSize); 
+       configuration.queue().put1DRangeKernel(updateShadeImageKernel, globalSize, localSize);  
+       configuration.queue().put1DRangeKernel(groupBufferPassKernel, globalSize, localSize);
+       /*
+         Why implementing this makes opencl run faster?
+         Probable answer is this... https://stackoverflow.com/questions/18471170/commenting-clfinish-out-makes-program-100-faster
+       */       
+       configuration.queue().finish();        
+        
+      
+    }
     
     public void readImageBuffer(CallBackFunction<IntBuffer> callback) {imageBuffer.mapReadBuffer(configuration.queue(), callback);}
+    public void readGroupBuffer(CallBackFunction<IntBuffer> callback) {groupBuffer.mapReadBuffer(configuration.queue(), callback);}
+   
     public void updateCamera(){this.cameraBuffer.mapWriteBuffer(configuration.queue(), cameraStruct -> 
             {
                 cameraStruct[0] = camera.getCameraStruct();
@@ -192,7 +230,10 @@ public class RayDeviceMesh {
         this.size               = mesh.getCLSizeBuffer("size", configuration.context(), configuration.queue());
         this.bvhBuild = new CNormalBVH(configuration);
         this.bvhBuild.build(mesh);
-        
-        raytracingKernel = configuration.program().createKernel("traceMesh", imageBuffer, cameraBuffer, width, height, points, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());
+                
+        generateCameraRaysKernel = configuration.program().createKernel("generateCameraRays", cameraBuffer, raysBuffer, isectBuffer, width, height);
+        intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, count, points, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());
+        updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", imageBuffer, width, height, isectBuffer);
+        groupBufferPassKernel = configuration.program().createKernel("groupBufferPass", isectBuffer, groupBuffer);
     }
 }

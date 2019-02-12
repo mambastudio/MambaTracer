@@ -99,6 +99,8 @@ typedef struct
    float tMin;
    float tMax;
    
+   float2 pixel;
+   
    int4 sign;
    int2 extra;
 }Ray;
@@ -110,8 +112,9 @@ typedef struct
    float4 n;
    float4 d;
    float2 uv;
+   int mat;
    int id;
-   int hit;
+   int hit;           
    float2 pixel;
 }Intersection;
 
@@ -212,6 +215,12 @@ float2 getPixel(int index, int width, int height)
     return pixel;
 }
 
+// get index from pixel
+int getIndex(float2 pixel, int width, int height)
+{
+    return (int)(pixel.x + pixel.y * width);
+}
+
 //int rgb from float3
 int getIntRGB(float3 color)
 {
@@ -255,7 +264,7 @@ float4 getPoint(Ray r, float t)
    return point;
 }
 
-// get ray initialized
+// get ray initialized (CONSIDER DELETING)
 Ray initRay(float4 position, float4 direction)
 {
    Ray ray;
@@ -272,7 +281,21 @@ Ray initRay(float4 position, float4 direction)
    return ray;
 }
 
-// pinhole camera ray
+// get ray initialized
+void initGlobalRay(global Ray* ray, float4 position, float4 direction)
+{
+   ray->o = position;
+   ray->d = direction;
+   ray->inv_d = (float4)(1.f/direction.x, 1.f/direction.y, 1.f/direction.z, 0);
+   ray->sign.x = ray->inv_d.x < 0 ? 1 : 0;
+   ray->sign.y = ray->inv_d.y < 0 ? 1 : 0;
+   ray->sign.z = ray->inv_d.z < 0 ? 1 : 0;
+   ray->tMin = 0.001f;
+   ray->tMax = INFINITY;
+}
+
+
+// pinhole camera ray (CONSIDER DELETING)
 Ray getCameraRay(float x, float y, float width, float height, CameraStruct camera)
 {
      float fv    = radians(camera.fov);
@@ -290,6 +313,26 @@ Ray getCameraRay(float x, float y, float width, float height, CameraStruct camer
      
      return initRay(camera.position, dir)  ;
 }
+
+// pinhole camera ray
+void getGlobalCameraRay(global Ray* ray, global CameraStruct* camera, float x, float y, float width, float height)
+{
+     float fv    = radians(camera->fov);
+
+     float4 look = camera->lookat - camera->position;
+     float4 Du   = cross(look, camera->up); Du = normalize(Du);
+     float4 Dv   = cross(look, Du);        Dv = normalize(Dv);
+     
+     float fl    = width / (2. * tan(0.5f * fv));
+     float4 vp   = normalize(look);
+
+     vp = vp*fl - 0.5f*(width*Du + height*Dv);
+
+     float4 dir  =  x*Du + y*Dv + vp; dir = normalize(dir);
+     
+     initGlobalRay(ray, camera->position, dir)  ;
+}
+
 
 // get value from index
 float get(float4 value, int index)

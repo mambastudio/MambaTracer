@@ -11,7 +11,7 @@ import coordinate.struct.IntStruct;
  *
  * @author user
  */
-public class Node extends IntStruct
+public class CNode extends IntStruct
 {
     public int bound;
     public int sibling;

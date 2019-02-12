@@ -5,6 +5,7 @@
  */
 package cl.ui.mvc.viewmodel;
 
+import cl.core.Overlay;
 import cl.core.device.RayDeviceMesh;
 import cl.ui.mvc.model.CustomData;
 import static cl.ui.mvc.model.CustomData.Type.PARENT;
@@ -36,6 +37,8 @@ public class RenderViewModel
     private static TreeItem<CustomData<MaterialT>> materialRoot = null;    
     private static TreeItem<CustomData<MaterialT>> diffuseTreeItem = null;
     private static TreeItem<CustomData<MaterialT>> emitterTreeItem = null;
+    
+    public static Overlay overlay = null;
     
     public static void setDevice(RayDeviceMesh device)
     {

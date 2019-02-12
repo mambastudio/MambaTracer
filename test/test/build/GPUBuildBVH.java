@@ -6,8 +6,8 @@
 package test.build;
 
 import cl.core.CBoundingBox;
-import cl.core.CIntersection;
-import cl.core.CRay;
+import cl.core.data.struct.CIntersection;
+import cl.core.data.struct.CRay;
 import cl.core.data.CPoint3;
 import cl.core.kernel.CLSource;
 import cl.shapes.CMesh;

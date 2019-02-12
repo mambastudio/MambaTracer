@@ -3,11 +3,12 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cl.core;
+package cl.core.data.struct;
 
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import coordinate.generic.AbstractRay;
+import org.jocl.struct.CLTypes.cl_float2;
 import org.jocl.struct.CLTypes.cl_float4;
 import org.jocl.struct.CLTypes.cl_int2;
 import org.jocl.struct.CLTypes.cl_int4;
@@ -25,6 +26,8 @@ public class CRay extends Struct implements AbstractRay<CPoint3, CVector3>
     public cl_float4 inv_d;    
     public float tMin;
     public float tMax;
+    
+    public cl_float2 pixel;
     
     public cl_int4 sign;
     public cl_int2 extra;
@@ -127,4 +130,12 @@ public class CRay extends Struct implements AbstractRay<CPoint3, CVector3>
         return tMax;
     }
     
+    @Override
+    public String toString()
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.append("o ").append(o.get(0)).append(" ").append(o.get(1)).append(" ").append(o.get(2)).append(" ");
+        builder.append("d ").append(d.get(0)).append(" ").append(d.get(1)).append(" ").append(d.get(2));
+        return builder.toString();
+    }
 }

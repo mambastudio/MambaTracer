@@ -8,7 +8,8 @@ package cl.renderer;
 import bitmap.display.StaticDisplay;
 import bitmap.image.BitmapARGB;
 import cl.core.CBoundingBox;
-import cl.core.CRay;
+import cl.core.Overlay;
+import cl.core.data.struct.CRay;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import cl.core.device.RayDeviceMesh;
@@ -32,8 +33,7 @@ public class SimpleRender extends KernelThread{
     
     BitmapARGB bitmap;
     BitmapARGB selectionBitmap;
-    
-    int[] bufferImage;
+       
     StaticDisplay display;
     
     
@@ -46,13 +46,16 @@ public class SimpleRender extends KernelThread{
         
         RenderViewModel.getDevice().updateCamera();
         RenderViewModel.getDevice().execute();
-        RenderViewModel.getDevice().readImageBuffer(buffer-> {
-            buffer.get(bufferImage);
-            bitmap.writeColor(bufferImage, 0, 0, width, height);
-            display.imageFill(bitmap);
-            display.imageFillSelection(selectionBitmap);
-            
+        RenderViewModel.getDevice().readImageBuffer(buffer-> {            
+            bitmap.writeColor(buffer.array(), 0, 0, width, height);              
         });
+        RenderViewModel.getDevice().readGroupBuffer(buffer-> {
+            RenderViewModel.overlay.copyToArray(buffer.array());            
+        });
+        
+        display.imageFillSelection(selectionBitmap);
+        display.imageFill(bitmap);
+        
         
         timer.end();
         
@@ -65,10 +68,10 @@ public class SimpleRender extends KernelThread{
     public boolean init() 
     {   
         RenderViewModel.setDevice(new RayDeviceMesh());
-        RenderViewModel.getDevice().init(width, height, globalSize, localSize);
-        bufferImage = new int[width * height];
+        RenderViewModel.getDevice().init(width, height, globalSize, localSize);   
         bitmap = new BitmapARGB(width, height);
-        selectionBitmap = new BitmapARGB(width, height, false);
+        selectionBitmap = new BitmapARGB(width, height, false);        
+        RenderViewModel.overlay = new Overlay(width, height);
         
         return true;
     }
