@@ -39,6 +39,16 @@ public class Overlay {
         System.arraycopy(instances, 0, this.instances, 0, wh);
     }
     
+    public boolean isInstance(double x, double y)
+    {
+        return get(x, y) > -1;
+    }
+    
+    public int get(double x, double y)
+    {
+        return get((int)x, (int) y);
+    }
+    
     public int get(int x, int y)
     {
         if ((x >= this.w) || (y >= this.h))
@@ -52,6 +62,14 @@ public class Overlay {
             return -2;
 
         return instances[i];
+    }
+    
+    public int getPixelIndex(double x, double y)
+    {       
+        if ((x >= this.w) || (y >= this.h))
+            return -1;
+
+        return (int) (x + y * this.w);        
     }
 
     public void set(int x, int y, int instance)
@@ -78,7 +96,7 @@ public class Overlay {
         BitmapARGB image = new BitmapARGB(this.w, this.h);
 
         int i = 0;
-        int stride = 14;
+        int stride = 6;
         
         /**
          * Borrowed from the discontinued but awesome Radium java monte-carlo renderer but a similar code can be gotten from here

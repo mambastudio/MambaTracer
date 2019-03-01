@@ -12,17 +12,21 @@ import cl.core.data.struct.CRay;
 import cl.core.data.CPoint2;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
+import cl.core.data.struct.CMaterial;
 import coordinate.generic.AbstractMesh;
 import coordinate.generic.raytrace.AbstractPrimitive;
 import coordinate.list.CoordinateList;
 import coordinate.list.IntList;
+import coordinate.parser.attribute.MaterialT;
 import wrapper.core.CBufferFactory;
 import wrapper.core.CCommandQueue;
 import wrapper.core.CContext;
 import static wrapper.core.CMemory.READ_ONLY;
+import static wrapper.core.CMemory.READ_WRITE;
 import wrapper.core.OpenCLPlatform;
 import wrapper.core.buffer.CFloatBuffer;
 import wrapper.core.buffer.CIntBuffer;
+import wrapper.core.buffer.CStructBuffer;
 import wrapper.core.svm.CSVMFloatBuffer;
 import wrapper.core.svm.CSVMIntBuffer;
 
@@ -161,6 +165,20 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
     {
         return CBufferFactory.wrapInt(name, context, queue, new int[]{triangleSize()}, READ_ONLY);               
     }   
+    
+    public CStructBuffer<CMaterial> getCLMaterialBuffer(String name, CContext context, CCommandQueue queue)
+    {        
+        CStructBuffer<CMaterial> cmaterials = CBufferFactory.allocStruct(name, configuration.context(), CMaterial.class, this.getMaterialList().size(), READ_WRITE);       
+        cmaterials.mapWriteBuffer(queue, materialArray -> {
+            for(int i = 0; i<materialArray.length; i++)
+            {
+                MaterialT mat = this.getMaterialList().get(i);                 
+                materialArray[i].setDiffuse(mat.dr, mat.dg, mat.db);   
+                
+            }
+        });
+        return cmaterials;
+    }
     
     public CSVMFloatBuffer getCLPointsBufferSVM(CContext context, CCommandQueue queue)
     {

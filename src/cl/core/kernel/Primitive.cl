@@ -1,76 +1,3 @@
-
-//(CONSIDER DELETING)
-bool mollerTriangleIntersection(Ray* r, float* tuv, float4 p1, float4 p2, float4 p3)
-{
-    float4 e1, e2, h, s, q;
-     float a, f, b1, b2;
-     
-     e1 = p2 - p1;
-     e2 = p3 - p1;
-     h  = cross(r->d, e2);
-     a  = dot(e1, h);
-
-     if (a > -0.0000001 && a < 0.0000001)
-        return false;
-
-     f = 1/a;
-
-     s = r->o - p1; 
-     b1 = f * dot(s, h);
-     
-     if (b1 < 0.0 || b1 > 1.0)
-        return false;
-
-     q = cross(s, e1);
-     b2 = f * dot(r->d, q);
-
-     if (b2 < 0.0 || b1 + b2 > 1.0)    
-        return false;
-
-     float t = f * dot(e2, q);
-
-     // if intersection, update ray and intersection
-     if(isInside(*r, t))
-     {
-         tuv[0] = t;
-         tuv[1] = b1;
-         tuv[2] = b2;
-         
-         return true;
-     }
-     return false;
-}
-
-//(CONSIDER DELETING)
-bool intersectTriangle(Ray* r, Intersection* isect, TriangleMesh mesh, int primID)
-{
-     float4 p1 = getP1(mesh, primID);
-     float4 p2 = getP2(mesh, primID);
-     float4 p3 = getP3(mesh, primID);
-     float4 n  = getNormal(p1, p2, p3);
-     float tuv[3];
-     
-     if(mollerTriangleIntersection(r, tuv, p1, p2, p3))
-     {
-        //set values
-        r->tMax = tuv[0];
-        isect->p = getPoint(*r, tuv[0]);
-        isect->n = n;
-        isect->d = r->d;
-        isect->id = primID;     
-        isect->mat = mesh.faces[primID].mat;
-        return true;
-     }
-     else
-     {
-        isect->id = -1;
-        isect->mat = -1;
-     }
-     return false;
-}
-
-
-
 // triangle intersection
 bool mollerTriangleIntersectionGlobal(global Ray* r, float* tuv, float4 p1, float4 p2, float4 p3)
 {
@@ -129,17 +56,16 @@ bool intersectTriangleGlobal(global Ray* r, global Intersection* isect, Triangle
       isect->p = getPoint(*r, tuv[0]);
       isect->n = n;
       isect->d = r->d;
-      isect->id = primID;     
-      isect->mat = mesh.faces[primID].mat;
+      isect->id = primID;
+      isect->mat = getMaterial(mesh.faces[primID].mat);  //because face - mat is encoded to include both group and material, as such, extract material index
       return true;
    }
    else
    {
-      isect->id = -1;
-      isect->mat = -1;
+      //avoid setting any values here for isect. This overrides previous settings of close hits if intersection 
+      //failed for other hits on primitives
+      return false;
    }
-   return false;
-  
 }
 
 

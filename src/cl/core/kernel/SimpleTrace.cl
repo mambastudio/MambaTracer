@@ -12,15 +12,6 @@
 
 */
 
-int getMaterial(int data)
-{
-    return data & 0xFFFF;
-}
-
-int getGroup(int data)
-{
-    return (data >> 16) & 0xFFFF;
-}
 
 __kernel void generateCameraRays(
     global CameraStruct* camera,
@@ -64,11 +55,33 @@ __kernel void intersectPrimitives(
     TriangleMesh mesh = {points, faces, size[0]};
 
     //intersect and update hit and update isect
-    int hit = intersectGlobal(ray, isect, mesh, nodes, bounds);
+    bool hit = intersectGlobal(ray, isect, mesh, nodes, bounds);
     isect->hit = hit;
+}
 
-    //probably put a global memory fence here
-    barrier(CLK_GLOBAL_MEM_FENCE);
+__kernel void fastShade(
+    global Material* materials,
+    global Intersection* isects
+)
+{
+    //get thread id
+    int id = get_global_id( 0 );
+    
+    //default color
+    float4 color = (float4)(0, 0, 0, 1);
+    float4 color1 = (float4)(1, 1, 1, 1);
+
+    //get intersection and material
+    global Intersection* isect = isects + id;
+    
+    if(isect->hit)
+    {
+        float coeff = fabs(dot(isect->d, isect->n));
+        color.xyz = materials[isect->mat].diffuse.xyz;    //printlnInt(isect->mat);
+        color.xyz *= coeff;
+    }  
+    
+    isect->throughput = color;
 }
 
 __kernel void updateShadeImage(
@@ -79,17 +92,10 @@ __kernel void updateShadeImage(
 )
 {
     int id= get_global_id( 0 );
-    float4 color = (float4)(0, 0, 0, 1);
-    
     global Intersection* isect = isects + id;
-    if(isect->hit)
-    {
-        float coeff = fabs(dot(isect->d, isect->n));
-        color = (float4)(1, 1, 1, 1);
-        color.xyz *= coeff;
-    }
+
     //update
-    imageBuffer[id] = getIntARGB(color);
+    imageBuffer[id] = getIntARGB(isect->throughput);
 }
 
 __kernel void groupBufferPass(
@@ -100,9 +106,12 @@ __kernel void groupBufferPass(
     int id= get_global_id( 0 );
     
     global Intersection* isect = isects + id;
-    
+
     if(isect->hit)
-        groupBuffer[id] = 0;//getGroup(isects[id].mat);
+    {
+        groupBuffer[id] = getMaterial(isects[id].mat);//getMaterial(isects[id].mat);
+
+    }    
     else
         groupBuffer[id] = -1;
 }

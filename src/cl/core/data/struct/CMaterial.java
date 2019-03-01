@@ -22,4 +22,12 @@ public class CMaterial extends Struct{
         diffuse.set(2, 0.95f);
         diffuse.set(3, 1f);
     }
+    
+    public void setDiffuse(float r, float g, float b)
+    {
+        diffuse.set(0, r);
+        diffuse.set(1, g);
+        diffuse.set(2, b);
+        diffuse.set(3, 1f);
+    }
 }

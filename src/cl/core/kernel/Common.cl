@@ -29,6 +29,11 @@ void printInt(int i, bool newLine)
         printf("%2d  ", i);
 }
 
+void printlnInt(int i)
+{
+    printInt(i, true);
+}
+
 void printInt2(int2 v)
 {
    printf("%d, %d\n", v.x, v.y);
@@ -40,6 +45,15 @@ void printBoolean(bool value)
     printf(value ? "true \n" : "false \n");
 }
 
+int getMaterial(int data)
+{
+    return data & 0xFFFF;
+}
+
+int getGroup(int data)
+{
+    return (data >> 16) & 0xFFFF;
+}
 
 // camera info
 typedef struct
@@ -114,7 +128,8 @@ typedef struct
    float2 uv;
    int mat;
    int id;
-   int hit;           
+   int hit;    
+   float4 throughput;       
    float2 pixel;
 }Intersection;
 

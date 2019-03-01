@@ -21,11 +21,12 @@ import javafx.scene.input.TransferMode;
 public class MaterialVaultTreeCell  extends TreeCell<CustomData<MaterialT>>{
     public MaterialVaultTreeCell()
     {       
+        
         setOnDragDetected(e ->{            
             Dragboard db = startDragAndDrop(TransferMode.COPY);
             ClipboardContent content = new ClipboardContent();        
             MaterialVaultTreeCell cell = (MaterialVaultTreeCell)e.getSource();
-            
+           
             if(!cell.getTreeItem().isLeaf()) return;
             
             CustomData data = cell.getItem();

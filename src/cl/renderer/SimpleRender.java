@@ -12,11 +12,18 @@ import cl.core.Overlay;
 import cl.core.data.struct.CRay;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
+import cl.core.data.struct.CMaterial;
 import cl.core.device.RayDeviceMesh;
+import cl.ui.mvc.model.CustomData;
+import cl.ui.mvc.view.MaterialVaultTreeCell;
+import cl.ui.mvc.view.TargetTreeCell;
 import cl.ui.mvc.viewmodel.RenderViewModel;
 import coordinate.model.OrientationModel;
+import coordinate.parser.attribute.MaterialT;
 import coordinate.utility.Timer;
 import java.nio.file.Path;
+import javafx.geometry.Bounds;
+import javafx.scene.input.TransferMode;
 import thread.model.KernelThread;
 
 /**
@@ -50,10 +57,8 @@ public class SimpleRender extends KernelThread{
             bitmap.writeColor(buffer.array(), 0, 0, width, height);              
         });
         RenderViewModel.getDevice().readGroupBuffer(buffer-> {
-            RenderViewModel.overlay.copyToArray(buffer.array());            
-        });
-        
-        display.imageFillSelection(selectionBitmap);
+            RenderViewModel.overlay.copyToArray(buffer.array());              
+        });        
         display.imageFill(bitmap);
         
         
@@ -89,7 +94,62 @@ public class SimpleRender extends KernelThread{
             resumeKernel();
         });
         
+        
         init();
+        
+        
+        display.setOnDragOver(e -> {            
+            
+            Bounds imageViewInScreen = display.get("base").localToScreen(display.get("base").getBoundsInLocal());
+            double x = e.getScreenX() - imageViewInScreen.getMinX();
+            double y = e.getScreenY() - imageViewInScreen.getMinY();
+            
+            if(!(e.getGestureSource() instanceof MaterialVaultTreeCell))            
+                if(e.getDragboard().getContent(CustomData.getFormat()) instanceof CustomData)
+                {         
+                    if(RenderViewModel.overlay.isInstance(x, y))
+                        e.acceptTransferModes(TransferMode.COPY_OR_MOVE);             
+                }
+                       
+            int instance = RenderViewModel.overlay.get(x, y);
+            selectionBitmap = RenderViewModel.overlay.getDragOverlay(instance);
+            display.imageFillSelection(selectionBitmap);
+           
+        });
+        
+        display.setOnDragEntered(e -> {
+            Bounds imageViewInScreen = display.get("base").localToScreen(display.get("base").getBoundsInLocal());
+            double x = e.getScreenX() - imageViewInScreen.getMinX();
+            double y = e.getScreenY() - imageViewInScreen.getMinY();
+                       
+            int instance = RenderViewModel.overlay.get(x, y);
+            selectionBitmap = RenderViewModel.overlay.getDragOverlay(instance);
+            display.imageFillSelection(selectionBitmap);
+           
+        });
+                
+        display.setOnDragExited(e -> {
+            selectionBitmap = RenderViewModel.overlay.getNull();
+            display.imageFillSelection(selectionBitmap);
+        });
+        
+        display.setOnDragDropped(e -> {
+            Bounds imageViewInScreen = display.get("base").localToScreen(display.get("base").getBoundsInLocal());
+            double x = e.getScreenX() - imageViewInScreen.getMinX();
+            double y = e.getScreenY() - imageViewInScreen.getMinY();
+            
+            if(e.getGestureSource() instanceof TargetTreeCell)
+            {
+                CustomData data = (CustomData) e.getDragboard().getContent(CustomData.getFormat());
+                MaterialT mat = (MaterialT) data.getData();                
+                CMaterial cmat = new CMaterial();
+                int cmatIndex = RenderViewModel.overlay.get(x, y);
+                cmat.setDiffuse(mat.dr, mat.dg, mat.db);                
+                RenderViewModel.getDevice().setMaterial(cmatIndex, cmat);                
+                resumeKernel();
+            }
+        });
+        
                
         startKernel();
     }

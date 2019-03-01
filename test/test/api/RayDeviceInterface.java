@@ -7,6 +7,7 @@ package test.api;
 
 import cl.core.CBoundingBox;
 import cl.core.CCamera;
+import cl.core.data.struct.CMaterial;
 import java.net.URI;
 import java.nio.IntBuffer;
 import java.nio.file.Path;
@@ -34,9 +35,12 @@ public interface RayDeviceInterface {
     public void execute();
     
     public void readImageBuffer(String name, CallBackFunction<IntBuffer> callback);   
+    public void setMaterial(int index, CMaterial material);
+    public CMaterial getMaterial(int index);
     public void updateCamera();    
+    public CCamera getCamera(); 
     public int getTotalSize();    
     public CBoundingBox getBound(); 
-    public CCamera getCamera(); 
+    
    
 }
