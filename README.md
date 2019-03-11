@@ -26,7 +26,12 @@ A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drive
       - http://www.tut.fi/vga/publications/PLOCTree_A_Fast_High-Quality_Hardware_BVH_Builder.html
   - Fast Traversal & Build
     - GPU Ray Tracing using Irregular Grids (solves teapot in a stadium problem) - https://graphics.cg.uni-saarland.de/index.php?id=939
-    
+* Global illumination (Path tracing & BDPT)
+* Environment map
+  - Sunsky
+  - HDR
+  - Adaptive environment map sampling without use of portals - https://cgg.mff.cuni.cz/~jaroslav/papers/2018-adaptiveibl/index.htm
+* Intuitive and simple material editor
 * Scene Description
   - GL Transmission Format (glTF) as main scene format - https://github.com/KhronosGroup/glTF
   - Improve OBJ File format reading 
