@@ -35,3 +35,7 @@ A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drive
 * Scene Description
   - GL Transmission Format (glTF) as main scene format - https://github.com/KhronosGroup/glTF
   - Improve OBJ File format reading 
+    - Additional feature reading
+    - Multithreading based on ideas from:
+      - https://github.com/syoyo/tinyobjloader/blob/master/experimental/tinyobj_loader_opt.h
+      - https://github.com/antonmks/nvParse
