@@ -26,8 +26,16 @@ public class CBoundingBox extends Struct implements AbstractBound<CPoint3, CVect
         maximum.set(0, Float.NEGATIVE_INFINITY); maximum.set(1, Float.NEGATIVE_INFINITY); maximum.set(2, Float.NEGATIVE_INFINITY);         
     }
     
+    public CBoundingBox(CPoint3 min, CPoint3 max)
+    {
+        this();
+        include(min);
+        include(max);   
+       
+    }
+    
     @Override
-    public void include(CPoint3 p) {
+    public final void include(CPoint3 p) {
         if (p != null) {
             if (p.x < minimum.get(0))
                 minimum.set(0, p.x);

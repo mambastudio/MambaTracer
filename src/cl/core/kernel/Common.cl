@@ -1,7 +1,9 @@
 #define FLOATMAX  3.402823e+38
-#define FLOATMIN -3.402823e+38
+#define FLOATMIN -3.402823e+38   //kindly change the naming, since it means least positive zero
 #define HIT_MARKER 1
 #define MISS_MARKER 0
+
+#pragma OPENCL EXTENSION cl_amd_printf :enable
 
 // print float value
 void printFloat(float v)
@@ -444,4 +446,45 @@ bool intersectBoundT(Ray r, BoundingBox bound, float* t)
     t[1] = tmax;
     return ((tmin < r.tMax) && (tmax > r.tMin));
    //float tmax
+}
+
+
+
+/*
+     OpenCL 1.2 doesn't have atomic operations on floats...
+
+     -details well on implementation, and accomodates other operations
+        *https://stackoverflow.com/questions/18950732/atomic-max-for-floats-in-opencl
+     -simple but only for max and min, which I've adopted here
+        *https://ingowald.blog/2018/06/24/float-atomics-in-opencl/
+*/
+
+//Function to perform the atomic max
+inline void atomicMax(volatile __global float *source, float operand) {
+    union {
+           unsigned int u32;
+           float        f32;
+       } next, expected, current;
+   	current.f32    = *source;
+       do {
+   	   expected.f32 = current.f32;
+           next.f32     = max(expected.f32, operand);
+   		current.u32  = atomic_cmpxchg( (volatile __global unsigned int *)source,
+                               expected.u32, next.u32);
+       } while( current.u32 != expected.u32 );
+}
+
+//Function to perform the atomic min
+inline void atomicMin(volatile __global float *source, float operand) {
+   union {
+           unsigned int u32;
+           float        f32;
+       } next, expected, current;
+   	current.f32    = *source;
+       do {
+   	   expected.f32 = current.f32;
+           next.f32     = min(expected.f32, operand);
+   		current.u32  = atomic_cmpxchg( (volatile __global unsigned int *)source,
+                               expected.u32, next.u32);
+       } while( current.u32 != expected.u32 );
 }

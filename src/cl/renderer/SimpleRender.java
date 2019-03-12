@@ -23,6 +23,7 @@ import coordinate.parser.attribute.MaterialT;
 import coordinate.utility.Timer;
 import java.nio.file.Path;
 import javafx.geometry.Bounds;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.TransferMode;
 import thread.model.KernelThread;
 
@@ -42,6 +43,8 @@ public class SimpleRender extends KernelThread{
     BitmapARGB selectionBitmap;
        
     StaticDisplay display;
+    
+    int currentinstance = -2;
     
     
     OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
@@ -112,25 +115,24 @@ public class SimpleRender extends KernelThread{
                 }
                        
             int instance = RenderViewModel.overlay.get(x, y);
-            selectionBitmap = RenderViewModel.overlay.getDragOverlay(instance);
-            display.imageFillSelection(selectionBitmap);
+            
+            //since if we paint in every mouse movement, 
+            //it will be expensive in a slow processor, 
+            //hence we avoid such a situation.
+            //It would still work if we neglet such a concern!!
+            if(currentinstance != instance) 
+            {
+                currentinstance = instance;
+                selectionBitmap = RenderViewModel.overlay.getDragOverlay(instance);
+                display.imageFillSelection(selectionBitmap);
+            }
            
         });
-        
-        display.setOnDragEntered(e -> {
-            Bounds imageViewInScreen = display.get("base").localToScreen(display.get("base").getBoundsInLocal());
-            double x = e.getScreenX() - imageViewInScreen.getMinX();
-            double y = e.getScreenY() - imageViewInScreen.getMinY();
-                       
-            int instance = RenderViewModel.overlay.get(x, y);
-            selectionBitmap = RenderViewModel.overlay.getDragOverlay(instance);
-            display.imageFillSelection(selectionBitmap);
-           
-        });
-                
+                             
         display.setOnDragExited(e -> {
             selectionBitmap = RenderViewModel.overlay.getNull();
             display.imageFillSelection(selectionBitmap);
+            currentinstance = -2;
         });
         
         display.setOnDragDropped(e -> {
@@ -148,6 +150,27 @@ public class SimpleRender extends KernelThread{
                 RenderViewModel.getDevice().setMaterial(cmatIndex, cmat);                
                 resumeKernel();
             }
+        });
+        
+        display.get("base").setOnMousePressed(e -> {
+            if(e.getButton().equals(MouseButton.PRIMARY)){
+                if(e.getClickCount() == 2){
+                    
+                    Bounds imageViewInScreen = display.get("base").localToScreen(display.get("base").getBoundsInLocal());
+                    double x = e.getScreenX() - imageViewInScreen.getMinX();
+                    double y = e.getScreenY() - imageViewInScreen.getMinY();
+                    
+                    int instance = RenderViewModel.overlay.get(x, y);
+                    //System.out.println(instance);
+                    if(instance > -1)
+                    {
+                        CBoundingBox bound = RenderViewModel.getDevice().getGroupBound(instance);
+                        RenderViewModel.getDevice().reposition(bound);
+                        this.resumeKernel();                       
+                    }
+                }
+            }
+            
         });
         
                

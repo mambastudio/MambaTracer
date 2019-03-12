@@ -51,6 +51,10 @@ public class RayDeviceMesh {
     CIntBuffer imageBuffer = null;
     CIntBuffer groupBuffer = null;
     
+    //group index an bound
+    CIntBuffer groupIndex = null;
+    CFloatBuffer groupBound = null;
+    
     //viewport variables
     CStructBuffer<CCamera.CameraStruct> cameraBuffer = null;
     CIntBuffer width = null;
@@ -73,6 +77,7 @@ public class RayDeviceMesh {
     CKernel fastShadeKernel = null;
     CKernel updateShadeImageKernel = null;
     CKernel groupBufferPassKernel = null;
+    CKernel findBoundKernel = null;
     
     //mesh
     CFloatBuffer points = null;
@@ -107,6 +112,8 @@ public class RayDeviceMesh {
         this.width              = CBufferFactory.initIntValue("width", configuration.context(), configuration.queue(), width, READ_ONLY);
         this.height             = CBufferFactory.initIntValue("height", configuration.context(), configuration.queue(), height, READ_ONLY);
         this.count              = CBufferFactory.initIntValue("count", configuration.context(), configuration.queue(), 0, READ_WRITE);
+        this.groupIndex         = CBufferFactory.initIntValue("groupIndex", configuration.context(), configuration.queue(), 0, READ_ONLY);
+        this.groupBound         = CBufferFactory.allocFloat("groupBound", configuration.context(), 6 , READ_WRITE);
                 
         //read mesh and position camera
         initDefaultMesh();  
@@ -126,7 +133,6 @@ public class RayDeviceMesh {
         
         //Load scene material and group to ui
         RenderViewModel.setSceneMaterial(mesh.getMaterialList());
-        RenderViewModel.setSceneGroup(mesh.getGroupList());
         
         //Time building
         Timer buildTime = Timer.timeThis(() -> mesh.buildAccelerator());
@@ -149,6 +155,7 @@ public class RayDeviceMesh {
         fastShadeKernel = configuration.program().createKernel("fastShade", materialBuffer, isectBuffer);        
         updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", imageBuffer, width, height, isectBuffer);        
         groupBufferPassKernel = configuration.program().createKernel("groupBufferPass", isectBuffer, groupBuffer);
+        findBoundKernel = configuration.program().createKernel("findBound", groupIndex, points, faces, size, groupBound);
         
         
         //update the kernels here
@@ -163,6 +170,7 @@ public class RayDeviceMesh {
        configuration.queue().put1DRangeKernel(fastShadeKernel, globalSize, localSize);
        configuration.queue().put1DRangeKernel(updateShadeImageKernel, globalSize, localSize);  
        configuration.queue().put1DRangeKernel(groupBufferPassKernel, globalSize, localSize);
+       
        /*
          Why implementing this makes opencl run faster?
          Probable answer is this... https://stackoverflow.com/questions/18471170/commenting-clfinish-out-makes-program-100-faster
@@ -196,6 +204,35 @@ public class RayDeviceMesh {
     public CBoundingBox getBound()
     {
         return bvhBuild.getBound();
+    }
+    
+    public CBoundingBox getGroupBound(int value)
+    {
+        groupBound.mapWriteBuffer(configuration.queue(), buffer -> {
+           buffer.put(new float[]{Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY});
+       });
+        groupIndex.setArray(configuration.queue(), value);
+       
+       configuration.queue().put1DRangeKernel(findBoundKernel, size.get(0), 1);
+       configuration.queue().finish(); // not really necessary
+       
+       CPoint3 min = new CPoint3();
+       CPoint3 max = new CPoint3();
+       
+       groupBound.mapReadBuffer(configuration.queue(), buffer -> {           
+           min.x = buffer.get(0); min.y = buffer.get(1); min.z = buffer.get(2);
+           max.x = buffer.get(3); max.y = buffer.get(4); max.z = buffer.get(5);   
+           
+           //System.out.println(String.format("(%8.2f, %8.2f, %8.2f) to (%8.2f, %8.2f, %8.2f)", buffer.get(0), buffer.get(1), buffer.get(2), buffer.get(3), buffer.get(4), buffer.get(5)));
+           
+       });       
+       return new CBoundingBox(min, max);
+    }
+    
+    public void reposition(CBoundingBox box)
+    {
+        OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
+        orientation.repositionLocation(camera, box);
     }
     
     private void initDefaultMesh()
@@ -233,8 +270,7 @@ public class RayDeviceMesh {
         OBJParser parser = new OBJParser();
         //parser.readString(cube, mesh);
         parser.readString(cube, mesh);
-        RenderViewModel.setSceneMaterial(mesh.getMaterialList());
-        RenderViewModel.setSceneGroup(mesh.getGroupList());
+        RenderViewModel.setSceneMaterial(mesh.getMaterialList());        
         mesh.buildAccelerator();
         OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
         orientation.reposition(camera, mesh.getBound());
@@ -256,5 +292,6 @@ public class RayDeviceMesh {
         fastShadeKernel = configuration.program().createKernel("fastShade", materialBuffer, isectBuffer);
         updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", imageBuffer, width, height, isectBuffer);
         groupBufferPassKernel = configuration.program().createKernel("groupBufferPass", isectBuffer, groupBuffer);
+        findBoundKernel = configuration.program().createKernel("findBound", groupIndex, points, faces, size, groupBound);
     }
 }

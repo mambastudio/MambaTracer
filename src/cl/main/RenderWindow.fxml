@@ -2,20 +2,29 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ColorPicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.Spinner?>
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.control.TreeView?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.RowConstraints?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
@@ -66,13 +75,13 @@
             </TabPane>
          </center>
          <left>
-            <HBox prefHeight="758.0" prefWidth="378.0" BorderPane.alignment="CENTER">
+            <HBox prefHeight="669.0" prefWidth="338.0" BorderPane.alignment="CENTER">
                <children>
-                  <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="758.0" prefWidth="381.0" side="LEFT" tabClosingPolicy="UNAVAILABLE">
+                  <TabPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="669.0" prefWidth="336.0" side="LEFT" tabClosingPolicy="UNAVAILABLE">
                     <tabs>
                         <Tab text="Materials">
                            <content>
-                              <SplitPane dividerPositions="0.4757834757834758" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0">
+                              <SplitPane dividerPositions="0.515695067264574" orientation="VERTICAL" prefHeight="200.0" prefWidth="160.0">
                                  <items>
                                     <VBox prefHeight="200.0" prefWidth="100.0">
                                        <children>
@@ -84,15 +93,11 @@
                                           <TreeView fx:id="treeViewScene" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
                                           <HBox prefHeight="22.0" prefWidth="343.0" spacing="5.0">
                                              <children>
-                                                <Button mnemonicParsing="false" onAction="#resetSceneTreeMaterial" prefHeight="25.0" prefWidth="49.0" text="CTM">
+                                                <Button mnemonicParsing="false" onAction="#resetSceneTreeMaterial" prefHeight="25.0" prefWidth="55.0" text="Clear">
                                                    <tooltip>
                                                       <Tooltip text="Clear Tree Material" />
                                                    </tooltip></Button>
-                                                <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="49.0" text="RTM">
-                                                   <tooltip>
-                                                      <Tooltip text="Reload Tree Material" />
-                                                   </tooltip>
-                                                </Button>
+                                                <Button mnemonicParsing="false" text="Reload" />
                                              </children>
                                              <VBox.margin>
                                                 <Insets bottom="2.0" left="2.0" top="2.0" />
@@ -118,6 +123,152 @@
                                     </VBox>
                                  </items>
                               </SplitPane>
+                           </content>
+                        </Tab>
+                        <Tab text="BRDF Editor">
+                           <content>
+                              <VBox>
+                                 <children>
+                                    <ScrollPane>
+                                       <content>
+                                          <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" opacity="0.94" prefHeight="684.0" prefWidth="295.0" spacing="5.0">
+                                             <children>
+                                                <GridPane alignment="TOP_CENTER">
+                                                   <columnConstraints>
+                                                      <ColumnConstraints hgrow="ALWAYS" maxWidth="118.0" minWidth="10.0" prefWidth="110.0" />
+                                                      <ColumnConstraints fillWidth="false" hgrow="ALWAYS" maxWidth="153.0" minWidth="10.0" prefWidth="135.0" />
+                                                   </columnConstraints>
+                                                   <rowConstraints>
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
+                                                   </rowConstraints>
+                                                   <children>
+                                                      <Label text="Name">
+                                                         <font>
+                                                            <Font name="System Bold" size="12.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <TextField prefHeight="25.0" prefWidth="154.0" GridPane.columnIndex="1" />
+                                                   </children>
+                                                </GridPane>
+                                                <Separator prefWidth="200.0" />
+                                                <GridPane alignment="TOP_CENTER" prefHeight="141.0" prefWidth="245.0">
+                                                   <columnConstraints>
+                                                      <ColumnConstraints hgrow="ALWAYS" maxWidth="118.0" minWidth="10.0" prefWidth="110.0" />
+                                                      <ColumnConstraints fillWidth="false" hgrow="ALWAYS" maxWidth="153.0" minWidth="10.0" prefWidth="135.0" />
+                                                   </columnConstraints>
+                                                   <rowConstraints>
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="ALWAYS" />
+                                                   </rowConstraints>
+                                                   <children>
+                                                      <Label text="Color" GridPane.rowIndex="1" />
+                                                      <ColorPicker maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="30.0" prefWidth="152.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="1" />
+                                                      <Label text="Diffuse">
+                                                         <font>
+                                                            <Font name="System Bold" size="12.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <Label text="Weight" GridPane.rowIndex="2" />
+                                                      <Slider max="1.0" prefHeight="43.0" prefWidth="135.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                                      <Label prefHeight="17.0" prefWidth="60.0" text="Label" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                                                   </children>
+                                                </GridPane>
+                                                <Separator prefWidth="200.0" />
+                                                <GridPane alignment="TOP_CENTER" prefHeight="193.0" prefWidth="245.0">
+                                                   <columnConstraints>
+                                                      <ColumnConstraints hgrow="SOMETIMES" maxWidth="118.0" minWidth="10.0" prefWidth="110.0" />
+                                                      <ColumnConstraints hgrow="SOMETIMES" maxWidth="153.0" minWidth="10.0" prefWidth="135.0" />
+                                                   </columnConstraints>
+                                                   <rowConstraints>
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                   </rowConstraints>
+                                                   <children>
+                                                      <Label text="Color" GridPane.rowIndex="1" />
+                                                      <ColorPicker prefHeight="25.0" prefWidth="245.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                                      <Label text="Exponential u" GridPane.rowIndex="2" />
+                                                      <Label text="Exponential v" GridPane.rowIndex="3" />
+                                                      <Spinner prefHeight="25.0" prefWidth="274.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                                      <Spinner prefHeight="25.0" prefWidth="342.0" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                                                      <Label text="Reflection">
+                                                         <font>
+                                                            <Font name="System Bold" size="12.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <Label text="Weight" GridPane.rowIndex="4" />
+                                                      <Slider max="1.0" prefHeight="43.0" prefWidth="135.0" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                                                      <Label prefHeight="17.0" prefWidth="60.0" text="Label" GridPane.columnIndex="1" GridPane.rowIndex="5" />
+                                                   </children>
+                                                </GridPane>
+                                                <Separator prefWidth="200.0" />
+                                                <GridPane alignment="TOP_CENTER">
+                                                   <columnConstraints>
+                                                      <ColumnConstraints hgrow="SOMETIMES" maxWidth="118.0" minWidth="10.0" prefWidth="110.0" />
+                                                      <ColumnConstraints hgrow="SOMETIMES" maxWidth="153.0" minWidth="10.0" prefWidth="135.0" />
+                                                   </columnConstraints>
+                                                   <rowConstraints>
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                   </rowConstraints>
+                                                   <children>
+                                                      <Label text="IOR" GridPane.rowIndex="1" />
+                                                      <Spinner prefHeight="25.0" prefWidth="352.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                                      <Label text="Refraction">
+                                                         <font>
+                                                            <Font name="System Bold" size="12.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <CheckBox mnemonicParsing="false" text="Enable" GridPane.columnIndex="1" />
+                                                   </children>
+                                                </GridPane>
+                                                <Separator prefWidth="200.0" />
+                                                <GridPane alignment="TOP_CENTER">
+                                                   <columnConstraints>
+                                                      <ColumnConstraints hgrow="SOMETIMES" maxWidth="118.0" minWidth="10.0" prefWidth="110.0" />
+                                                      <ColumnConstraints hgrow="SOMETIMES" maxWidth="153.0" minWidth="10.0" prefWidth="135.0" />
+                                                   </columnConstraints>
+                                                   <rowConstraints>
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                   </rowConstraints>
+                                                   <children>
+                                                      <Label text="Color" GridPane.rowIndex="1" />
+                                                      <Label text="Emitter">
+                                                         <font>
+                                                            <Font name="System Bold" size="12.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <ColorPicker prefHeight="25.0" prefWidth="404.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                                      <Label text="Power" GridPane.rowIndex="2" />
+                                                      <Spinner prefHeight="25.0" prefWidth="476.0" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                                      <CheckBox mnemonicParsing="false" text="Enable" GridPane.columnIndex="1" />
+                                                   </children>
+                                                </GridPane>
+                                             </children>
+                                             <padding>
+                                                <Insets bottom="5.0" left="3.0" right="3.0" top="5.0" />
+                                             </padding>
+                                          </VBox>
+                                       </content>
+                                    </ScrollPane>
+                                    <HBox prefHeight="31.0" prefWidth="303.0" spacing="5.0">
+                                       <children>
+                                          <Button mnemonicParsing="false" text="Accept" />
+                                          <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="53.0" text="Cancel" />
+                                       </children>
+                                       <padding>
+                                          <Insets bottom="3.0" left="5.0" top="3.0" />
+                                       </padding>
+                                    </HBox>
+                                 </children>
+                              </VBox>
                            </content>
                         </Tab>
                       <Tab text="Statistics">
@@ -166,6 +317,25 @@
                </children>
             </HBox>
          </left>
+         <bottom>
+            <HBox prefHeight="33.0" prefWidth="1153.0" spacing="5.0" BorderPane.alignment="CENTER">
+               <children>
+                  <CheckBox mnemonicParsing="false" text="Refresh Every" />
+                  <Spinner>
+                     <HBox.margin>
+                        <Insets />
+                     </HBox.margin>
+                  </Spinner>
+                  <Label text="Seconds" />
+               </children>
+               <BorderPane.margin>
+                  <Insets />
+               </BorderPane.margin>
+               <padding>
+                  <Insets left="5.0" top="5.0" />
+               </padding>
+            </HBox>
+         </bottom>
       </BorderPane>
    </children>
 </StackPane>
