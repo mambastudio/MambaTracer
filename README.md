@@ -27,6 +27,8 @@ A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drive
   - Fast Traversal & Build
     - GPU Ray Tracing using Irregular Grids (solves teapot in a stadium problem) - https://graphics.cg.uni-saarland.de/index.php?id=939
 * Global illumination (Path tracing & BDPT)
+  - Best implementation I've come across - https://github.com/SmallVCM/SmallVCM
+  - Light Vertex Cache for GPU implementation of BDPT - https://cgg.mff.cuni.cz/~jaroslav/papers/2014-gpult/index.htm
 * Environment map
   - Sunsky
   - HDR
@@ -35,3 +37,7 @@ A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drive
 * Scene Description
   - GL Transmission Format (glTF) as main scene format - https://github.com/KhronosGroup/glTF
   - Improve OBJ File format reading 
+    - Additional feature reading
+    - Multithreading based on ideas from:
+      - https://github.com/syoyo/tinyobjloader/blob/master/experimental/tinyobj_loader_opt.h
+      - https://github.com/antonmks/nvParse
