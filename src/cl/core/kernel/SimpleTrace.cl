@@ -38,6 +38,7 @@ __kernel void intersectPrimitives(
 
     //mesh
     global const float4* points,
+    global const float4* normals,
     global const Face*   faces,
     global const int*    size,
 
@@ -52,7 +53,7 @@ __kernel void intersectPrimitives(
     //get ray, create both isect and mesh
     global Ray* ray = rays + id;
     global Intersection* isect = isects + id;
-    TriangleMesh mesh = {points, faces, size[0]};
+    TriangleMesh mesh = {points, normals, faces, size[0]};
 
     //intersect and update hit and update isect
     bool hit = intersectGlobal(ray, isect, mesh, nodes, bounds);
@@ -122,6 +123,7 @@ __kernel void findBound(
 
      //mesh
     global const float4* points,
+    global const float4* normals,
     global const Face*   faces,
     global const int*    size,
 
@@ -133,7 +135,7 @@ __kernel void findBound(
     int id= get_global_id( 0 );
 
     //Scene mesh
-    TriangleMesh mesh = {points, faces, size[0]};
+    TriangleMesh mesh = {points, normals, faces, size[0]};
 
     //Get face at id
     global Face * face = faces + id;

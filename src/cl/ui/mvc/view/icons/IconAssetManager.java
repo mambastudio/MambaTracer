@@ -21,9 +21,9 @@ public class IconAssetManager {
         if(material == null)
             return FileIconManager.getIcon(IconAssetManager.class, "questionmark20x20.png");
         else if(material.isEmitter())
-            return new Circle(10, new Color(material.er, material.eg, material.eb, 1));
+            return new Circle(10, new Color(material.emitter.r, material.emitter.g, material.emitter.b, 1));
         else
-            return new Circle(10, new Color(material.dr, material.dg, material.db, 1));
+            return new Circle(10, new Color(material.diffuse.r, material.diffuse.g, material.diffuse.b, 1));
     }
     public static Node getGroupIcon()            
     {

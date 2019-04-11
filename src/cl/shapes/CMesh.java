@@ -156,6 +156,11 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
         return CBufferFactory.wrapFloat(name, context, queue, getPointArray(), READ_ONLY);          
     }
     
+    public CFloatBuffer getCLNormalsBuffer(String name, CContext context, CCommandQueue queue)
+    {        
+        return CBufferFactory.wrapFloat(name, context, queue, getNormalArray(), READ_ONLY);          
+    }
+    
     public CIntBuffer getCLFacesBuffer(String name, CContext context, CCommandQueue queue)
     {
         return CBufferFactory.wrapInt(name, context, queue, getTriangleFacesArray(), READ_ONLY);
@@ -173,7 +178,7 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
             for(int i = 0; i<materialArray.length; i++)
             {
                 MaterialT mat = this.getMaterialList().get(i);                 
-                materialArray[i].setDiffuse(mat.dr, mat.dg, mat.db);   
+                materialArray[i].setMaterial(mat);   
                 
             }
         });

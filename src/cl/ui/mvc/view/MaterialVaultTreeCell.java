@@ -17,6 +17,9 @@ import javafx.scene.input.TransferMode;
 /**
  *
  * @author user
+ * 
+ * http://jaypthakkar.blogspot.com/2013/11/javafx-updating-item-in-tableview.html
+ * 
  */
 public class MaterialVaultTreeCell  extends TreeCell<CustomData<MaterialT>>{
     public MaterialVaultTreeCell()
@@ -49,6 +52,7 @@ public class MaterialVaultTreeCell  extends TreeCell<CustomData<MaterialT>>{
         
         else
         {
+            
             if(getTreeItem().getParent() == null)
                 setGraphic(FileIconManager.getIcon("home"));
             else if(getTreeItem().getChildren().size() > 0)

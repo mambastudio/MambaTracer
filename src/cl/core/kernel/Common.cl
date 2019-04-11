@@ -87,6 +87,7 @@ typedef struct
 typedef struct
 {
     global float4       const*  points;
+    global float4       const*  normals;
     global Face         const*  faces;
     int                         size;
 
@@ -164,6 +165,33 @@ float4 getP3(TriangleMesh mesh, int primID)
 {
    Face face  = mesh.faces[primID];
    return mesh.points[face.vz];
+}
+
+// normal 1 in mesh
+float4 getN1(TriangleMesh mesh, int primID)
+{
+   Face face  = mesh.faces[primID];
+   return mesh.normals[face.nx];
+}
+
+// normal 2 in mesh
+float4 getN2(TriangleMesh mesh, int primID)
+{
+   Face face  = mesh.faces[primID];
+   return mesh.normals[face.ny];
+}
+
+// normal 3 in mesh
+float4 getN3(TriangleMesh mesh, int primID)
+{
+   Face face  = mesh.faces[primID];
+   return mesh.normals[face.nz];
+}
+
+bool hasNormals(TriangleMesh mesh, int primID)
+{
+   Face face  = mesh.faces[primID];
+   return face.nx > -1; 
 }
 
 float4 getCenterOfBoundingBox(BoundingBox bound)

@@ -12,6 +12,8 @@ import cl.ui.mvc.viewmodel.RenderViewModel;
 import cl.ui.mvc.model.CustomData;
 import cl.ui.mvc.view.MaterialVaultTreeCell;
 import cl.ui.mvc.view.TargetTreeCell;
+import com.sun.javafx.scene.control.skin.LabeledText;
+import coordinate.parser.attribute.MaterialT;
 import filesystem.core.OutputFactory;
 import filesystem.util.FileChooserManager;
 import filesystem.util.FileUtility;
@@ -25,14 +27,26 @@ import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.Slider;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import thread.model.LambdaThread;
@@ -75,6 +89,51 @@ public class RenderWindowController implements Initializable {
     
     @FXML
     Button openButton;
+    
+    //MaterialEditor
+    @FXML
+    TextField nameTextField;
+    @FXML
+    ColorPicker diffuseColorPicker;
+    @FXML
+    Slider diffuseWeightSlider;
+    @FXML
+    Label diffuseWeightLabel;
+        
+    @FXML
+    ColorPicker reflectionColorPicker;
+    @FXML
+    Spinner<Double> exponentialU;
+    @FXML
+    Spinner<Double> exponentialV;
+    @FXML
+    Spinner<Double> iorSpinner;
+    
+    @FXML
+    ColorPicker emitterColorPicker;
+    @FXML
+    Spinner<Double> emitterPowerSpinner;
+    
+    @FXML
+    GridPane diffuseGridPane;
+    @FXML
+    GridPane reflectionGridPane;
+    @FXML
+    GridPane refractionGridPane;
+    
+    @FXML
+    CheckBox refractionEnabled;
+    @FXML
+    CheckBox emitterEnabled;
+    
+    
+    //Tab section
+    @FXML
+    TabPane tPane;
+    @FXML
+    Tab brdfTab;
+    @FXML
+    Tab matsTab;
         
     private final StaticDisplay display = new StaticDisplay();
     private final SimpleRender render = new SimpleRender();
@@ -87,9 +146,46 @@ public class RenderWindowController implements Initializable {
         RenderViewModel.initMaterialTreeData(treeViewMaterial);
         RenderViewModel.initSceneTreeData(treeViewScene);
         
-        //Set cell renderer for tree cell
-        treeViewScene.setCellFactory(m -> new TargetTreeCell());        
-        treeViewMaterial.setCellFactory(m -> new MaterialVaultTreeCell());  
+        //Set cell renderer for tree cell       
+        treeViewScene.setCellFactory(m -> new TargetTreeCell());                 
+        treeViewScene.setOnMouseClicked(e -> { //this selection is for cell material leaf only
+            if(e.getClickCount() == 2)
+            {                
+                Node node = e.getPickResult().getIntersectedNode();
+                if(node instanceof TargetTreeCell)
+                {
+                    TargetTreeCell tCell = (TargetTreeCell)node;
+                    if(tCell.getTreeItem() != null)
+                    {
+                        TreeItem item = tCell.getTreeItem(); 
+                        if(item.isLeaf())
+                        {
+                            CustomData data = (CustomData) item.getValue();
+                            MaterialT mat = (MaterialT) data.getData();
+                            RenderViewModel.materialEditorModel.initMaterial(mat);
+                            RenderViewModel.cmat = data;
+                            tPane.getSelectionModel().select(brdfTab);
+                        }
+                    }
+                }
+                else if(node instanceof Circle || node instanceof LabeledText)
+                {
+                    
+                    TreeItem item = (TreeItem) treeViewScene.getSelectionModel().getSelectedItem();
+                    if(item.isLeaf())
+                    {
+                        CustomData data = (CustomData) item.getValue();
+                        MaterialT mat = (MaterialT) data.getData();
+                        RenderViewModel.materialEditorModel.initMaterial(mat);
+                        RenderViewModel.cmat = data;
+                        tPane.getSelectionModel().select(brdfTab);
+                    }
+                }
+                //else
+                //    System.out.println(node);
+            }
+        });
+        treeViewMaterial.setCellFactory(m -> new MaterialVaultTreeCell());       
         initDragAndDrop();
         
         //Set Console
@@ -133,6 +229,33 @@ public class RenderWindowController implements Initializable {
         pauseButton.setGraphic(IconAssetManager.getPauseIcon());
         stopButton.setGraphic(IconAssetManager.getStopIcon());
         
+        //Editor register
+        RenderViewModel.materialEditorModel.registerNameTextField(nameTextField);
+        
+        RenderViewModel.materialEditorModel.registerDiffuseColorPicker(diffuseColorPicker);
+        RenderViewModel.materialEditorModel.registerDiffuseWeightSlider(diffuseWeightSlider);
+        RenderViewModel.materialEditorModel.registerDiffuseWeightLabel(diffuseWeightLabel);
+         
+        RenderViewModel.materialEditorModel.registerReflectionColorPicker(reflectionColorPicker);
+        RenderViewModel.materialEditorModel.registerExponentialUSpinner(exponentialU);
+        RenderViewModel.materialEditorModel.registerExponentialVSpinner(exponentialV);
+        RenderViewModel.materialEditorModel.registerRefractionEnabled(refractionEnabled);
+        RenderViewModel.materialEditorModel.registerIORSpinner(iorSpinner);
+        
+        RenderViewModel.materialEditorModel.registerEmitterColorPicker(emitterColorPicker);
+        RenderViewModel.materialEditorModel.registerEmitterPowerSpinner(emitterPowerSpinner);
+        RenderViewModel.materialEditorModel.registerEmitterEnabled(emitterEnabled);
+        
+        RenderViewModel.materialEditorModel.initMaterial(new MaterialT());
+        
+        //gui to gui component interaction
+        diffuseGridPane.disableProperty().bind(emitterEnabled.selectedProperty());
+        reflectionGridPane.disableProperty().bind(emitterEnabled.selectedProperty());
+        refractionGridPane.disableProperty().bind(emitterEnabled.selectedProperty());
+        emitterColorPicker.disableProperty().bind(emitterEnabled.selectedProperty().not());
+        emitterPowerSpinner.disableProperty().bind(emitterEnabled.selectedProperty().not());
+        
+        iorSpinner.disableProperty().bind(refractionEnabled.selectedProperty().not());
         
         //Init rest of gui
         pane.setCenter(display);        
@@ -202,5 +325,15 @@ public class RenderWindowController implements Initializable {
     public void resetSceneTreeMaterial(ActionEvent e)
     {
         RenderViewModel.clearSceneMaterial();
+    }
+    
+    public void backToMaterialsTab(ActionEvent e)
+    {
+        tPane.getSelectionModel().select(matsTab);
+    }
+    
+    public void acceptEditedMaterial(ActionEvent e)
+    {
+        RenderViewModel.cmat.setMaterial(RenderViewModel.materialEditorModel.getEditedMaterial());
     }
 }

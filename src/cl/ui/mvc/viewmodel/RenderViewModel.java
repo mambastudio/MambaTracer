@@ -5,6 +5,7 @@
  */
 package cl.ui.mvc.viewmodel;
 
+import cl.core.CMaterialInterface;
 import cl.core.Overlay;
 import cl.core.device.RayDeviceMesh;
 import cl.ui.mvc.model.CustomData;
@@ -30,6 +31,10 @@ public class RenderViewModel
     private static TreeItem<CustomData<MaterialT>> materialRoot = null;    
     private static TreeItem<CustomData<MaterialT>> diffuseTreeItem = null;
     private static TreeItem<CustomData<MaterialT>> emitterTreeItem = null;
+    
+    //MaterialEditorModel
+    public static MaterialEditorModel materialEditorModel = new MaterialEditorModel();
+    public static CMaterialInterface cmat = null;
     
     public static Overlay overlay = null;
     
@@ -61,13 +66,13 @@ public class RenderViewModel
         materialRoot.getChildren().add(diffuseTreeItem); 
         materialRoot.getChildren().add(emitterTreeItem);
                 
-        diffuseTreeItem.getChildren().add(new TreeItem(new CustomData<>("Blue" , new MaterialT(0, 0, 1))));
-        diffuseTreeItem.getChildren().add(new TreeItem(new CustomData<>("Red"  , new MaterialT(1, 0, 0))));
-        diffuseTreeItem.getChildren().add(new TreeItem(new CustomData<>("Green", new MaterialT(0, 1, 0))));
+        diffuseTreeItem.getChildren().add(new TreeItem(new CustomData<>("Blue" , new MaterialT("Blue", 0, 0, 1))));
+        diffuseTreeItem.getChildren().add(new TreeItem(new CustomData<>("Red"  , new MaterialT("Red", 1, 0, 0))));
+        diffuseTreeItem.getChildren().add(new TreeItem(new CustomData<>("Green", new MaterialT("Green", 0, 1, 0))));
         
-        emitterTreeItem.getChildren().add(new TreeItem(new CustomData<>("10 kW", new MaterialT(0, 0, 0, 0.9f, 0.9f, 0.9f))));
-        emitterTreeItem.getChildren().add(new TreeItem(new CustomData<>("20 kW", new MaterialT(0, 0, 0, 0.9f, 0.9f, 0.9f))));
-        emitterTreeItem.getChildren().add(new TreeItem(new CustomData<>("30 kW", new MaterialT(0, 0, 0, 0.9f, 0.9f, 0.9f))));
+        emitterTreeItem.getChildren().add(new TreeItem(new CustomData<>("10 kW", new MaterialT("10 kW", 0, 0, 0, 0.9f, 0.9f, 0.9f))));
+        emitterTreeItem.getChildren().add(new TreeItem(new CustomData<>("20 kW", new MaterialT("20 kW", 0, 0, 0, 0.9f, 0.9f, 0.9f))));
+        emitterTreeItem.getChildren().add(new TreeItem(new CustomData<>("30 kW", new MaterialT("30 kW", 0, 0, 0, 0.9f, 0.9f, 0.9f))));
         
         materialRoot.setExpanded(true);
         diffuseTreeItem.setExpanded(true);

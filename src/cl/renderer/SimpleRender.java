@@ -131,7 +131,7 @@ public class SimpleRender extends KernelThread{
                              
         display.setOnDragExited(e -> {
             selectionBitmap = RenderViewModel.overlay.getNull();
-            display.imageFillSelection(selectionBitmap);
+            display.imageFillSelection(selectionBitmap);            
             currentinstance = -2;
         });
         
@@ -145,8 +145,8 @@ public class SimpleRender extends KernelThread{
                 CustomData data = (CustomData) e.getDragboard().getContent(CustomData.getFormat());
                 MaterialT mat = (MaterialT) data.getData();                
                 CMaterial cmat = new CMaterial();
-                int cmatIndex = RenderViewModel.overlay.get(x, y);
-                cmat.setDiffuse(mat.dr, mat.dg, mat.db);                
+                int cmatIndex = RenderViewModel.overlay.get(x, y);    
+                cmat.setMaterial(mat);
                 RenderViewModel.getDevice().setMaterial(cmatIndex, cmat);                
                 resumeKernel();
             }

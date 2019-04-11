@@ -46,11 +46,28 @@ bool intersectTriangleGlobal(global Ray* r, global Intersection* isect, Triangle
    float4 p1 = getP1(mesh, primID);
    float4 p2 = getP2(mesh, primID);
    float4 p3 = getP3(mesh, primID);
-   float4 n  = getNormal(p1, p2, p3);
+
    float tuv[3];
    
    if(mollerTriangleIntersectionGlobal(r, tuv, p1, p2, p3))
    {
+
+      //n1.mul(1 - uv.x - uv.y).add(n2.mul(uv.x).add(n3.mul(uv.y)));
+      //n = n1 * (1 - tuv[1] - tuv[2]) + (n2 * tuv[1] + n3 * tuv[2]);
+      float4 n;
+
+      if(hasNormals(mesh, primID))
+      {
+          float4 n1 = getN1(mesh, primID);
+          float4 n2 = getN2(mesh, primID);
+          float4 n3 = getN3(mesh, primID);
+         //printFloat(tuv[2]);
+
+          n = n1 * (1 - tuv[1] - tuv[2]) + n2 * tuv[1] + n3 * tuv[2];
+      }
+      else
+          n  = getNormal(p1, p2, p3);
+
       //set values
       r->tMax = tuv[0];
       isect->p = getPoint(*r, tuv[0]);
