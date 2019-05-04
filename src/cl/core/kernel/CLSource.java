@@ -14,12 +14,13 @@ import wrapper.util.CLFileReader;
 public class CLSource {
     public static String[] readFiles()
     {
-        String source1 = CLFileReader.readFile(CLSource.class, "Common.cl");
-        String source2 = CLFileReader.readFile(CLSource.class, "Matrix4f.cl");
-        String source3 = CLFileReader.readFile(CLSource.class, "Material.cl");
-        String source4 = CLFileReader.readFile(CLSource.class, "Primitive.cl");
-        String source5 = CLFileReader.readFile(CLSource.class, "NormalBVH.cl");
-        String source6 = CLFileReader.readFile(CLSource.class, "SimpleTrace.cl");
-        return new String[]{source1, source2, source3, source4, source5, source6} ;
+        String source1 = CLFileReader.readFile(CLSource.class, "Matrix.cl");
+        String source2 = CLFileReader.readFile(CLSource.class, "Sampling.cl");
+        String source3 = CLFileReader.readFile(CLSource.class, "Common.cl");        
+        String source4 = CLFileReader.readFile(CLSource.class, "Material.cl");
+        String source5 = CLFileReader.readFile(CLSource.class, "Primitive.cl");
+        String source6 = CLFileReader.readFile(CLSource.class, "NormalBVH.cl");
+        String source7 = CLFileReader.readFile(CLSource.class, "SimpleTrace.cl");
+        return new String[]{source1, source2, source3, source4, source5, source6, source7} ;
     }
 }

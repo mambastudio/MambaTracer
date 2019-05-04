@@ -169,6 +169,14 @@ public class SimpleRender extends KernelThread{
                         this.resumeKernel();                       
                     }
                 }
+                if(e.getClickCount() == 1)
+                {
+                    Bounds imageViewInScreen = display.get("base").localToScreen(display.get("base").getBoundsInLocal());
+                    float x = (float) (e.getScreenX() - imageViewInScreen.getMinX());
+                    float y = (float) (e.getScreenY() - imageViewInScreen.getMinY());
+                    
+                    RenderViewModel.getDevice().simpleDebug(x, y);
+                }
             }
             
         });

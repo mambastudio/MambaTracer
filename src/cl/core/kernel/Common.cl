@@ -194,6 +194,11 @@ bool hasNormals(TriangleMesh mesh, int primID)
    return face.nx > -1; 
 }
 
+bool is_equal_float4(float4 c1, float4 c2)
+{
+    return (c1.x == c2.x) && (c1.y == c2.y) && (c1.z == c2.z) && (c1.w == c2.w);
+}
+
 float4 getCenterOfBoundingBox(BoundingBox bound)
 {
    float4 dest;

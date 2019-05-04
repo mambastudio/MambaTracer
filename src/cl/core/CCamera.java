@@ -9,6 +9,7 @@ import cl.core.data.struct.CRay;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import coordinate.model.CameraModel;
+import org.jocl.struct.CLTypes.cl_float16;
 import org.jocl.struct.CLTypes.cl_float4;
 import org.jocl.struct.Struct;
 
@@ -16,8 +17,7 @@ import org.jocl.struct.Struct;
  *
  * @author user
  */
-public class CCamera extends CameraModel <CPoint3, CVector3, CRay>{
-
+public class CCamera extends CameraModel <CPoint3, CVector3, CRay>{    
     public CCamera(CPoint3 position, CPoint3 lookat, CVector3 up, float horizontalFOV) {
         super(position.copy(), lookat.copy(), up.copy(), horizontalFOV);
     }
@@ -39,12 +39,18 @@ public class CCamera extends CameraModel <CPoint3, CVector3, CRay>{
         return camera;        
     }
     
+    public CTransform getTransform()
+    {
+        CTransform transform = new CTransform();
+        transform.setTransform(this.cameraTransform.m.m, this.cameraTransform.mInv.m);
+        return transform;
+    }
+    
     public static class CameraStruct extends Struct
     {
         public cl_float4 position;
         public cl_float4 lookat;
         public cl_float4 up;
         public float fov;
-    }
-    
+    }     
 }

@@ -10,3 +10,9 @@ typedef struct
    float4 emitter;         //emission   - r, g, b, w (power)
    bool emitterEnabled;  //emission   - emission enabled
 }Material;
+
+float4 getMaterialColor(Material mat, float coeff)
+{
+   if(mat.emitterEnabled) return mat.emitter;
+   else                   return mat.diffuse * coeff;
+}

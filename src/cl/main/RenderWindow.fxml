@@ -129,6 +129,15 @@
                            <content>
                               <VBox>
                                  <children>
+                                    <BorderPane prefHeight="635.0" prefWidth="303.0">
+                                       <top>
+                                          <Label text="Material Render" underline="true" BorderPane.alignment="CENTER">
+                                             <font>
+                                                <Font name="System Bold" size="12.0" />
+                                             </font>
+                                          </Label>
+                                       </top>
+                                    </BorderPane>
                                     <ScrollPane>
                                        <content>
                                           <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" opacity="0.94" prefHeight="684.0" prefWidth="295.0" spacing="5.0">
