@@ -1,0 +1,13 @@
+//Path tracer
+
+camera ray             //rayCount
+while(true)  
+{
+  tracekernel()       //hitCount, rayCount
+  if(!(hitCount>0))
+    break;
+  sampleBRDF()        //intersection[]
+  accumulateGI()      //intersection[], accum[]
+  sampleNextRay()     //intersection[], rays[], accum[]
+}
+   
