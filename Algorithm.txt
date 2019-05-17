@@ -4,12 +4,25 @@ while(true)
   camera ray             //rayCount
   for(int i = 0; i<5; i++)  
   {
-    tracekernel()       //rays[], intersection[], primitives[], bvh, hitCount, rayCount
+    tracekernel(rays[], intersection[], primitives[], bvh, hitCount, rayCount);    
+    shadeBackground();
     if(!(hitCount>0))
       break;
-    sampleBRDF()        //intersection[]
-    accumulateGI()      //intersection[], accum[]                 (this is based on the sampled brdf)
-    sampleNextRay()     //intersection[], rays[], accum[]         (compact next rays)
+      
+    /*
+      "in case you hit light directly, since light doesn't reflect" 
+    */
+    directlyHitLight(intersection[], material[], accum[]);          
+    
+    /*
+      "this methods are trivial hence can fit in one kernel"
+       sample_brdf
+       sample_next_ray
+       calculate_brdf_factor
+       calculate_brdf_pdf
+       compact_ray
+    */    
+    randomWalk(intersection[], rays[], material[], accum[]);                
   }
   updateFrame()
 }
