@@ -21,15 +21,24 @@ while(true)
     /*
       "in case you hit light directly, since light doesn't reflect" 
     */
-    directlyHitLight(intersection[], material[], accum[]);          
+    lightHit(intersection[], material[], accum[]); 
     
     /*
-      "this methods are trivial hence can fit in one kernel"
-       sample_brdf
-       sample_next_ray
-       calculate_brdf_factor
-       calculate_brdf_pdf
-       compact_ray
+      "sample brdf"
+    */
+    sampleBRDF(intersection[], material[]);
+          
+    /*
+      "sample direct light and perform a simple occlusion test of sampled light"
+    */    
+    directLightSample(intersection[], directLightRays[]);
+    
+    /*
+      "this methods are trivial hence can fit in one kernel"       
+       sample_next_ray()
+       calculate_brdf_factor()
+       calculate_brdf_pdf()
+       compact_ray()
     */    
     randomWalk(intersection[], rays[], material[], accum[]);                
   }
