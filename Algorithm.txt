@@ -1,11 +1,16 @@
 //Path tracer
+initBuffers(accum[], frameBuffer[]);
+
 while(true)
 {
-  camera ray             //rayCount
+  generateCameraRay(rays[], cameraStruct, rayCount);      
+  
   for(int i = 0; i<5; i++)  
   {
     tracekernel(rays[], intersection[], primitives[], bvh, hitCount, rayCount);    
-    shadeBackground();
+    
+    shadeBackground(intersection[]);
+    
     if(!(hitCount>0))
       break;
       
@@ -24,6 +29,6 @@ while(true)
     */    
     randomWalk(intersection[], rays[], material[], accum[]);                
   }
-  updateFrame()
+  updateFrame(accum[], frameBuffer[], frameCount);
 }
    
