@@ -1,4 +1,8 @@
-//Path tracer
+/*
+  Path Tracer Algorithm
+*/
+
+
 initBuffers(accum[], frameBuffer[]);
 
 while(true)
@@ -9,7 +13,7 @@ while(true)
   {
     tracekernel(rays[], intersection[], primitives[], bvh, hitCount, rayCount);    
     
-    shadeBackground(intersection[]);
+    shadeBackground(intersection[], rays[], occlusions[]);
     
     if(!(hitCount>0))
       break;
