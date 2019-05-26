@@ -11,8 +11,10 @@ while(true)
   
   for(int i = 0; i<5; i++)  
   {
+    //where gpu takes all resources, the intersection, with rays already compact
     tracekernel(rays[], intersection[], primitives[], bvh, hitCount, rayCount);    
     
+    //if there is an environmental map
     shadeBackground(intersection[], rays[], occlusions[]);
     
     if(hitCount>0)
