@@ -15,32 +15,32 @@ while(true)
     
     shadeBackground(intersection[], rays[], occlusions[]);
     
-    if(!(hitCount>0))
-      break;
-      
-    /*
-      "in case you hit light directly, since light doesn't reflect" 
-    */
-    lightHit(intersection[], material[], accum[]); 
-    
-    /*
-      "sample brdf"
-    */
-    sampleBRDF(intersection[], material[]);
-          
-    /*
-      "sample direct light and perform a simple occlusion test of sampled light"
-    */    
-    directLightSample(intersection[], directLightRays[]);
-    
-    /*
-      "this methods are trivial hence can fit in one kernel"       
-       sample_next_ray()
-       calculate_brdf_factor()
-       calculate_brdf_pdf()
-       compact_ray()
-    */    
-    randomWalk(intersection[], rays[], material[], accum[]);                
+    if(hitCount>0)
+    {            
+        /*
+          "in case you hit light directly, since light doesn't reflect" 
+        */
+        lightHit(intersection[], material[], accum[]); 
+
+        /*
+          "sample brdf"
+        */
+        sampleBRDF(intersection[], material[]);
+
+        /*
+          "sample direct light and perform a simple occlusion test of sampled light"
+        */    
+        directLightSample(intersection[], directLightRays[]);
+
+        /*
+          "this methods are trivial hence can fit in one kernel"       
+           sample_next_ray()
+           calculate_brdf_factor()
+           calculate_brdf_pdf()
+           compact_ray()
+        */    
+        randomWalk(intersection[], rays[], material[], accum[]);  
+     }
   }
   updateFrame(accum[], frameBuffer[], frameCount);
 }
