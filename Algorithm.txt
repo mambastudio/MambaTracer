@@ -26,6 +26,7 @@ while(true)
 
         /*
           "sample brdf"
+          "in case there are multiple brdfs and we need one
         */
         sampleBRDF(intersection[], material[]);
 
