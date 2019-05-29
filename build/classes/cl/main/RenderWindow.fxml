@@ -51,6 +51,7 @@
                         <Button fx:id="renderButton" mnemonicParsing="false" prefHeight="43.0" prefWidth="102.0" text="Render" />
                         <Button fx:id="pauseButton" mnemonicParsing="false" prefHeight="43.0" prefWidth="102.0" text="Pause" />
                         <Button fx:id="stopButton" mnemonicParsing="false" prefHeight="43.0" prefWidth="102.0" text="Stop" />
+                        <Button fx:id="editButton" mnemonicParsing="false" prefHeight="43.0" prefWidth="102.0" text="Edit" />
                      </children>
                      <padding>
                         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />

@@ -5,8 +5,10 @@
  */
 package cl.main;
 
+import bitmap.display.BlendDisplay;
+import bitmap.image.BitmapARGB;
+import bitmap.image.BitmapRGB;
 import cl.renderer.SimpleRender;
-import bitmap.display.StaticDisplay;
 import cl.ui.mvc.view.icons.IconAssetManager;
 import cl.ui.mvc.viewmodel.RenderViewModel;
 import cl.ui.mvc.model.CustomData;
@@ -85,6 +87,8 @@ public class RenderWindowController implements Initializable {
     Button pauseButton;
     @FXML
     Button stopButton;
+    @FXML 
+    Button editButton;
     
     
     @FXML
@@ -135,12 +139,14 @@ public class RenderWindowController implements Initializable {
     @FXML
     Tab matsTab;
         
-    private final StaticDisplay display = new StaticDisplay();
+    private final BlendDisplay display = new BlendDisplay("base", "selection", "render");
     private final SimpleRender render = new SimpleRender();
     
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         // TODO     
+        
+        RenderViewModel.display = display;
         
         //Init material database and scene tree view   
         RenderViewModel.initMaterialTreeData(treeViewMaterial);
@@ -228,6 +234,44 @@ public class RenderWindowController implements Initializable {
         renderButton.setGraphic(IconAssetManager.getRenderIcon());
         pauseButton.setGraphic(IconAssetManager.getPauseIcon());
         stopButton.setGraphic(IconAssetManager.getStopIcon());
+        editButton.setGraphic(IconAssetManager.getEditIcon());        
+        
+        //render button actions
+        pauseButton.setDisable(true);
+        stopButton.setDisable(true);        
+        renderButton.setOnAction(e -> {
+            RenderViewModel.isRendering = true;
+            pauseButton.setDisable(false);
+            stopButton.setDisable(false);
+            renderButton.setDisable(true);
+            editButton.setDisable(true);
+            
+            if(!RenderViewModel.getDevice().isRenderPaused())
+                display.set("render", new BitmapARGB(render.getWidth(), render.getHeight(), true));
+            
+            RenderViewModel.getDevice().render();
+        });
+        pauseButton.setOnAction(e -> {            
+            pauseButton.setDisable(true);
+            stopButton.setDisable(false);
+            renderButton.setDisable(false);
+            editButton.setDisable(true);
+            
+            RenderViewModel.getDevice().pauseRender();
+        });
+        stopButton.setOnAction(e -> {
+            pauseButton.setDisable(true);
+            stopButton.setDisable(true);
+            renderButton.setDisable(false);
+            editButton.setDisable(false);
+            
+            RenderViewModel.getDevice().stopRender();
+        });
+        editButton.setOnAction(e -> {
+            RenderViewModel.isRendering = false;
+            display.set("render", new BitmapARGB(render.getWidth(), render.getHeight(), false));
+            editButton.setDisable(true);
+        });
         
         //Editor register
         RenderViewModel.materialEditorModel.registerNameTextField(nameTextField);

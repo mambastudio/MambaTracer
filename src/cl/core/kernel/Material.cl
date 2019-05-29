@@ -16,3 +16,14 @@ float4 getMaterialColor(Material mat, float coeff)
    if(mat.emitterEnabled) return mat.emitter;
    else                   return mat.diffuse * coeff;
 }
+
+float4 sampledMaterialColor(Material mat)
+{
+   if(mat.emitterEnabled) return mat.emitter;
+   else                   return mat.diffuse;
+}
+
+bool isEmitter(Material mat)
+{
+   return mat.emitterEnabled;
+}

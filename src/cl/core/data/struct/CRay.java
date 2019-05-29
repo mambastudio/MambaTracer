@@ -28,6 +28,7 @@ public class CRay extends Struct implements AbstractRay<CPoint3, CVector3>
     public float tMax;
     
     public cl_float2 pixel;
+    public cl_float4 throughput;
     
     public cl_int4 sign;
     public cl_int2 extra;

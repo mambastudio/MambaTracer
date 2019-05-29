@@ -12,13 +12,6 @@
 
 */
 
-__kernel void debug(
-    global CameraStruct* camera,
-    global float2* pixels)
-{
-
-}
-
 /*
     - Essential Mathematics for Games and Interactive Applications: 2nd edition, pg 203
     - Soon to expand for thin lens, which is trivial
@@ -29,6 +22,7 @@ __kernel void debug(
 __kernel void generateCameraRays(
     global CameraStruct* camera,
     global Ray* rays,
+    global int* rayCount,
     global int* width,
     global int* height)
 {
@@ -60,12 +54,17 @@ __kernel void generateCameraRays(
     //set pixel & active
     r->pixel = pixel;
     r->extra.x = true;
+    
+    //ray count
+    atomic_inc(rayCount);
 }
 
 __kernel void intersectPrimitives(
     global Ray* rays,
     global Intersection* isects,
-    global int* count,
+    
+    //hit count
+    global int* hitCount,
 
     //mesh
     global const float4* points,
@@ -95,6 +94,54 @@ __kernel void intersectPrimitives(
       isect->pixel = ray->pixel;
       isect->hit = hit;
     }
+    else
+    {
+      isect->hit = false;
+      isect->mat = 0;
+    }
+    
+    //perform intersection first in order to proceed
+    barrier(CLK_GLOBAL_MEM_FENCE);
+    
+    //get hit count
+    if(isect->hit)
+      atomic_inc(hitCount);
+}
+
+__kernel void lightHit(
+    global Intersection* isects,
+    global Material* materials,
+    global float4* accum,
+    global int* width,
+    global int* height
+)
+{
+    //get thread id
+    int id = get_global_id( 0 );
+    
+    //get intersection and material
+    global Intersection* isect = isects + id;
+    global Material* material = materials + isect->mat;
+    
+    //if there was an intersection of light
+    if(isect->hit && material->emitterEnabled)
+    {
+        int index = isect->pixel.x + width[0] * isect->pixel.y;
+        accum[index] += sampledMaterialColor(*material);
+    }
+}
+
+__kernel void updateFrameImage(
+    global float4* accum,
+    global int* frame,
+    global float* frameCount
+)
+{
+    //get thread id
+    int id = get_global_id( 0 );
+    
+    //update frame render
+    frame[id] = getIntARGB((float4)(accum[id].xyz/frameCount[0], 1.f));
 }
 
 __kernel void fastShade(

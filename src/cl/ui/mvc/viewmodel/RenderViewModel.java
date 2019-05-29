@@ -5,6 +5,8 @@
  */
 package cl.ui.mvc.viewmodel;
 
+import bitmap.display.BlendDisplay;
+import bitmap.image.BitmapARGB;
 import cl.core.CMaterialInterface;
 import cl.core.Overlay;
 import cl.core.device.RayDeviceMesh;
@@ -37,6 +39,11 @@ public class RenderViewModel
     public static CMaterialInterface cmat = null;
     
     public static Overlay overlay = null;
+    
+    public static boolean isRendering = false;
+    
+    public static BlendDisplay display = null;
+    public static BitmapARGB renderBitmap = null;
     
     public static void setDevice(RayDeviceMesh device)
     {

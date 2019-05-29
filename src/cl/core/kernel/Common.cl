@@ -136,6 +136,33 @@ typedef struct
    float2 pixel;
 }Intersection;
 
+typedef struct
+{
+   float4 mX;
+   float4 mY;
+   float4 mZ;
+}Frame;
+
+Frame get_frame(float4 z)
+{
+   Frame frame;
+   float4 tmpZ = frame.mZ = normalize(z);
+   float4 tmpX = fabs(tmpZ.x) > 0.99f ? (float4)(0,1,0,0) : (float4)(1,0,0,0);
+   frame.mY    = normalize(cross(tmpZ,tmpX) );
+   frame.mX    = cross(frame.mY, tmpZ);
+   return frame;
+}
+
+float4 to_world(Frame frame, float4 a)
+{
+   return frame.mX*a.x + frame.mY*a.y + frame.mZ*a.z;
+}
+
+float4 to_local(Frame frame, float4 a)
+{
+   return (float4)(dot(frame.mX, a), dot(frame.mY, a), dot(frame.mZ, a), 0);
+}
+
 void setRayActive(Ray* ray, bool type)
 {
    ray->extra.x = type;
@@ -269,6 +296,15 @@ float2 getPixel(int index, int width, int height)
 int getIndex(float2 pixel, int width, int height)
 {
     return (int)(pixel.x + pixel.y * width);
+}
+
+float3 make_float3(float x, float y, float z)
+{
+    float3 res;
+    res.x = x;
+    res.y = y;
+    res.z = z;
+    return res;
 }
 
 //int rgb from float3

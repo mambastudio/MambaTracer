@@ -49,4 +49,9 @@ public class IconAssetManager {
     {
         return FileIconManager.getIcon(IconAssetManager.class, "Play32x32.png");
     }
+    
+    public static Node getEditIcon()
+    {
+        return FileIconManager.getIcon(IconAssetManager.class, "Edit32x32.png");
+    }
 }

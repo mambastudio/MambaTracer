@@ -5,6 +5,7 @@
  */
 package cl.core.device;
 
+import bitmap.image.BitmapARGB;
 import cl.core.CBoundingBox;
 import cl.core.CCamera;
 import cl.core.data.struct.CRay;
@@ -20,11 +21,13 @@ import coordinate.model.OrientationModel;
 import coordinate.parser.OBJParser;
 import coordinate.utility.Timer;
 import filesystem.core.OutputFactory;
+import static java.lang.Math.sqrt;
 import java.net.URI;
 import java.nio.IntBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.jocl.CL;
+import thread.model.LambdaThread;
 import wrapper.core.CBufferFactory;
 import wrapper.core.CKernel;
 import static wrapper.core.CMemory.READ_ONLY;
@@ -46,9 +49,19 @@ public class RayDeviceMesh {
     
     CCamera camera = new CCamera(new CPoint3(0, 0, 9), new CPoint3(), new CVector3(0, 1, 0), 45);
     
+    CIntBuffer hitCount = null;
+    
     //image variables
     CIntBuffer imageBuffer = null;
     CIntBuffer groupBuffer = null;
+    
+    //Image variables from rendering
+    CIntBuffer frameBuffer = null;
+    CFloatBuffer accumBuffer = null;
+    CFloatBuffer frameCountBuffer = null;
+    CIntBuffer   rayCount = null;
+    CIntBuffer   hitCountBuffer = null;    
+    CIntBuffer   occlusionBuffer = null;
     
     //group index an bound
     CIntBuffer groupIndex = null;
@@ -74,12 +87,13 @@ public class RayDeviceMesh {
     //kernel    
     CKernel generateCameraRaysKernel = null;
     CKernel intersectPrimitivesKernel = null;
+    CKernel lightHitKernel = null;
+    CKernel updateFrameImageKernel = null;
     CKernel fastShadeKernel = null;
     CKernel updateShadeImageKernel = null;
     CKernel groupBufferPassKernel = null;
     CKernel findBoundKernel = null;
-    CKernel debugKernel = null;
-    
+   
     //mesh
     CFloatBuffer points = null;
     CFloatBuffer normals = null;
@@ -88,6 +102,9 @@ public class RayDeviceMesh {
     
     //accelerator
     CNormalBVH bvhBuild;
+    
+    //render thread
+    LambdaThread renderThread = new LambdaThread();
     
     
     public RayDeviceMesh()
@@ -106,10 +123,15 @@ public class RayDeviceMesh {
         this.globalSize  = globalSize; this.localSize = localSize;
         
         //Init constant global variables, except mesh that is loaded after mesh is uploaded
+        this.hitCount           = CBufferFactory.initIntValue("hitCount", configuration.context(), configuration.queue(), 0, READ_WRITE);
         this.imageBuffer        = CBufferFactory.allocInt("image", configuration.context(), globalSize, READ_WRITE);
         this.groupBuffer        = CBufferFactory.allocInt("group", configuration.context(), globalSize, READ_WRITE);
+        this.frameBuffer        = CBufferFactory.allocInt("frame", configuration.context(), globalSize, READ_WRITE);
+        this.frameCountBuffer   = CBufferFactory.initFloatValue("countFrame", configuration.context(), configuration.queue(), 0, READ_WRITE);        
+        this.accumBuffer        = CBufferFactory.allocFloat("accum", configuration.context(), globalSize * 4, READ_WRITE);
         this.isectBuffer        = CBufferFactory.allocStruct("intersctions", configuration.context(), CIntersection.class, globalSize, READ_ONLY);
         this.raysBuffer         = CBufferFactory.allocStruct("rays", configuration.context(), CRay.class, globalSize, READ_WRITE);
+        this.rayCount           = CBufferFactory.initIntValue("rayCount", configuration.context(), configuration.queue(), 0, READ_WRITE);
         this.cameraBuffer       = CBufferFactory.allocStruct("camera", configuration.context(), CCamera.CameraStruct.class, 1, READ_ONLY);
         this.width              = CBufferFactory.initIntValue("width", configuration.context(), configuration.queue(), width, READ_ONLY);
         this.height             = CBufferFactory.initIntValue("height", configuration.context(), configuration.queue(), height, READ_ONLY);
@@ -121,6 +143,8 @@ public class RayDeviceMesh {
         //read mesh and position camera
         initDefaultMesh();  
     }
+    
+    
     
     public void initMesh(String uri) {initMesh(Paths.get(uri));}
     public void initMesh(URI uri){initMesh(Paths.get(uri));}
@@ -154,14 +178,14 @@ public class RayDeviceMesh {
         this.bvhBuild = new CNormalBVH(configuration);
         this.bvhBuild.build(mesh);           
        
-        generateCameraRaysKernel = configuration.program().createKernel("generateCameraRays", cameraBuffer, raysBuffer, width, height);
-        intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, count, points, normals, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());        
+        generateCameraRaysKernel = configuration.program().createKernel("generateCameraRays", cameraBuffer, raysBuffer,  rayCount, width, height);
+        intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, hitCount, points, normals, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());
+        lightHitKernel = configuration.program().createKernel("lightHit", isectBuffer, materialBuffer, accumBuffer, width, height);
+        updateFrameImageKernel = configuration.program().createKernel("updateFrameImage", accumBuffer, frameBuffer, frameCountBuffer);
         fastShadeKernel = configuration.program().createKernel("fastShade", materialBuffer, isectBuffer);        
         updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", imageBuffer, width, height, isectBuffer);        
         groupBufferPassKernel = configuration.program().createKernel("groupBufferPass", isectBuffer, groupBuffer);
         findBoundKernel = configuration.program().createKernel("findBound", groupIndex, points, normals, faces, size, groupBound);
-        debugKernel = configuration.program().createKernel("debug", cameraBuffer, pixels);
-        
         
         //update the kernels here
     }
@@ -169,22 +193,108 @@ public class RayDeviceMesh {
     public CCamera getCamera(){return camera;}
     
     public void execute()
-    {  
-       count.mapWriteBuffer(configuration.queue(), buffer-> {buffer.put(0, 0);});
-       
-       configuration.queue().put1DRangeKernel(generateCameraRaysKernel, globalSize, localSize); 
-       configuration.queue().put1DRangeKernel(intersectPrimitivesKernel, globalSize, localSize); 
-       configuration.queue().put1DRangeKernel(fastShadeKernel, globalSize, localSize);
-       configuration.queue().put1DRangeKernel(updateShadeImageKernel, globalSize, localSize);  
-       configuration.queue().put1DRangeKernel(groupBufferPassKernel, globalSize, localSize);
-       
-       /*
-         Why implementing this makes opencl run faster?
-         Probable answer is this... https://stackoverflow.com/questions/18471170/commenting-clfinish-out-makes-program-100-faster
-       */       
-       configuration.queue().finish();        
+    {     
+        //set hit count 0
+        hitCount.mapWriteValue(configuration.queue(), 0);
+        
+        configuration.queue().put1DRangeKernel(generateCameraRaysKernel, globalSize, localSize); 
+        configuration.queue().put1DRangeKernel(intersectPrimitivesKernel, globalSize, localSize); 
+        configuration.queue().put1DRangeKernel(fastShadeKernel, globalSize, localSize);
+        configuration.queue().put1DRangeKernel(updateShadeImageKernel, globalSize, localSize);  
+        configuration.queue().put1DRangeKernel(groupBufferPassKernel, globalSize, localSize);
+               
+         /*
+             Why implementing this makes opencl run faster?
+            Probable answer is this... https://stackoverflow.com/questions/18471170/commenting-clfinish-out-makes-program-100-faster
+        */       
+        configuration.queue().finish();        
         
       
+    }
+    
+    public void initBuffers()
+    {
+        frameBuffer.mapWriteBuffer(configuration.queue(), buffer -> {
+           for(int i = 0; i<buffer.capacity(); i++)
+               buffer.put(0);
+        });
+        
+        frameCountBuffer.mapWriteValue(configuration.queue(), 0);
+      
+        RenderViewModel.renderBitmap = new BitmapARGB(800, 700, true);
+        
+        accumBuffer.mapWriteBuffer(configuration.queue(), buffer -> {           
+           for(int i = 0; i<buffer.capacity(); i++)
+               buffer.put(0);
+        });
+        
+    }        
+            
+    
+    public void render()
+    {
+        if(renderThread.isPaused())
+            renderThread.resumeExecution();
+        else if(renderThread.isTerminated()) 
+        {
+            initBuffers();
+            renderThread.restartExecution();
+        }        
+        else
+        {
+            initBuffers();            
+            renderThread.startExecution(() -> {
+                
+                //set ray count and hit count to zero and generate camera rays
+                rayCount.mapWriteValue(configuration.queue(), 0);     
+                hitCount.mapWriteValue(configuration.queue(), 0);
+                configuration.queue().put1DRangeKernel(generateCameraRaysKernel, globalSize, localSize); 
+                
+                //start tracing path
+                for(int i = 0; i<1; i++)
+                {
+                    //intersect scene
+                    configuration.queue().put1DRangeKernel(intersectPrimitivesKernel, globalSize, localSize); 
+                    renderThread.chill();
+                    
+                    //if hit count is greater than zero
+                    if(hitCount.mapReadValue(configuration.queue()) > 0)
+                    {
+                        configuration.queue().put1DRangeKernel(lightHitKernel, globalSize, localSize);                        
+                    }
+                }
+                
+                //increment frame count by 1
+                frameCountBuffer.mapWriteValue(configuration.queue(), frameCountBuffer.mapReadValue(configuration.queue()) + 1);             
+
+                //update frame
+                configuration.queue().put1DRangeKernel(updateFrameImageKernel, globalSize, localSize);
+                
+                //write pixels to display
+                frameBuffer.mapReadBuffer(configuration.queue(), buffer -> {
+                    int fwidth = 800; int fheight = 700;
+                    RenderViewModel.renderBitmap.writeColor(buffer.array(), 0, 0, fwidth, fheight);                    
+                    RenderViewModel.display.imageFill("render", RenderViewModel.renderBitmap);
+                });  
+                                
+                renderThread.chill();
+            });
+        }
+    }
+    
+    public void pauseRender()            
+    {
+        renderThread.pauseExecution();
+    }
+    
+    public void stopRender()
+    {
+        renderThread.stopExecution();
+    }
+    
+    public boolean isRenderPaused()
+    {
+        return renderThread.isPaused();
     }
     
     public void readImageBuffer(CallBackFunction<IntBuffer> callback) {imageBuffer.mapReadBuffer(configuration.queue(), callback);}
@@ -234,15 +344,6 @@ public class RayDeviceMesh {
            
        });       
        return new CBoundingBox(min, max);
-    }
-    
-    public void simpleDebug(float x, float y)
-    {
-        pixels.mapWriteBuffer(configuration.queue(), buffer -> {
-           buffer.put(new float[]{x, y});
-        });
-        configuration.queue().put1DRangeKernel(debugKernel, 1, 1);
-        configuration.queue().finish(); // not really necessary
     }
     
     public void reposition(CBoundingBox box)
@@ -299,17 +400,16 @@ public class RayDeviceMesh {
         this.size               = mesh.getCLSizeBuffer("size", configuration.context(), configuration.queue());
         this.materialBuffer     = mesh.getCLMaterialBuffer("materials", configuration.context(), configuration.queue());
         
-        
-        
         this.bvhBuild = new CNormalBVH(configuration);
         this.bvhBuild.build(mesh);
                 
-        generateCameraRaysKernel = configuration.program().createKernel("generateCameraRays", cameraBuffer, raysBuffer, width, height);
-        intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, count, points, normals, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());
+        generateCameraRaysKernel = configuration.program().createKernel("generateCameraRays", cameraBuffer, raysBuffer, rayCount, width, height);
+        intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, hitCount, points, normals, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());
+        lightHitKernel = configuration.program().createKernel("lightHit", isectBuffer, materialBuffer, accumBuffer, width, height);
+        updateFrameImageKernel = configuration.program().createKernel("updateFrameImage", accumBuffer, frameBuffer, frameCountBuffer);
         fastShadeKernel = configuration.program().createKernel("fastShade", materialBuffer, isectBuffer);
         updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", imageBuffer, width, height, isectBuffer);
         groupBufferPassKernel = configuration.program().createKernel("groupBufferPass", isectBuffer, groupBuffer);
-        findBoundKernel = configuration.program().createKernel("findBound", groupIndex, points, normals, faces, size, groupBound);
-        debugKernel = configuration.program().createKernel("debug", cameraBuffer, pixels);
+        findBoundKernel = configuration.program().createKernel("findBound", groupIndex, points, normals, faces, size, groupBound);        
     }
 }

@@ -5,7 +5,7 @@
  */
 package cl.renderer;
 
-import bitmap.display.StaticDisplay;
+import bitmap.display.BlendDisplay;
 import bitmap.image.BitmapARGB;
 import cl.core.CBoundingBox;
 import cl.core.Overlay;
@@ -41,8 +41,9 @@ public class SimpleRender extends KernelThread{
     
     BitmapARGB bitmap;
     BitmapARGB selectionBitmap;
+    BitmapARGB renderBitmap = new BitmapARGB(width, height, true);
        
-    StaticDisplay display;
+    BlendDisplay display;
     
     int currentinstance = -2;
     
@@ -62,7 +63,7 @@ public class SimpleRender extends KernelThread{
         RenderViewModel.getDevice().readGroupBuffer(buffer-> {
             RenderViewModel.overlay.copyToArray(buffer.array());              
         });        
-        display.imageFill(bitmap);
+        display.imageFill("base", bitmap);
         
         
         timer.end();
@@ -78,20 +79,25 @@ public class SimpleRender extends KernelThread{
         RenderViewModel.setDevice(new RayDeviceMesh());
         RenderViewModel.getDevice().init(width, height, globalSize, localSize);   
         bitmap = new BitmapARGB(width, height);
-        selectionBitmap = new BitmapARGB(width, height, false);        
+        selectionBitmap = new BitmapARGB(width, height, false);  
+        renderBitmap = new BitmapARGB(width, height, false);
+        RenderViewModel.renderBitmap = renderBitmap;
         RenderViewModel.overlay = new Overlay(width, height);
         
         return true;
     }
     
-    public void launch(StaticDisplay display) {
+    public void launch(BlendDisplay display) {
         this.display = display;     
-        display.translationDepth.addListener((observable, old_value, new_value) -> {                        
+        display.translationDepth.addListener((observable, old_value, new_value) -> {       
+            if(RenderViewModel.isRendering) return;     
             orientation.translateDistance(RenderViewModel.getDevice().getCamera(), new_value.floatValue() * RenderViewModel.getDevice().getBound().getMaximumExtent());     
             resumeKernel();
         });
         
-        display.translationXY.addListener((observable, old_value, new_value) -> {            
+        display.translationXY.addListener((observable, old_value, new_value) -> {     
+            if(RenderViewModel.isRendering) return;
+            
             orientation.rotateX(RenderViewModel.getDevice().getCamera(), (float) new_value.getX());
             orientation.rotateY(RenderViewModel.getDevice().getCamera(), (float) new_value.getY());
             resumeKernel();
@@ -102,6 +108,7 @@ public class SimpleRender extends KernelThread{
         
         
         display.setOnDragOver(e -> {            
+            if(RenderViewModel.isRendering) return;
             
             Bounds imageViewInScreen = display.get("base").localToScreen(display.get("base").getBoundsInLocal());
             double x = e.getScreenX() - imageViewInScreen.getMinX();
@@ -124,18 +131,22 @@ public class SimpleRender extends KernelThread{
             {
                 currentinstance = instance;
                 selectionBitmap = RenderViewModel.overlay.getDragOverlay(instance);
-                display.imageFillSelection(selectionBitmap);
+                display.set("selection", selectionBitmap);                
             }
            
         });
                              
         display.setOnDragExited(e -> {
+            if(RenderViewModel.isRendering) return;
+            
             selectionBitmap = RenderViewModel.overlay.getNull();
-            display.imageFillSelection(selectionBitmap);            
+            display.set("selection", selectionBitmap);            
             currentinstance = -2;
         });
         
         display.setOnDragDropped(e -> {
+            if(RenderViewModel.isRendering) return;
+            
             Bounds imageViewInScreen = display.get("base").localToScreen(display.get("base").getBoundsInLocal());
             double x = e.getScreenX() - imageViewInScreen.getMinX();
             double y = e.getScreenY() - imageViewInScreen.getMinY();
@@ -153,6 +164,8 @@ public class SimpleRender extends KernelThread{
         });
         
         display.get("base").setOnMousePressed(e -> {
+            if(RenderViewModel.isRendering) return;
+            
             if(e.getButton().equals(MouseButton.PRIMARY)){
                 if(e.getClickCount() == 2){
                     
@@ -168,15 +181,7 @@ public class SimpleRender extends KernelThread{
                         RenderViewModel.getDevice().reposition(bound);
                         this.resumeKernel();                       
                     }
-                }
-                if(e.getClickCount() == 1)
-                {
-                    Bounds imageViewInScreen = display.get("base").localToScreen(display.get("base").getBoundsInLocal());
-                    float x = (float) (e.getScreenX() - imageViewInScreen.getMinX());
-                    float y = (float) (e.getScreenY() - imageViewInScreen.getMinY());
-                    
-                    RenderViewModel.getDevice().simpleDebug(x, y);
-                }
+                }               
             }
             
         });
@@ -189,6 +194,16 @@ public class SimpleRender extends KernelThread{
         return true;
     }
     
+    
+    public int getWidth()
+    {
+        return width;
+    }
+    
+    public int getHeight()
+    {
+        return height;
+    }
     
     public void initMesh(Path path)
     {
