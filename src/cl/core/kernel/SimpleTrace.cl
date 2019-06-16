@@ -26,10 +26,16 @@ __kernel void generateCameraRays(
     global int* width,
     global int* height)
 {
+    //set ray count to zero
+    rayCount[0] = 0;
+    barrier(CLK_GLOBAL_MEM_FENCE);
+
     //global id and pixel making
-    int id= get_global_id( 0 );
+    int id= get_global_id( 0 );      
+
+    //pixel value
     float2 pixel = getPixel(id, width[0], height[0]);
-    
+
     //camera matrix, m = world_to_view, mInv = view_to_world
     transform camera_matrix = camera_transform(camera->position, camera->lookat, camera->up);
 
@@ -77,6 +83,8 @@ __kernel void intersectPrimitives(
     global const BoundingBox* bounds
 )
 {
+
+
     //get thread id
     int id = get_global_id( 0 );
 
@@ -89,15 +97,15 @@ __kernel void intersectPrimitives(
     {
       //intersect
       bool hit = intersectGlobal(ray, isect, mesh, nodes, bounds);    
-      
+
       //update hit status and what pixel it represent
       isect->pixel = ray->pixel;
       isect->hit = hit;
     }
     else
     {
-      isect->hit = false;
-      isect->mat = 0;
+      isect->hit = MISS_MARKER;
+      isect->mat = -1;
     }
     
     //perform intersection first in order to proceed
@@ -128,6 +136,26 @@ __kernel void lightHit(
     {
         int index = isect->pixel.x + width[0] * isect->pixel.y;
         accum[index] += sampledMaterialColor(*material);
+    }
+}
+
+// select brdf from material
+__kernel void sampleBRDF(
+    global Intersection* isects,
+    global Material* materials,
+    global int* count      //ray count
+)
+{
+    //get thread id
+    int id = get_global_id( 0 );  
+
+    if(id < *count)
+    {
+        //get intersection and material
+        global Intersection* isect = isects + id;
+        global Material* material = materials + isect->mat;
+        
+        isect->sampled_brdf = selectBRDF(*material);
     }
 }
 
@@ -168,6 +196,27 @@ __kernel void fastShade(
     isect->throughput = color;
 }
 
+__kernel void shadeBackground(
+    global int* imageBuffer,
+    global int* width,
+    global int* height,
+    global Intersection* isects
+)
+{
+    //get thread id
+    int id = get_global_id( 0 );
+
+    //updated the intersected areas color
+    global Intersection* isect = isects + id;
+    //if(!isect->hit)
+    {
+        //pixel index
+        //int index = isect->pixel.x + width[0] * isect->pixel.y;
+        //update
+        imageBuffer[id] = getIntARGB((float4)(1, 0, 0, 1));
+    }
+}
+
 __kernel void updateShadeImage(
     global int* imageBuffer,
     global int* width,
@@ -177,10 +226,6 @@ __kernel void updateShadeImage(
 {
     int id= get_global_id( 0 );
 
-    //first set the image buffer to black
-    imageBuffer[id] = getIntARGB((float4)(0, 0, 0, 1));
-    barrier(CLK_GLOBAL_MEM_FENCE);
-    
     //updated the intersected areas color
     global Intersection* isect = isects + id;
     if(isect->hit)
@@ -190,7 +235,6 @@ __kernel void updateShadeImage(
         //update
        imageBuffer[index] = getIntARGB(isect->throughput);
     }
-
 }
 
 __kernel void groupBufferPass(

@@ -23,6 +23,12 @@ float4 sampledMaterialColor(Material mat)
    else                   return mat.diffuse;
 }
 
+int selectBRDF(Material mat)
+{
+   if(mat.emitterEnabled) return 2;
+   else                   return 0;
+}
+
 bool isEmitter(Material mat)
 {
    return mat.emitterEnabled;

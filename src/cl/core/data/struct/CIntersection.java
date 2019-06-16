@@ -21,6 +21,7 @@ public class CIntersection extends Struct implements AbstractIntersection{
     public cl_float4 dOut;
     public cl_float2 uv;
     public int mat;
+    public int sampled_brdf;
     public int id;
     public int hit;   
     public cl_float4 throughput;

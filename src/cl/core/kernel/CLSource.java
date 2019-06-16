@@ -20,7 +20,8 @@ public class CLSource {
         String source4 = CLFileReader.readFile(CLSource.class, "Material.cl");
         String source5 = CLFileReader.readFile(CLSource.class, "Primitive.cl");
         String source6 = CLFileReader.readFile(CLSource.class, "NormalBVH.cl");
-        String source7 = CLFileReader.readFile(CLSource.class, "SimpleTrace.cl");
-        return new String[]{source1, source2, source3, source4, source5, source6, source7} ;
+        String source7 = CLFileReader.readFile(CLSource.class, "ScanCompact.cl");
+        String source8 = CLFileReader.readFile(CLSource.class, "SimpleTrace.cl");
+        return new String[]{source1, source2, source3, source4, source5, source6, source7, source8} ;
     }
 }

@@ -128,8 +128,10 @@ typedef struct
    float4 p;
    float4 n;
    float4 d;
+   float4 dOut;
    float2 uv;
    int mat;
+   int sampled_brdf;
    int id;
    int hit;    
    float4 throughput;       
