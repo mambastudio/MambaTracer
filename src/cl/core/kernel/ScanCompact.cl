@@ -249,3 +249,13 @@ __kernel void transferIntersection(__global Intersection* isects,
     int global_id   = get_global_id(0);
     isects[global_id] = temp_isects[global_id];
 }
+__kernel void totalIntersection(__global Intersection* isects,
+                                __global int* prefixsum,
+                                __global int* length,
+                                __global int* count)
+{
+     int i    = isects[*length - 1].hit;
+     int j    = prefixsum[*length - 1];
+     count[0] = i+j;
+
+}

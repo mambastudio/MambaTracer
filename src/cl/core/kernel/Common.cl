@@ -559,3 +559,60 @@ inline void atomicMin(volatile __global float *source, float operand) {
                                expected.u32, next.u32);
        } while( current.u32 != expected.u32 );
 }
+
+__kernel void findBound(
+    //group to look for instances
+    global const int* groupIndex,
+
+     //mesh
+    global const float4* points,
+    global const float4* normals,
+    global const Face*   faces,
+    global const int*    size,
+
+    //global bound of size 6 -> xmin, ymin, zmin, xmax, ymax, zmax
+    global const float* groupBound
+)
+{
+    //global id  for mesh at index (id)
+    int id= get_global_id( 0 );
+
+    //Scene mesh
+    TriangleMesh mesh = {points, normals, faces, size[0]};
+
+    //Get face at id
+    global Face * face = faces + id;
+    
+    //Get bound coordinates
+    global float* xmin = groupBound + 0;
+    global float* ymin = groupBound + 1;
+    global float* zmin = groupBound + 2;
+    global float* xmax = groupBound + 3;
+    global float* ymax = groupBound + 4;
+    global float* zmax = groupBound + 5;
+
+
+    //update bounds
+    int groupID = getMaterial(face-> mat);
+    //printlnInt(groupID);
+    if(groupIndex[0] == groupID)
+    {
+        //printlnInt(*groupIndex);
+        BoundingBox bounds = getBoundingBox(mesh, id);
+
+        //bound->minimum = min(bound->minimum, point);
+        atomicMin(xmin, bounds.minimum.x);
+        atomicMin(ymin, bounds.minimum.y);
+        atomicMin(zmin, bounds.minimum.z);
+
+        //bound->maximum = max(bound->maximum, point);
+        atomicMax(xmax, bounds.maximum.x);
+        atomicMax(ymax, bounds.maximum.y);
+        atomicMax(zmax, bounds.maximum.z);
+        
+        BoundingBox box;
+        box.minimum = (float4)(*xmin, *ymin, *zmin, 0);
+        box.maximum = (float4)(*xmax, *ymax, *zmax, 0);
+        //printBound(box);
+    }
+}

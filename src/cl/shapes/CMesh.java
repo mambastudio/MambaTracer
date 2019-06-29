@@ -19,16 +19,13 @@ import coordinate.list.CoordinateList;
 import coordinate.list.IntList;
 import coordinate.parser.attribute.MaterialT;
 import wrapper.core.CBufferFactory;
-import wrapper.core.CCommandQueue;
-import wrapper.core.CContext;
 import static wrapper.core.CMemory.READ_ONLY;
 import static wrapper.core.CMemory.READ_WRITE;
+import wrapper.core.CResourceFactory;
 import wrapper.core.OpenCLPlatform;
 import wrapper.core.buffer.CFloatBuffer;
 import wrapper.core.buffer.CIntBuffer;
 import wrapper.core.buffer.CStructBuffer;
-import wrapper.core.svm.CSVMFloatBuffer;
-import wrapper.core.svm.CSVMIntBuffer;
 
 /**
  *
@@ -40,10 +37,21 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
          CIntersection, 
          CNormalBVH, 
          CBoundingBox> {
+       
+    private final OpenCLPlatform configuration;
     
-    CNormalBVH accelerator;
-    CBoundingBox bounds;
-    OpenCLPlatform configuration;
+    //mesh bound
+    private final CBoundingBox bounds;
+    
+    //mesh data
+    private CFloatBuffer pointsBuffer = null;
+    private CFloatBuffer normalsBuffer = null;
+    private CIntBuffer facesBuffer = null;
+    private CIntBuffer sizeBuffer = null;
+    
+    //materials
+    private CStructBuffer<CMaterial> cmaterials = null;
+    
         
     public CMesh(OpenCLPlatform configuration)
     {
@@ -102,7 +110,7 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
 
     @Override
     public CNormalBVH getAccelerator() {
-        return accelerator;
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
@@ -150,31 +158,17 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
         CPoint2 p = new CPoint2(values[0], values[1]);
         texcoords.add(p);
     }
-            
-    public CFloatBuffer getCLPointsBuffer(String name, CContext context, CCommandQueue queue)
+    
+    public void initCLBuffers()
     {
-        return CBufferFactory.wrapFloat(name, context, queue, getPointArray(), READ_ONLY);          
-    }
-    
-    public CFloatBuffer getCLNormalsBuffer(String name, CContext context, CCommandQueue queue)
-    {        
-        return CBufferFactory.wrapFloat(name, context, queue, getNormalArray(), READ_ONLY);          
-    }
-    
-    public CIntBuffer getCLFacesBuffer(String name, CContext context, CCommandQueue queue)
-    {
-        return CBufferFactory.wrapInt(name, context, queue, getTriangleFacesArray(), READ_ONLY);
-    }
-    
-    public CIntBuffer getCLSizeBuffer(String name, CContext context, CCommandQueue queue)
-    {
-        return CBufferFactory.wrapInt(name, context, queue, new int[]{triangleSize()}, READ_ONLY);               
-    }   
-    
-    public CStructBuffer<CMaterial> getCLMaterialBuffer(String name, CContext context, CCommandQueue queue)
-    {        
-        CStructBuffer<CMaterial> cmaterials = CBufferFactory.allocStruct(name, configuration.context(), CMaterial.class, this.getMaterialList().size(), READ_WRITE);       
-        cmaterials.mapWriteBuffer(queue, materialArray -> {
+        CResourceFactory.releaseMemory("points", "normals", "faces", "size", "materials");
+                System.out.println(getPointArray().length);
+        pointsBuffer = CBufferFactory.wrapFloat("points", configuration.context(), configuration.queue(), getPointArray(), READ_ONLY);
+        normalsBuffer = CBufferFactory.wrapFloat("normals", configuration.context(), configuration.queue(), getNormalArray(), READ_ONLY); 
+        facesBuffer = CBufferFactory.wrapInt("faces", configuration.context(), configuration.queue(), getTriangleFacesArray(), READ_ONLY);
+        sizeBuffer = CBufferFactory.wrapInt("size", configuration.context(), configuration.queue(), new int[]{triangleSize()}, READ_ONLY);
+        cmaterials = CBufferFactory.allocStruct("materials", configuration.context(), CMaterial.class, this.getMaterialList().size(), READ_WRITE);       
+        cmaterials.mapWriteBuffer(configuration.queue(), materialArray -> {
             for(int i = 0; i<materialArray.length; i++)
             {
                 MaterialT mat = this.getMaterialList().get(i);                 
@@ -182,27 +176,38 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
                 
             }
         });
+    }
+    
+    public CFloatBuffer clPoints()
+    {
+        return pointsBuffer;
+    }
+    
+    public CFloatBuffer clNormals()
+    {
+        return normalsBuffer;
+    }
+    
+    public CIntBuffer clFaces()
+    {
+        return facesBuffer;
+    }
+    
+    public CIntBuffer clSize()
+    {
+        return sizeBuffer;
+    }
+    
+    public CStructBuffer<CMaterial> clMaterials()
+    {
         return cmaterials;
     }
-    
-    public CSVMFloatBuffer getCLPointsBufferSVM(CContext context, CCommandQueue queue)
+        
+    public void setMaterial(int index, CMaterial material)    
     {
-        CSVMFloatBuffer buffer = CBufferFactory.allocSVMFloat(context, pointArraySize(), READ_ONLY);   
-        buffer.mapWriteBuffer(queue, floatbuffer -> floatbuffer.put(getPointArray()));        
-        return buffer;
+        this.cmaterials.mapWriteBuffer(configuration.queue(), materialArray -> {            
+            materialArray[index] = material;            
+        });
     }
-    
-    public CSVMIntBuffer getCLFacesBufferSVM(CContext context, CCommandQueue queue)
-    {
-        CSVMIntBuffer buffer = CBufferFactory.allocSVMInt(context, triangleArraySize(), READ_ONLY);
-        buffer.mapWriteBuffer(queue, intbuffer -> intbuffer.put(getTriangleFacesArray()));        
-        return buffer;
-    }
-    
-    public CSVMIntBuffer getCLSizeBufferSVM(CContext context, CCommandQueue queue)
-    {
-        CSVMIntBuffer buffer = CBufferFactory.allocSVMInt(context, 1, READ_ONLY);
-        buffer.mapWriteBuffer(queue, intbuffer -> intbuffer.put(triangleSize()));        
-        return buffer;
-    }   
+   
 }

@@ -31,6 +31,8 @@ public interface RayDeviceInterface {
     public void initMesh(String uri);
     public void initMesh(URI uri);        
     public void initMesh(Path path);
+    
+    public void setAPI(MambaAPIInterface api);
        
     public void execute();
     

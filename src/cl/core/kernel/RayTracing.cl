@@ -9,8 +9,8 @@
                     nodes, bounds);
      updateShadeImage(imageBuffer, width, height, isects);
   }
-
 */
+
 
 /*
     - Essential Mathematics for Games and Interactive Applications: 2nd edition, pg 203
@@ -22,14 +22,10 @@
 __kernel void generateCameraRays(
     global CameraStruct* camera,
     global Ray* rays,
-    global int* rayCount,
     global int* width,
     global int* height)
 {
-    //set ray count to zero
-    rayCount[0] = 0;
-    barrier(CLK_GLOBAL_MEM_FENCE);
-
+  
     //global id and pixel making
     int id= get_global_id( 0 );      
 
@@ -60,17 +56,12 @@ __kernel void generateCameraRays(
     //set pixel & active
     r->pixel = pixel;
     r->extra.x = true;
-    
-    //ray count
-    atomic_inc(rayCount);
 }
 
 __kernel void intersectPrimitives(
     global Ray* rays,
     global Intersection* isects,
-    
-    //hit count
-    global int* hitCount,
+    global int* count,
 
     //mesh
     global const float4* points,
@@ -93,27 +84,24 @@ __kernel void intersectPrimitives(
     global Intersection* isect = isects + id;
     TriangleMesh mesh = {points, normals, faces, size[0]};
     
-    if(isRayActive(*ray))
+    if(id < *count)
     {
-      //intersect
-      bool hit = intersectGlobal(ray, isect, mesh, nodes, bounds);    
+      if(isRayActive(*ray))
+      {
+        //intersect
+        bool hit = intersectGlobal(ray, isect, mesh, nodes, bounds);    
+  
+        //update hit status and what pixel it represent
+        isect->pixel = ray->pixel;
+        isect->hit = hit;
+      }
+      else
+      {
+        isect->hit = MISS_MARKER;
+        isect->mat = -1;
+      }
+    }
 
-      //update hit status and what pixel it represent
-      isect->pixel = ray->pixel;
-      isect->hit = hit;
-    }
-    else
-    {
-      isect->hit = MISS_MARKER;
-      isect->mat = -1;
-    }
-    
-    //perform intersection first in order to proceed
-    barrier(CLK_GLOBAL_MEM_FENCE);
-    
-    //get hit count
-    if(isect->hit)
-      atomic_inc(hitCount);
 }
 
 __kernel void lightHit(
@@ -197,10 +185,10 @@ __kernel void fastShade(
 }
 
 __kernel void shadeBackground(
-    global int* imageBuffer,
+    global Intersection* isects,
     global int* width,
     global int* height,
-    global Intersection* isects
+    global int* imageBuffer
 )
 {
     //get thread id
@@ -208,20 +196,20 @@ __kernel void shadeBackground(
 
     //updated the intersected areas color
     global Intersection* isect = isects + id;
-    //if(!isect->hit)
+    if(!isect->hit)
     {
         //pixel index
-        //int index = isect->pixel.x + width[0] * isect->pixel.y;
+        int index = isect->pixel.x + width[0] * isect->pixel.y;
         //update
-        imageBuffer[id] = getIntARGB((float4)(1, 0, 0, 1));
+        imageBuffer[id] = getIntARGB((float4)(0, 0, 0, 1));
     }
 }
 
 __kernel void updateShadeImage(
-    global int* imageBuffer,
+    global Intersection* isects,
     global int* width,
     global int* height,
-    global Intersection* isects
+    global int* imageBuffer
 )
 {
     int id= get_global_id( 0 );
@@ -239,75 +227,20 @@ __kernel void updateShadeImage(
 
 __kernel void groupBufferPass(
     global Intersection* isects,
+    global int* width,
+    global int* height,
     global int* groupBuffer
 )
 {
     int id= get_global_id( 0 );
-    
-    global Intersection* isect = isects + id;
 
+    global Intersection* isect = isects + id;
     if(isect->hit)
     {
-        groupBuffer[id] = getMaterial(isects[id].mat);//getMaterial(isects[id].mat);
+        int index = isect->pixel.x + width[0] * isect->pixel.y;
+        groupBuffer[index] = getMaterial(isect->mat);
 
     }    
-    else
-        groupBuffer[id] = -1;
+
 }
 
-__kernel void findBound(
-    //group to look for instances
-    global const int* groupIndex,
-
-     //mesh
-    global const float4* points,
-    global const float4* normals,
-    global const Face*   faces,
-    global const int*    size,
-
-    //global bound of size 6 -> xmin, ymin, zmin, xmax, ymax, zmax
-    global const float* groupBound
-)
-{
-    //global id  for mesh at index (id)
-    int id= get_global_id( 0 );
-
-    //Scene mesh
-    TriangleMesh mesh = {points, normals, faces, size[0]};
-
-    //Get face at id
-    global Face * face = faces + id;
-    
-    //Get bound coordinates
-    global float* xmin = groupBound + 0;
-    global float* ymin = groupBound + 1;
-    global float* zmin = groupBound + 2;
-    global float* xmax = groupBound + 3;
-    global float* ymax = groupBound + 4;
-    global float* zmax = groupBound + 5;
-
-
-    //update bounds
-    int groupID = getMaterial(face-> mat);
-    //printlnInt(groupID);
-    if(groupIndex[0] == groupID)
-    {
-        //printlnInt(*groupIndex);
-        BoundingBox bounds = getBoundingBox(mesh, id);
-
-        //bound->minimum = min(bound->minimum, point);
-        atomicMin(xmin, bounds.minimum.x);
-        atomicMin(ymin, bounds.minimum.y);
-        atomicMin(zmin, bounds.minimum.z);
-
-        //bound->maximum = max(bound->maximum, point);
-        atomicMax(xmax, bounds.maximum.x);
-        atomicMax(ymax, bounds.maximum.y);
-        atomicMax(zmax, bounds.maximum.z);
-        
-        BoundingBox box;
-        box.minimum = (float4)(*xmin, *ymin, *zmin, 0);
-        box.maximum = (float4)(*xmax, *ymax, *zmax, 0);
-        //printBound(box);
-    }
-}

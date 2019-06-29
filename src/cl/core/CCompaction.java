@@ -25,6 +25,8 @@ public final class CCompaction {
     private int size;
     private final int LOCALSIZECONSTANT = 256;
     
+    private CIntBuffer total = null;
+    
     private int gSize1, gSize2, gSize3;
     private int lSize1, lSize2, lSize3;
     
@@ -34,6 +36,9 @@ public final class CCompaction {
     
     private CKernel scanKernel1, scanKernel2, scanKernel3;
     private CKernel sumgKernel2, sumgKernel1;
+    
+    //optional kernel
+    private CKernel totalIntersectionKernel;
     
     private CKernel resetTempIntersection, compactIntersection, transferIntersection;
     
@@ -45,9 +50,10 @@ public final class CCompaction {
         this.configuration = configuration;       
     }
     
-    public void init(CStructBuffer<CIntersection> isectBuffer)
+    public void init(CStructBuffer<CIntersection> isectBuffer, CIntBuffer total)
     {
         this.size = isectBuffer.getSize();
+        this.total = total;
         this.isectBuffer = isectBuffer;
         this.tempIsectBuffer = CBufferFactory.allocStruct("temp_intersctions", configuration.context(), CIntersection.class, isectBuffer.getSize(), READ_ONLY);
         initCBuffers(size);
@@ -82,8 +88,10 @@ public final class CCompaction {
         resetTempIntersection   = configuration.createKernel("resetIntersection"          , tempIsectBuffer);       
         compactIntersection     = configuration.createKernel("compactIntersection"        , isectBuffer, tempIsectBuffer, sum_level1);       
         transferIntersection    = configuration.createKernel("transferIntersection"       , isectBuffer, tempIsectBuffer);      
+        
+        totalIntersectionKernel = configuration.createKernel("totalIntersection", isectBuffer, sum_level1, sum_level1_length, total);
     }
-    
+        
     public void execute()
     {
         configuration.executeKernel1D(scanKernel1, gSize1, lSize1);  
@@ -91,6 +99,8 @@ public final class CCompaction {
         configuration.executeKernel1D(scanKernel3, gSize3, lSize3);       
         configuration.executeKernel1D(sumgKernel2, gSize2, lSize2);
         configuration.executeKernel1D(sumgKernel1, gSize1, lSize1);
+        
+        configuration.executeKernel1D(totalIntersectionKernel, 1, 1);
         
         configuration.executeKernel1D(resetTempIntersection,    size, 1);
         configuration.executeKernel1D(compactIntersection,      size, 1);

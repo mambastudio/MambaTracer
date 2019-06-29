@@ -22,12 +22,10 @@ import coordinate.model.OrientationModel;
 import coordinate.parser.OBJParser;
 import coordinate.utility.Timer;
 import filesystem.core.OutputFactory;
-import static java.lang.Math.sqrt;
 import java.net.URI;
 import java.nio.IntBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import org.jocl.CL;
 import thread.model.LambdaThread;
 import wrapper.core.CBufferFactory;
@@ -78,33 +76,32 @@ public class RayDeviceMesh {
     //Ray & intersects
     CStructBuffer<CRay> raysBuffer;
     CStructBuffer<CIntersection> isectBuffer;
-    CStructBuffer<CMaterial> materialBuffer;
-    
+     
     //global count
     CIntBuffer count = null;
     
     //global and local size
     private int globalSize, localSize;
     
-    //kernel    
-    CKernel generateCameraRaysKernel = null;
+    //For ray tracing    
+    CKernel initGroupBufferKernel = null;
+    CKernel initCameraRaysKernel = null;    
     CKernel intersectPrimitivesKernel = null;
-    CKernel lightHitKernel = null;
     CKernel shadeBackgroundKernel = null;
+    CKernel updateShadeImageKernel = null;
+    CKernel groupBufferPassKernel = null;
+    
+    //For path tracing
+    CKernel lightHitKernel = null;    
     CKernel sampleBRDFKernel = null;
     CKernel updateFrameImageKernel = null;
     CKernel fastShadeKernel = null;
-    CKernel updateShadeImageKernel = null;
-    CKernel groupBufferPassKernel = null;
+        
+    //scan primitives to get bound of specific group
     CKernel findBoundKernel = null;
-   
-    //mesh
-    CFloatBuffer points = null;
-    CFloatBuffer normals = null;
-    CIntBuffer faces = null;
-    CIntBuffer size = null;
-    
-    //accelerator
+       
+    //mesh and accelerator
+    CMesh mesh;
     CNormalBVH bvhBuild;
     
     //render thread
@@ -112,6 +109,8 @@ public class RayDeviceMesh {
     
     //Compaction
     CCompaction compactIsect;
+    
+    
     
     public RayDeviceMesh()
     {
@@ -147,7 +146,7 @@ public class RayDeviceMesh {
         this.groupBound         = CBufferFactory.allocFloat("groupBound", configuration.context(), 6 , READ_WRITE);
         
         this.compactIsect       = new CCompaction(configuration);
-        this.compactIsect.init(isectBuffer);
+        this.compactIsect.init(isectBuffer, count);
                 
         //read mesh and position camera
         initDefaultMesh();  
@@ -160,43 +159,40 @@ public class RayDeviceMesh {
         
     public void initMesh(Path path)
     {
-        CMesh mesh = new CMesh(configuration);
-        OBJParser parser = new OBJParser();
+        CResourceFactory.releaseMemory("points","normals", "faces","size","nodes","nodesSize","objects", "materials", "fastShade");
         
-        //Time parsing
-        Timer parseTime = Timer.timeThis(() -> parser.read(path.toString(), mesh));
+        //load mesh and init mesh variables
+        mesh = new CMesh(configuration);
+        OBJParser parser = new OBJParser();    
+        Timer parseTime = Timer.timeThis(() -> parser.read(path.toString(), mesh)); //Time parsing
         OutputFactory.print("scene parse time", parseTime.toString());
+        mesh.initCLBuffers();
         
+        //build accelerator
+        Timer buildTime = Timer.timeThis(() -> {                                   //Time building
+            this.bvhBuild = new CNormalBVH(configuration);
+            this.bvhBuild.build(mesh);      
+        });
+        OutputFactory.print("bvh build time", buildTime.toString());
+                
         //Load scene material and group to ui
         RenderViewModel.setSceneMaterial(mesh.getMaterialList());
         
-        //Time building
-        Timer buildTime = Timer.timeThis(() -> mesh.buildAccelerator());
-        OutputFactory.print("bvh build time", buildTime.toString());
-        
+        //Set camera new position
         OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
         orientation.reposition(camera, mesh.getBound());
         
-        CResourceFactory.releaseMemory("points","normals", "faces","size","nodes","nodesSize","objects", "materials", "fastShade");
-        
-        this.points             = mesh.getCLPointsBuffer("points", configuration.context(), configuration.queue());
-        this.normals            = mesh.getCLNormalsBuffer("normals", configuration.context(), configuration.queue());
-        this.faces              = mesh.getCLFacesBuffer("faces", configuration.context(), configuration.queue());
-        this.size               = mesh.getCLSizeBuffer("size", configuration.context(), configuration.queue());
-        this.materialBuffer     = mesh.getCLMaterialBuffer("materials", configuration.context(), configuration.queue());
-        this.bvhBuild = new CNormalBVH(configuration);
-        this.bvhBuild.build(mesh);           
-       
-        generateCameraRaysKernel = configuration.program().createKernel("generateCameraRays", cameraBuffer, raysBuffer,  rayCount, width, height);
-        intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, hitCount, points, normals, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());
-        lightHitKernel = configuration.program().createKernel("lightHit", isectBuffer, materialBuffer, accumBuffer, width, height);
-        sampleBRDFKernel = configuration.program().createKernel("sampleBRDF", isectBuffer, materialBuffer, rayCount);
+        initGroupBufferKernel = configuration.program().createKernel("InitIntData_1", groupBuffer);
+        initCameraRaysKernel = configuration.program().createKernel("InitCameraRayData", cameraBuffer, raysBuffer, width, height);
+        intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, count, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvhBuild.getCNodes(), bvhBuild.getCBounds());
+        lightHitKernel = configuration.program().createKernel("lightHit", isectBuffer, mesh.clMaterials(), accumBuffer, width, height);
+        sampleBRDFKernel = configuration.program().createKernel("sampleBRDF", isectBuffer, mesh.clMaterials(), rayCount);
         updateFrameImageKernel = configuration.program().createKernel("updateFrameImage", accumBuffer, frameBuffer, frameCountBuffer);
-        fastShadeKernel = configuration.program().createKernel("fastShade", materialBuffer, isectBuffer);        
-        updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", imageBuffer, width, height, isectBuffer);  
-        shadeBackgroundKernel = configuration.program().createKernel("shadeBackground", imageBuffer, width, height, isectBuffer);  
-        groupBufferPassKernel = configuration.program().createKernel("groupBufferPass", isectBuffer, groupBuffer);
-        findBoundKernel = configuration.program().createKernel("findBound", groupIndex, points, normals, faces, size, groupBound);
+        fastShadeKernel = configuration.program().createKernel("fastShade", mesh.clMaterials(), isectBuffer);
+        shadeBackgroundKernel = configuration.program().createKernel("shadeBackground", isectBuffer, width, height, imageBuffer);
+        updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", isectBuffer, width, height, imageBuffer);
+        groupBufferPassKernel = configuration.program().createKernel("groupBufferPass", isectBuffer, width, height, groupBuffer);
+        findBoundKernel = configuration.program().createKernel("findBound", groupIndex, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), groupBound);        
         
         //update the kernels here
     }
@@ -205,24 +201,25 @@ public class RayDeviceMesh {
     
     public void execute()
     {     
-        //set hit count 0
-        hitCount.mapWriteValue(configuration.queue(), 0);
+        //reset to window size
+        count.mapWriteValue(configuration.queue(), globalSize);
         
-        configuration.queue().put1DRangeKernel(generateCameraRaysKernel, globalSize, localSize); 
+        configuration.queue().put1DRangeKernel(initGroupBufferKernel, globalSize, localSize);
+        configuration.queue().put1DRangeKernel(initCameraRaysKernel, globalSize, localSize); 
         configuration.queue().put1DRangeKernel(intersectPrimitivesKernel, globalSize, localSize);    
         configuration.queue().put1DRangeKernel(shadeBackgroundKernel, globalSize, localSize);        
-        compactIsect.execute();         
+        //compactIsect.execute();   //compact intersections      
         configuration.queue().put1DRangeKernel(fastShadeKernel, globalSize, localSize);       
         configuration.queue().put1DRangeKernel(updateShadeImageKernel, globalSize, localSize);  
         configuration.queue().put1DRangeKernel(groupBufferPassKernel, globalSize, localSize);
-                       
+                             
          /*
              Why implementing this makes opencl run faster?
             Probable answer is this... https://stackoverflow.com/questions/18471170/commenting-clfinish-out-makes-program-100-faster
         */       
         configuration.queue().finish();        
         
-      
+     
     }
     
     public void initBuffers()
@@ -261,7 +258,7 @@ public class RayDeviceMesh {
                 //set ray count and hit count to zero and generate camera rays
                 rayCount.mapWriteValue(configuration.queue(), 0);     
                 hitCount.mapWriteValue(configuration.queue(), 0);
-                configuration.queue().put1DRangeKernel(generateCameraRaysKernel, globalSize, localSize); 
+                configuration.queue().put1DRangeKernel(initCameraRaysKernel, globalSize, localSize); 
                 
                 //start tracing path
                 for(int i = 0; i<1; i++)
@@ -329,10 +326,8 @@ public class RayDeviceMesh {
             });}
     
     public void setMaterial(int index, CMaterial material)
-    {        
-        this.materialBuffer.mapWriteBuffer(configuration.queue(), materialArray -> {            
-            materialArray[index] = material;            
-        });
+    {    
+        mesh.setMaterial(index, material);
     }
     
     public int getTotalSize(){return globalSize;}
@@ -349,7 +344,7 @@ public class RayDeviceMesh {
        });
         groupIndex.setArray(configuration.queue(), value);
        
-       configuration.queue().put1DRangeKernel(findBoundKernel, size.get(0), 1);
+       configuration.queue().put1DRangeKernel(findBoundKernel, mesh.clSize().get(0), 1);
        configuration.queue().finish(); // not really necessary
        
        CPoint3 min = new CPoint3();
@@ -401,36 +396,37 @@ public class RayDeviceMesh {
                         "f 2//4 6//4 3//4\n" +
                         "f 4//5 3//5 8//5\n" +
                         "f 5//6 1//6 8//6";
+        CResourceFactory.releaseMemory("points","faces","size","nodes","nodesSize","objects", "materials", "fastShadeKernel");
         
-        CMesh mesh = new CMesh(configuration);
-        OBJParser parser = new OBJParser();
-        //parser.readString(cube, mesh);
+        //load mesh and init mesh variables
+        mesh = new CMesh(configuration);   
+        OBJParser parser = new OBJParser();        
         parser.readString(cube, mesh);
+        mesh.initCLBuffers();
+        
+        //build accelerator
+        this.bvhBuild = new CNormalBVH(configuration);
+        this.bvhBuild.build(mesh);
+        
+        //set material to model api
         RenderViewModel.setSceneMaterial(mesh.getMaterialList());        
-        mesh.buildAccelerator();
+        
+        //set camera new position 
         OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
         orientation.reposition(camera, mesh.getBound());
         
-        CResourceFactory.releaseMemory("points","faces","size","nodes","nodesSize","objects", "materials", "fastShadeKernel");
         
-        this.points             = mesh.getCLPointsBuffer("points", configuration.context(), configuration.queue());
-        this.normals            = mesh.getCLNormalsBuffer("normals", configuration.context(), configuration.queue());
-        this.faces              = mesh.getCLFacesBuffer("faces", configuration.context(), configuration.queue());
-        this.size               = mesh.getCLSizeBuffer("size", configuration.context(), configuration.queue());
-        this.materialBuffer     = mesh.getCLMaterialBuffer("materials", configuration.context(), configuration.queue());
-        
-        this.bvhBuild = new CNormalBVH(configuration);
-        this.bvhBuild.build(mesh);
                 
-        generateCameraRaysKernel = configuration.program().createKernel("generateCameraRays", cameraBuffer, raysBuffer, rayCount, width, height);
-        intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, hitCount, points, normals, faces, size, bvhBuild.getCNodes(), bvhBuild.getCBounds());
-        lightHitKernel = configuration.program().createKernel("lightHit", isectBuffer, materialBuffer, accumBuffer, width, height);
-        sampleBRDFKernel = configuration.program().createKernel("sampleBRDF", isectBuffer, materialBuffer, rayCount);
+        initGroupBufferKernel = configuration.program().createKernel("InitIntData_1", groupBuffer);
+        initCameraRaysKernel = configuration.program().createKernel("InitCameraRayData", cameraBuffer, raysBuffer, width, height);
+        intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, count, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvhBuild.getCNodes(), bvhBuild.getCBounds());
+        lightHitKernel = configuration.program().createKernel("lightHit", isectBuffer, mesh.clMaterials(), accumBuffer, width, height);
+        sampleBRDFKernel = configuration.program().createKernel("sampleBRDF", isectBuffer, mesh.clMaterials(), rayCount);
         updateFrameImageKernel = configuration.program().createKernel("updateFrameImage", accumBuffer, frameBuffer, frameCountBuffer);
-        fastShadeKernel = configuration.program().createKernel("fastShade", materialBuffer, isectBuffer);
-        shadeBackgroundKernel = configuration.program().createKernel("shadeBackground", imageBuffer, width, height, isectBuffer);  
-        updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", imageBuffer, width, height, isectBuffer);
-        groupBufferPassKernel = configuration.program().createKernel("groupBufferPass", isectBuffer, groupBuffer);
-        findBoundKernel = configuration.program().createKernel("findBound", groupIndex, points, normals, faces, size, groupBound);        
+        fastShadeKernel = configuration.program().createKernel("fastShade", mesh.clMaterials(), isectBuffer);
+        shadeBackgroundKernel = configuration.program().createKernel("shadeBackground", isectBuffer, width, height, imageBuffer);  
+        updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", isectBuffer, width, height, imageBuffer);
+        groupBufferPassKernel = configuration.program().createKernel("groupBufferPass", isectBuffer, width, height, groupBuffer);
+        findBoundKernel = configuration.program().createKernel("findBound", groupIndex, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), groupBound);        
     }
 }
