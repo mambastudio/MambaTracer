@@ -65,8 +65,6 @@ public class GPUBuildBVH implements AbstractAccelerator< CRay,
         StructIntArray<MortonPrimitive> mortonPrimitives = new StructIntArray<>(MortonPrimitive.class, leafS); 
         
         //init mesh
-        CFloatBuffer cpoints = mesh.getCLPointsBuffer("points", configuration.context(), configuration.queue());
-        CIntBuffer cfaces = mesh.getCLFacesBuffer("faces", configuration.context(), configuration.queue());
         CFloatBuffer cpoints = mesh.clPoints();
         CIntBuffer cfaces = mesh.clFaces();
         CIntBuffer csize = mesh.clSize();
