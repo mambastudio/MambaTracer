@@ -54,16 +54,8 @@ public class RayDeviceMesh {
     //image variables
     CIntBuffer imageBuffer = null;
     CIntBuffer groupBuffer = null;
-    
-    //Image variables from rendering
-    CIntBuffer frameBuffer = null;
-    CFloatBuffer accumBuffer = null;
-    CFloatBuffer frameCountBuffer = null;
-    CIntBuffer   rayCount = null;
-    CIntBuffer   hitCountBuffer = null;    
-    CIntBuffer   occlusionBuffer = null;
-    
-    //group index an bound
+       
+    //group index an bound for selection
     CIntBuffer groupIndex = null;
     CFloatBuffer groupBound = null;
     
@@ -87,17 +79,12 @@ public class RayDeviceMesh {
     CKernel initGroupBufferKernel = null;
     CKernel initCameraRaysKernel = null;    
     CKernel intersectPrimitivesKernel = null;
+    CKernel fastShadeKernel = null;
     CKernel shadeBackgroundKernel = null;
     CKernel updateShadeImageKernel = null;
     CKernel groupBufferPassKernel = null;
     
-    //For path tracing
-    CKernel lightHitKernel = null;    
-    CKernel sampleBRDFKernel = null;
-    CKernel updateFrameImageKernel = null;
-    CKernel fastShadeKernel = null;
-        
-    //scan primitives to get bound of specific group
+    //iterate primitives to get bound of specific group
     CKernel findBoundKernel = null;
        
     //mesh and accelerator
@@ -109,8 +96,6 @@ public class RayDeviceMesh {
     
     //Compaction
     CCompaction compactIsect;
-    
-    
     
     public RayDeviceMesh()
     {
@@ -131,12 +116,8 @@ public class RayDeviceMesh {
         this.hitCount           = CBufferFactory.initIntValue("hitCount", configuration.context(), configuration.queue(), 0, READ_WRITE);
         this.imageBuffer        = CBufferFactory.allocInt("image", configuration.context(), globalSize, READ_WRITE);
         this.groupBuffer        = CBufferFactory.allocInt("group", configuration.context(), globalSize, READ_WRITE);
-        this.frameBuffer        = CBufferFactory.allocInt("frame", configuration.context(), globalSize, READ_WRITE);
-        this.frameCountBuffer   = CBufferFactory.initFloatValue("countFrame", configuration.context(), configuration.queue(), 0, READ_WRITE);        
-        this.accumBuffer        = CBufferFactory.allocFloat("accum", configuration.context(), globalSize * 4, READ_WRITE);
         this.isectBuffer        = CBufferFactory.allocStruct("intersctions", configuration.context(), CIntersection.class, globalSize, READ_WRITE);
         this.raysBuffer         = CBufferFactory.allocStruct("rays", configuration.context(), CRay.class, globalSize, READ_WRITE);
-        this.rayCount           = CBufferFactory.initIntValue("rayCount", configuration.context(), configuration.queue(), 0, READ_WRITE);
         this.cameraBuffer       = CBufferFactory.allocStruct("camera", configuration.context(), CCamera.CameraStruct.class, 1, READ_ONLY);
         this.width              = CBufferFactory.initIntValue("width", configuration.context(), configuration.queue(), width, READ_ONLY);
         this.height             = CBufferFactory.initIntValue("height", configuration.context(), configuration.queue(), height, READ_ONLY);
@@ -185,9 +166,6 @@ public class RayDeviceMesh {
         initGroupBufferKernel = configuration.program().createKernel("InitIntData_1", groupBuffer);
         initCameraRaysKernel = configuration.program().createKernel("InitCameraRayData", cameraBuffer, raysBuffer, width, height);
         intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, count, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvhBuild.getCNodes(), bvhBuild.getCBounds());
-        lightHitKernel = configuration.program().createKernel("lightHit", isectBuffer, mesh.clMaterials(), accumBuffer, width, height);
-        sampleBRDFKernel = configuration.program().createKernel("sampleBRDF", isectBuffer, mesh.clMaterials(), rayCount);
-        updateFrameImageKernel = configuration.program().createKernel("updateFrameImage", accumBuffer, frameBuffer, frameCountBuffer);
         fastShadeKernel = configuration.program().createKernel("fastShade", mesh.clMaterials(), isectBuffer);
         shadeBackgroundKernel = configuration.program().createKernel("shadeBackground", isectBuffer, width, height, imageBuffer);
         updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", isectBuffer, width, height, imageBuffer);
@@ -224,6 +202,7 @@ public class RayDeviceMesh {
     
     public void initBuffers()
     {
+        /*
         frameBuffer.mapWriteBuffer(configuration.queue(), buffer -> {
            for(int i = 0; i<buffer.capacity(); i++)
                buffer.put(0);
@@ -237,12 +216,12 @@ public class RayDeviceMesh {
            for(int i = 0; i<buffer.capacity(); i++)
                buffer.put(0);
         });
-        
+        */
     }        
             
     
     public void render()
-    {
+    {/*
         if(renderThread.isPaused())
             renderThread.resumeExecution();
         else if(renderThread.isTerminated()) 
@@ -296,6 +275,7 @@ public class RayDeviceMesh {
                 renderThread.chill();
             });
         }
+        */
     }
     
     public void pauseRender()            
@@ -414,15 +394,10 @@ public class RayDeviceMesh {
         //set camera new position 
         OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
         orientation.reposition(camera, mesh.getBound());
-        
-        
-                
+                    
         initGroupBufferKernel = configuration.program().createKernel("InitIntData_1", groupBuffer);
         initCameraRaysKernel = configuration.program().createKernel("InitCameraRayData", cameraBuffer, raysBuffer, width, height);
         intersectPrimitivesKernel = configuration.program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, count, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvhBuild.getCNodes(), bvhBuild.getCBounds());
-        lightHitKernel = configuration.program().createKernel("lightHit", isectBuffer, mesh.clMaterials(), accumBuffer, width, height);
-        sampleBRDFKernel = configuration.program().createKernel("sampleBRDF", isectBuffer, mesh.clMaterials(), rayCount);
-        updateFrameImageKernel = configuration.program().createKernel("updateFrameImage", accumBuffer, frameBuffer, frameCountBuffer);
         fastShadeKernel = configuration.program().createKernel("fastShade", mesh.clMaterials(), isectBuffer);
         shadeBackgroundKernel = configuration.program().createKernel("shadeBackground", isectBuffer, width, height, imageBuffer);  
         updateShadeImageKernel = configuration.program().createKernel("updateShadeImage", isectBuffer, width, height, imageBuffer);

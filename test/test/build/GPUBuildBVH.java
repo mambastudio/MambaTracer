@@ -54,6 +54,7 @@ public class GPUBuildBVH implements AbstractAccelerator< CRay,
         CL.setExceptionsEnabled(true);
         OpenCLPlatform configuration = OpenCLPlatform.getDefault(source1, source2, source3);                
         this.mesh = primitives;
+        mesh.initCLBuffers();
         
         int leafS = primitives.getCount();              // n
         int nodeS = leafS - 1;                          // n - 1 
@@ -66,7 +67,9 @@ public class GPUBuildBVH implements AbstractAccelerator< CRay,
         //init mesh
         CFloatBuffer cpoints = mesh.getCLPointsBuffer("points", configuration.context(), configuration.queue());
         CIntBuffer cfaces = mesh.getCLFacesBuffer("faces", configuration.context(), configuration.queue());
-        CIntBuffer csize = mesh.getCLSizeBuffer("size", configuration.context(), configuration.queue());   
+        CFloatBuffer cpoints = mesh.clPoints();
+        CIntBuffer cfaces = mesh.clFaces();
+        CIntBuffer csize = mesh.clSize();
                 
         //init morton array
         CIntBuffer cmortons = CBufferFactory.wrapInt("mortons", configuration.context(), configuration.queue(), mortonPrimitives.getArray(), READ_WRITE);        

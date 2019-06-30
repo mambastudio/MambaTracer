@@ -36,10 +36,9 @@ public class GPUMeshBuild {
         OpenCLPlatform configuration = OpenCLPlatform.getDefault(source1, source2);
         
         OBJParser parser = new OBJParser();
-        CMesh mesh = new CMesh(configuration);
-        
-        
+        CMesh mesh = new CMesh(configuration);       
         parser.read("C:\\Users\\user\\Documents\\Scene3d\\simplebox\\boxes.obj", mesh);
+        mesh.initCLBuffers();
         
         int leafS = mesh.getCount();              // n
         int nodeS = leafS - 1;                          // n - 1 
@@ -50,9 +49,9 @@ public class GPUMeshBuild {
         StructIntArray<MortonPrimitive> mortonPrimitives = new StructIntArray<>(MortonPrimitive.class, leafS); 
         
         //init mesh
-        CFloatBuffer cpoints = mesh.getCLPointsBuffer("points", configuration.context(), configuration.queue());
-        CIntBuffer cfaces = mesh.getCLFacesBuffer("faces", configuration.context(), configuration.queue());
-        CIntBuffer csize = mesh.getCLSizeBuffer("size", configuration.context(), configuration.queue());   
+        CFloatBuffer cpoints = mesh.clPoints();
+        CIntBuffer cfaces = mesh.clFaces();
+        CIntBuffer csize = mesh.clSize(); 
                 
         //init morton array
         CIntBuffer cmortons = CBufferFactory.wrapInt("mortons", configuration.context(), configuration.queue(), mortonPrimitives.getArray(), READ_WRITE);        
