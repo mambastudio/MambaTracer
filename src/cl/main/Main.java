@@ -5,6 +5,11 @@
  */
 package cl.main;
 
+import bitmap.display.BlendDisplay;
+import cl.core.api.MambaAPIInterface;
+import static cl.core.api.MambaAPIInterface.ImageType.OVERLAY_IMAGE;
+import static cl.core.api.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
+import static cl.core.api.MambaAPIInterface.ImageType.RENDER_IMAGE;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
 import javafx.fxml.FXMLLoader;
@@ -24,8 +29,21 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        Parent root = FXMLLoader.load(getClass().getResource("RenderWindow.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("RenderWindow.fxml"));
+        Parent root = loader.load();
         
+        //create api and set display
+        TracerAPI api = new TracerAPI();   //api creates devices inside    
+        api.setBlendDisplay(new BlendDisplay(RAYTRACE_IMAGE.name(), OVERLAY_IMAGE.name(), RENDER_IMAGE.name()));
+        
+        //set controller (which sets display inside)
+        RenderWindowController controller = (RenderWindowController)loader.getController();        
+        api.set("controller", controller);
+       
+        //initialize 3d scene
+        api.init();
+        
+        //complete launch of ui
         Scene scene = new Scene(root);        
         primaryStage.setScene(scene);
         primaryStage.setTitle("Mamba Tracer");

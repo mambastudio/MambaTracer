@@ -3,11 +3,17 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/shapes/CMesh.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/renderer/SimpleRender.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/main/RenderWindowController.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/device/RayDeviceMeshRender.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/CCamera.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/main/Main.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/ui/mvc/viewmodel/RenderViewModel.java</file>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/device/RayDeviceMesh.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/device/RayDeviceMeshRenderBind.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/CNormalBVH.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/main/TracerAPI.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/api/RayDeviceInterface.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/api/MambaAPIInterface.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/api/RenderControllerInterface.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/test/SimpleTest.java</file>
         </group>
     </open-files>
 </project-private>

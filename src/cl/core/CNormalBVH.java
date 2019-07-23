@@ -15,6 +15,7 @@ import cl.shapes.CMesh;
 import coordinate.generic.raytrace.AbstractAccelerator;
 import java.util.concurrent.TimeUnit;
 import static wrapper.core.CMemory.READ_WRITE;
+import wrapper.core.CResourceFactory;
 import wrapper.core.OpenCLPlatform;
 import wrapper.core.buffer.CFloatBuffer;
 import wrapper.core.buffer.CIntBuffer;
@@ -58,9 +59,12 @@ public class CNormalBVH implements AbstractAccelerator
         for(int i = 0; i<this.primitives.getCount(); i++)
             objects[i] = i;
         
+        //Release memory
+        CResourceFactory.releaseMemory("nodes", "bounds");
+        
         //Allocate BVH root node
         nodes   = new CStructIntArray(configuration, CNode.class, this.primitives.getCount() * 2 - 1, "nodes", READ_WRITE);
-        bounds  = new CStructFloatArray(configuration, CBound.class, this.primitives.getCount() * 2 - 1, "nodes", READ_WRITE);
+        bounds  = new CStructFloatArray(configuration, CBound.class, this.primitives.getCount() * 2 - 1, "bounds", READ_WRITE);
         
         CNode root = new CNode();
         nodes.set(root, 0);        

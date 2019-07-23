@@ -162,7 +162,6 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
     public void initCLBuffers()
     {
         CResourceFactory.releaseMemory("points", "normals", "faces", "size", "materials");
-                System.out.println(getPointArray().length);
         pointsBuffer = CBufferFactory.wrapFloat("points", configuration.context(), configuration.queue(), getPointArray(), READ_ONLY);
         normalsBuffer = CBufferFactory.wrapFloat("normals", configuration.context(), configuration.queue(), getNormalArray(), READ_ONLY); 
         facesBuffer = CBufferFactory.wrapInt("faces", configuration.context(), configuration.queue(), getTriangleFacesArray(), READ_ONLY);

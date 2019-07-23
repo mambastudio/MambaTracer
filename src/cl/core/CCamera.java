@@ -9,7 +9,6 @@ import cl.core.data.struct.CRay;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import coordinate.model.CameraModel;
-import org.jocl.struct.CLTypes.cl_float16;
 import org.jocl.struct.CLTypes.cl_float4;
 import org.jocl.struct.Struct;
 
@@ -35,7 +34,7 @@ public class CCamera extends CameraModel <CPoint3, CVector3, CRay>{
         camera.position = position.getFloatCL4();
         camera.lookat = lookat.getFloatCL4();
         camera.up = up.getFloatCL4();
-        camera.fov = fov;
+        camera.fov = fov; 
         return camera;        
     }
     
@@ -48,9 +47,21 @@ public class CCamera extends CameraModel <CPoint3, CVector3, CRay>{
     
     public static class CameraStruct extends Struct
     {
-        public cl_float4 position;
+        public cl_float4 position; 
         public cl_float4 lookat;
         public cl_float4 up;
         public float fov;
     }     
+    
+    public boolean isSynched(CameraStruct cameraStruct)
+    {
+        float x  = position.x;
+        float x1 = cameraStruct.position.get(0);
+        float y  = position.y;
+        float y1 = cameraStruct.position.get(1);
+        float z  = position.z;
+        float z1 = cameraStruct.position.get(2);
+        
+        return (x == x1) && (y == y1) &&  (z == z1);
+    }
 }

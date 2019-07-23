@@ -40,7 +40,7 @@ __kernel void generateCameraRays(
 
     //distance to ndc and then aspect ratio
     float d = 1.0f/tan(radians((*camera).fov)/2.0f);
-    float a = width[0]/height[0];
+    float a = 10; //width[0]/height[0];
 
     //direction (px, py, pz, 0) and origin (0, 0, 0, 0)
     r->d = normalize((float4)(a * (2.f * pixel.x/width[0] - 1), -2.f * pixel.y/height[0] + 1, -d, 0));

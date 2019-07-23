@@ -5,16 +5,29 @@
  */
 package cl.main;
 
-import bitmap.display.BlendDisplay;
+import cl.core.console.Console;
 import bitmap.image.BitmapARGB;
-import bitmap.image.BitmapRGB;
-import cl.renderer.SimpleRender;
+import cl.core.CBoundingBox;
+import cl.core.api.MambaAPIInterface;
+import static cl.core.api.MambaAPIInterface.DeviceType.RAYTRACE;
+import static cl.core.api.MambaAPIInterface.DeviceType.RENDER;
+import cl.core.api.MambaAPIInterface.ImageType;
+import static cl.core.api.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
+import static cl.core.api.MambaAPIInterface.ImageType.RENDER_IMAGE;
+import cl.core.api.RayDeviceInterface;
+import cl.core.api.RenderControllerInterface;
+import cl.core.data.CPoint3;
+import cl.core.data.CVector3;
+import cl.core.data.struct.CMaterial;
+import cl.core.data.struct.CRay;
+import cl.core.device.RayDeviceMesh;
 import cl.ui.mvc.view.icons.IconAssetManager;
 import cl.ui.mvc.viewmodel.RenderViewModel;
 import cl.ui.mvc.model.CustomData;
 import cl.ui.mvc.view.MaterialVaultTreeCell;
 import cl.ui.mvc.view.TargetTreeCell;
 import com.sun.javafx.scene.control.skin.LabeledText;
+import coordinate.model.OrientationModel;
 import coordinate.parser.attribute.MaterialT;
 import filesystem.core.OutputFactory;
 import filesystem.util.FileChooserManager;
@@ -24,11 +37,13 @@ import java.io.File;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.ResourceBundle;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -44,6 +59,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.Dragboard;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
@@ -58,7 +74,7 @@ import thread.model.LambdaThread;
  *
  * @author user
  */
-public class RenderWindowController implements Initializable {
+public class RenderWindowController implements Initializable, RenderControllerInterface<TracerAPI, RayDeviceInterface,MaterialT> {
 
     /**
      * Initializes the controller class.
@@ -139,18 +155,30 @@ public class RenderWindowController implements Initializable {
     @FXML
     Tab matsTab;
         
-    private final BlendDisplay display = new BlendDisplay("base", "selection", "render");
-    private final SimpleRender render = new SimpleRender();
+    //API and display     
+    private MambaAPIInterface api;
+         
+    //Javafx data
+    private TreeItem<CustomData<MaterialT>> sceneRoot = null;    
+    
+    //Javafx data for material & group     
+    private TreeItem<CustomData<MaterialT>> materialRoot = null;    
+    private TreeItem<CustomData<MaterialT>> diffuseTreeItem = null;
+    private TreeItem<CustomData<MaterialT>> emitterTreeItem = null;
+    
+    OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
+    int currentinstance = -2;
     
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // TODO     
-        
-        RenderViewModel.display = display;
-        
+                
+        // TODO    
+        sceneRoot = new TreeItem(new CustomData("Scene Material", null)); 
+        sceneRoot.setExpanded(true);
+       
         //Init material database and scene tree view   
-        RenderViewModel.initMaterialTreeData(treeViewMaterial);
-        RenderViewModel.initSceneTreeData(treeViewScene);
+        initMaterialTreeData(treeViewMaterial);
+        initSceneTreeData(treeViewScene);
         
         //Set cell renderer for tree cell       
         treeViewScene.setCellFactory(m -> new TargetTreeCell());                 
@@ -240,16 +268,16 @@ public class RenderWindowController implements Initializable {
         pauseButton.setDisable(true);
         stopButton.setDisable(true);        
         renderButton.setOnAction(e -> {
-            RenderViewModel.isRendering = true;
+
             pauseButton.setDisable(false);
             stopButton.setDisable(false);
             renderButton.setDisable(true);
             editButton.setDisable(true);
             
-            if(!RenderViewModel.getDevice().isRenderPaused())
-                display.set("render", new BitmapARGB(render.getWidth(), render.getHeight(), true));
+            //if(!RenderViewModel.getDevice().isRenderPaused())
+            //    display.set("render", new BitmapARGB(render.getWidth(), render.getHeight(), true));
             
-            RenderViewModel.getDevice().render();
+            //RenderViewModel.getDevice().render();
         });
         pauseButton.setOnAction(e -> {            
             pauseButton.setDisable(true);
@@ -257,7 +285,7 @@ public class RenderWindowController implements Initializable {
             renderButton.setDisable(false);
             editButton.setDisable(true);
             
-            RenderViewModel.getDevice().pauseRender();
+            api.pauseDevice(RENDER);
         });
         stopButton.setOnAction(e -> {
             pauseButton.setDisable(true);
@@ -265,11 +293,12 @@ public class RenderWindowController implements Initializable {
             renderButton.setDisable(false);
             editButton.setDisable(false);
             
-            RenderViewModel.getDevice().stopRender();
+            api.stopDevice(RENDER);
         });
-        editButton.setOnAction(e -> {
-            RenderViewModel.isRendering = false;
-            display.set("render", new BitmapARGB(render.getWidth(), render.getHeight(), false));
+        editButton.setOnAction(e -> {            
+            api.applyImage(RENDER_IMAGE, () -> {
+                return new BitmapARGB(api.getImageSize(RENDER_IMAGE).x, api.getImageSize(RENDER_IMAGE).x, false);
+            });
             editButton.setDisable(true);
         });
         
@@ -300,11 +329,7 @@ public class RenderWindowController implements Initializable {
         emitterPowerSpinner.disableProperty().bind(emitterEnabled.selectedProperty().not());
         
         iorSpinner.disableProperty().bind(refractionEnabled.selectedProperty().not());
-        
-        //Init rest of gui
-        pane.setCenter(display);        
-        render.launch(display);
-        render.close();        
+      
     } 
     
     public void initDragAndDrop()
@@ -327,7 +352,7 @@ public class RenderWindowController implements Initializable {
             if(db.hasContent(CustomData.getFormat()))
             {
                 CustomData data = (CustomData) e.getDragboard().getContent(CustomData.getFormat());
-                RenderViewModel.addSceneMaterial(data);                
+                addSceneMaterial(data);                
                 success = true;
             }
              /* let the source know whether the string was successfully 
@@ -345,17 +370,16 @@ public class RenderWindowController implements Initializable {
    
     public void open(ActionEvent e)
     {
-        render.pauseKernel();
+        api.pauseDevice(RAYTRACE);
         
-        File file = launchSceneFileChooser(null);
-        
-        if(file == null) {render.resumeKernel(); return;}
+        File file = launchSceneFileChooser(null);        
+        if(file == null) {api.resumeDevice(RAYTRACE); return;}
         
         LambdaThread.executeThread(()->{
             ProgressIndicator progressIndicator = new ProgressIndicator();
             Platform.runLater(() -> parentPane.getChildren().add(progressIndicator));
-            render.initMesh(file.toPath());            
-            render.resumeKernel();
+            api.initMesh(file.toPath());
+            api.resumeDevice(RAYTRACE);
             Platform.runLater(() -> parentPane.getChildren().remove(progressIndicator));
         });
     }
@@ -368,7 +392,7 @@ public class RenderWindowController implements Initializable {
     
     public void resetSceneTreeMaterial(ActionEvent e)
     {
-        RenderViewModel.clearSceneMaterial();
+       clearSceneMaterial();
     }
     
     public void backToMaterialsTab(ActionEvent e)
@@ -380,4 +404,153 @@ public class RenderWindowController implements Initializable {
     {
         RenderViewModel.cmat.setMaterial(RenderViewModel.materialEditorModel.getEditedMaterial());
     }
+
+    @Override
+    public void setAPI(TracerAPI api) {
+        this.api = api;
+        this.pane.setCenter(api.getBlendDisplay());         
+        
+        api.getBlendDisplay().translationDepth.addListener((observable, old_value, new_value) -> {               
+            if(api.isDeviceRunning(RENDER)) return;
+            orientation.translateDistance(api.getDevice(RAYTRACE).getCamera(), new_value.floatValue() * api.getDevice(RAYTRACE).getBound().getMaximumExtent());     
+            api.getDevice(RAYTRACE).resume();
+        });
+        
+        api.getBlendDisplay().translationXY.addListener((observable, old_value, new_value) -> {    
+            if(api.isDeviceRunning(RENDER)) return;
+            orientation.rotateX(api.getDevice(RAYTRACE).getCamera(), (float) new_value.getX());
+            orientation.rotateY(api.getDevice(RAYTRACE).getCamera(), (float) new_value.getY());
+            api.getDevice(RAYTRACE).resume();
+        });
+        
+        api.getBlendDisplay().setOnDragOver(e -> {
+            if(api.isDeviceRunning(RENDER)) return;            
+            Bounds imageViewInScreen = api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).localToScreen(api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).getBoundsInLocal());
+            double x = e.getScreenX() - imageViewInScreen.getMinX();
+            double y = e.getScreenY() - imageViewInScreen.getMinY();
+            
+            if(!(e.getGestureSource() instanceof MaterialVaultTreeCell))            
+                if(e.getDragboard().getContent(CustomData.getFormat()) instanceof CustomData)
+                {         
+                    if(api.overlay.isInstance(x, y))
+                        e.acceptTransferModes(TransferMode.COPY_OR_MOVE);             
+                }
+                       
+            int instance = api.overlay.get(x, y);
+            
+            //since if we paint in every mouse movement, 
+            //it will be expensive in a slow processor, 
+            //hence we avoid such a situation.
+            //It would still work if we neglet such a concern!!
+            if(currentinstance != instance) 
+            {
+                currentinstance = instance;
+                BitmapARGB selectionBitmap = api.overlay.getDragOverlay(instance);
+                api.getBlendDisplay().set(ImageType.OVERLAY_IMAGE.name(), selectionBitmap);                
+            }
+        });
+        api.getBlendDisplay().setOnDragExited(e -> {
+            if(api.isDeviceRunning(RENDER)) return;
+            
+            BitmapARGB selectionBitmap = api.overlay.getNull();
+            api.getBlendDisplay().set(ImageType.OVERLAY_IMAGE.name(), selectionBitmap);            
+            currentinstance = -2;
+        });
+        api.getBlendDisplay().setOnDragDropped(e -> {
+            if(api.isDeviceRunning(RENDER)) return;
+            
+            Bounds imageViewInScreen = api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).localToScreen(api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).getBoundsInLocal());
+            double x = e.getScreenX() - imageViewInScreen.getMinX();
+            double y = e.getScreenY() - imageViewInScreen.getMinY();
+            
+            if(e.getGestureSource() instanceof TargetTreeCell)
+            {
+                CustomData data = (CustomData) e.getDragboard().getContent(CustomData.getFormat());
+                MaterialT mat = (MaterialT) data.getData();                
+                CMaterial cmat = new CMaterial();
+                int cmatIndex = api.overlay.get(x, y);    
+                cmat.setMaterial(mat);
+                api.getDevice(RAYTRACE).setMaterial(cmatIndex, mat);
+                api.getDevice(RAYTRACE).resume();
+            }
+        });
+        
+        api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).setOnMousePressed(e -> {
+            if(api.isDeviceRunning(RENDER)) return;
+            
+            if(e.getButton().equals(MouseButton.PRIMARY)){
+                if(e.getClickCount() == 2){
+                    
+                    Bounds imageViewInScreen = api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).localToScreen(api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).getBoundsInLocal());
+                    double x = e.getScreenX() - imageViewInScreen.getMinX();
+                    double y = e.getScreenY() - imageViewInScreen.getMinY();
+                    
+                    int instance = api.overlay.get(x, y);
+                    //System.out.println(instance);
+                    if(instance > -1)
+                    {
+                        RayDeviceMesh device = (RayDeviceMesh)api.getDevice(RAYTRACE);
+                        CBoundingBox bound = device.getGroupBound(instance);
+                        device.reposition(bound);
+                        device.resume();
+                    }
+                }               
+            }
+            
+        });
+    }
+
+    public void initSceneTreeData(TreeView treeView)
+    {
+        sceneRoot = new TreeItem(new CustomData("Scene Material", null));      
+        treeView.setRoot(sceneRoot);               
+        sceneRoot.setExpanded(true);
+    }
+    
+    public void initMaterialTreeData(TreeView treeView)
+    {
+        diffuseTreeItem = new TreeItem(new CustomData("Diffuse", null));
+        emitterTreeItem = new TreeItem(new CustomData("Emitter", null));
+        
+        materialRoot = new TreeItem(new CustomData("Material Vault", null)); 
+        treeView.setRoot(materialRoot);
+        
+        materialRoot.getChildren().add(diffuseTreeItem); 
+        materialRoot.getChildren().add(emitterTreeItem);
+                
+        diffuseTreeItem.getChildren().add(new TreeItem(new CustomData<>("Blue" , new MaterialT("Blue", 0, 0, 1))));
+        diffuseTreeItem.getChildren().add(new TreeItem(new CustomData<>("Red"  , new MaterialT("Red", 1, 0, 0))));
+        diffuseTreeItem.getChildren().add(new TreeItem(new CustomData<>("Green", new MaterialT("Green", 0, 1, 0))));
+        
+        emitterTreeItem.getChildren().add(new TreeItem(new CustomData<>("10 kW", new MaterialT("10 kW", 0, 0, 0, 0.9f, 0.9f, 0.9f))));
+        emitterTreeItem.getChildren().add(new TreeItem(new CustomData<>("20 kW", new MaterialT("20 kW", 0, 0, 0, 0.9f, 0.9f, 0.9f))));
+        emitterTreeItem.getChildren().add(new TreeItem(new CustomData<>("30 kW", new MaterialT("30 kW", 0, 0, 0, 0.9f, 0.9f, 0.9f))));
+        
+        materialRoot.setExpanded(true);
+        diffuseTreeItem.setExpanded(true);
+        emitterTreeItem.setExpanded(true);
+    }
+    
+    public void clearSceneMaterial()
+    {
+        sceneRoot.getChildren().clear();
+    }
+    
+    public void addSceneMaterial(CustomData material)
+    {
+        sceneRoot.getChildren().add(new TreeItem(material));
+        sceneRoot.setExpanded(true);
+    }
+         
+    @Override
+    public void displaySceneMaterial(ArrayList<MaterialT> materials)
+    {       
+        Platform.runLater(() -> {
+            clearSceneMaterial();
+            materials.forEach((mat) -> sceneRoot.getChildren().add(new TreeItem<>(new CustomData(mat.name, mat))));
+            sceneRoot.setExpanded(true);
+        });        
+        
+    }             
+
 }

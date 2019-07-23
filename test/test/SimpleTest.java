@@ -5,12 +5,13 @@
  */
 package test;
 
-import cl.core.data.struct.CIntersection;
-import wrapper.core.CBufferFactory;
-import static wrapper.core.CMemory.READ_ONLY;
-import wrapper.core.OpenCLPlatform;
-import wrapper.core.buffer.CStructBuffer;
-import wrapper.util.CLFileReader;
+import cl.core.Overlay;
+import static cl.core.api.MambaAPIInterface.DeviceType.RAYTRACE;
+import cl.core.device.RayDeviceMesh;
+import cl.core.console.CMDConsole;
+import cl.main.TracerAPI;
+import filesystem.core.OutputFactory;
+import java.util.function.Supplier;
 
 /**
  *
@@ -19,8 +20,23 @@ import wrapper.util.CLFileReader;
 public class SimpleTest {
     public static void main(String... args)
     {
-        OpenCLPlatform configuration = OpenCLPlatform.getDefault(CLFileReader.readFile(SimpleTest.class, "cl\\CommonBase.cl")); 
+        //OutputFactory.setOutput(new CMDConsole());
         
-        CStructBuffer<CIntersection> isectBuffer  = CBufferFactory.allocStruct("intersctions", configuration.context(), CIntersection.class, 1, READ_ONLY);
+        //TracerAPI api = new TracerAPI();
+        //api.set(RAYTRACE, new RayDeviceMesh());
+        
+        Joe joe = new Joe();
+        Overlay overlay = joe.getObject(() -> {
+            return new Overlay(2, 2);
+        });
+        System.out.println(overlay.toString());
+    }
+    
+    static class Joe
+    {
+        public <T> T getObject(Supplier<T> supply)
+        {
+            return supply.get();
+        }
     }
 }
