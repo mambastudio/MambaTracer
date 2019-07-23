@@ -34,6 +34,7 @@ A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drive
   - HDR
   - Adaptive environment map sampling without use of portals - https://cgg.mff.cuni.cz/~jaroslav/papers/2018-adaptiveibl/index.htm
 * Intuitive and simple material editor
+  - Implement Autodesk Standard Surface - https://autodesk.github.io/standard-surface/
 * Scene Description
   - GL Transmission Format (glTF) as main scene format - https://github.com/KhronosGroup/glTF
   - Improve OBJ File format reading 
