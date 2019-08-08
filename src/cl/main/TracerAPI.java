@@ -13,9 +13,9 @@ import cl.core.Overlay;
 import cl.core.api.MambaAPIInterface;
 import static cl.core.api.MambaAPIInterface.DeviceType.RAYTRACE;
 import static cl.core.api.MambaAPIInterface.DeviceType.RENDER;
-import static cl.core.api.MambaAPIInterface.ImageType.ALL_IMAGE;
 import static cl.core.api.MambaAPIInterface.ImageType.OVERLAY_IMAGE;
 import static cl.core.api.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
+import static cl.core.api.MambaAPIInterface.ImageType.RENDER_IMAGE;
 import cl.core.api.RayDeviceInterface;
 import static cl.core.api.RayDeviceInterface.DeviceBuffer.GROUP_BUFFER;
 import static cl.core.api.RayDeviceInterface.DeviceBuffer.IMAGE_BUFFER;
@@ -24,7 +24,7 @@ import cl.core.device.RayDeviceMesh;
 import cl.core.kernel.CLSource;
 import cl.shapes.CMesh;
 import cl.ui.mvc.viewmodel.MaterialEditorModel;
-import coordinate.parser.OBJParser;
+import coordinate.parser.obj.OBJParser;
 import coordinate.parser.attribute.MaterialT;
 import coordinate.utility.Timer;
 import coordinate.utility.Value2Di;
@@ -34,6 +34,10 @@ import java.nio.file.Path;
 import java.util.function.Supplier;
 import org.jocl.CL;
 import wrapper.core.OpenCLPlatform;
+import static cl.core.api.MambaAPIInterface.ImageType.ALL_RAYTRACE_IMAGE;
+import static cl.core.api.RayDeviceInterface.DeviceBuffer.RENDER_BUFFER;
+import cl.core.device.RayDeviceMeshRender;
+import coordinate.parser.obj.OBJMappedParser;
 
 /**
  *
@@ -83,17 +87,18 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
     @Override
     public void init() {
        
-        
         //dimension of images
         this.raytraceImageDimension = new Value2Di(800, 600);
         this.renderImageDimension = new Value2Di(800, 600);
         
         //create bitmap images
-        this.initBitmap(ALL_IMAGE);
+        this.initBitmap(ALL_RAYTRACE_IMAGE);
         
         //instantiate devices
         deviceRaytrace = new RayDeviceMesh();
         deviceRaytrace.setAPI(this);
+        deviceRender = new RayDeviceMeshRender();
+        deviceRender.setAPI(this);
         
         //default mesh
         this.initDefaultMesh();
@@ -180,7 +185,7 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
             case RENDER_IMAGE:
                 renderBitmap = new BitmapARGB(renderImageDimension.x, renderImageDimension.y, true);
                 break;
-            case ALL_IMAGE:
+            case ALL_RAYTRACE_IMAGE:
                 raytraceBitmap = new BitmapARGB(raytraceImageDimension.x, raytraceImageDimension.y, true);
                 overlayBitmap = new BitmapARGB(raytraceImageDimension.x, raytraceImageDimension.y, false);
                 overlay = new Overlay(raytraceImageDimension.x, raytraceImageDimension.y);
@@ -226,7 +231,7 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
                 deviceRaytrace.readBuffer(GROUP_BUFFER, buffer-> {
                     overlay.copyToArray(buffer.array()); 
                 });
-            else if(image == ALL_IMAGE)
+            else if(image == ALL_RAYTRACE_IMAGE)
             {
                 deviceRaytrace.readBuffer(IMAGE_BUFFER, buffer-> {            
                     this.getBitmap(RAYTRACE_IMAGE).writeColor(buffer.array(), 0, 0, raytraceImageDimension.x, raytraceImageDimension.y);
@@ -236,6 +241,13 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
                     overlay.copyToArray(buffer.array()); 
                 });
             }
+            else if(device.equals(RENDER))
+            {
+                deviceRender.readBuffer(RENDER_BUFFER, buffer-> {
+                    this.getBitmap(RENDER_IMAGE).writeColor(buffer.array(), 0, 0, raytraceImageDimension.x, raytraceImageDimension.y);
+                    this.display.imageFill(RENDER_IMAGE.name(), this.getBitmap(RENDER_IMAGE));
+                });
+            }
     }
 
     @Override
@@ -243,13 +255,13 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
     {
         //load mesh and init mesh variables
         mesh = new CMesh(configuration);
-        OBJParser parser = new OBJParser();    
+        OBJMappedParser parser = new OBJMappedParser();    
         Timer parseTime = Timer.timeThis(() -> parser.read(path.toString(), mesh)); //Time parsing
         OutputFactory.print("scene parse time", parseTime.toString());
         mesh.initCLBuffers();
         
         //display material in ui
-        controllerImplementation.displaySceneMaterial(mesh.getMaterialList());
+        controllerImplementation.displaySceneMaterial(parser.getSceneMaterialList());
         
         //build accelerator
         Timer buildTime = Timer.timeThis(() -> {                                   //Time building
@@ -302,7 +314,7 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
         mesh.initCLBuffers();
         
         //display material in ui
-        controllerImplementation.displaySceneMaterial(mesh.getMaterialList());
+        controllerImplementation.displaySceneMaterial(parser.getSceneMaterialList());
         
         //build accelerator
         this.bvhBuild = new CNormalBVH(configurationCL());
@@ -365,6 +377,10 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
     @Override
     public void applyImage(ImageType name, Supplier<BitmapARGB> supply) {
         setBitmap(name, supply.get());
+        if(name == RAYTRACE_IMAGE)
+            display.imageFill(RAYTRACE_IMAGE.name(), this.getBitmap(RAYTRACE_IMAGE));
+        else if(name == RENDER_IMAGE)
+            display.imageFill(RENDER_IMAGE.name(), this.getBitmap(RENDER_IMAGE));
     }
 
     @Override
@@ -374,7 +390,7 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
                 this.raytraceBitmap = bitmap;
             case RENDER_IMAGE:
                 this.renderBitmap = bitmap;
-            case ALL_IMAGE:
+            case ALL_RAYTRACE_IMAGE:
                 this.overlayBitmap = bitmap;
             default:
                 break;

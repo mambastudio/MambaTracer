@@ -12,7 +12,6 @@ import cl.core.CCompaction;
 import cl.core.data.struct.CRay;
 import cl.core.CNormalBVH;
 import static cl.core.api.MambaAPIInterface.DeviceType.RAYTRACE;
-import static cl.core.api.MambaAPIInterface.ImageType.ALL_IMAGE;
 import static cl.core.api.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
 import cl.core.api.RayDeviceInterface;
 import static cl.core.api.RayDeviceInterface.DeviceBuffer.GROUP_BUFFER;
@@ -36,6 +35,9 @@ import wrapper.core.CallBackFunction;
 import wrapper.core.buffer.CFloatBuffer;
 import wrapper.core.buffer.CIntBuffer;
 import wrapper.core.buffer.CStructBuffer;
+import static cl.core.api.MambaAPIInterface.ImageType.ALL_RAYTRACE_IMAGE;
+import static cl.core.api.RayDeviceInterface.ShadeType.NORMAL_SHADE;
+import static cl.core.api.RayDeviceInterface.ShadeType.RAYTRACE_SHADE;
 
 /**
  *
@@ -79,6 +81,7 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     CKernel fastShadeKernel = null;
     CKernel shadeBackgroundKernel = null;
     CKernel updateShadeImageKernel = null;
+    CKernel updateNormalShadeImageKernel = null;
     CKernel groupBufferPassKernel = null;
     
     //iterate primitives to get bound of specific group
@@ -89,10 +92,13 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     CNormalBVH bvhBuild;
     
     //render thread
-    LambdaThread renderThread = new LambdaThread();
+    LambdaThread raytraceThread = new LambdaThread();
     
     //Compaction
     CCompaction compactIsect;
+    
+    //Shade type
+    ShadeType type = RAYTRACE_SHADE;
     
     public RayDeviceMesh()
     {
@@ -107,17 +113,17 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     @Override
     public void execute()
     {     
-       renderThread.startExecution(()-> {
+       raytraceThread.startExecution(()-> {
             //execute pause             
             loop();
-            renderThread.pauseExecution();       
+            raytraceThread.pauseExecution();       
         });      
     }
     
     private void loop()
     {
         if(camera.isSynched(cameraBuffer.get(0)))
-            renderThread.chill();       
+            raytraceThread.chill();       
             
         updateCamera();
 
@@ -130,7 +136,19 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
         api.configurationCL().queue().put1DRangeKernel(shadeBackgroundKernel, globalSize, localSize);        
         //compactIsect.execute();   //compact intersections      
         api.configurationCL().queue().put1DRangeKernel(fastShadeKernel, globalSize, localSize);       
-        api.configurationCL().queue().put1DRangeKernel(updateShadeImageKernel, globalSize, localSize);  
+        
+        //shade type
+        switch (type) {
+            case RAYTRACE_SHADE:
+                api.configurationCL().queue().put1DRangeKernel(updateShadeImageKernel, globalSize, localSize);
+                break;
+            case NORMAL_SHADE:
+                api.configurationCL().queue().put1DRangeKernel(updateNormalShadeImageKernel, globalSize, localSize); 
+                break;
+            default:
+                throw new UnsupportedOperationException("shade type not supported yet.");
+        }
+        
         api.configurationCL().queue().put1DRangeKernel(groupBufferPassKernel, globalSize, localSize);
 
          /*
@@ -140,24 +158,24 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
         api.configurationCL().queue().finish();
 
         //update image
-        api.readImageFromDevice(RAYTRACE, ALL_IMAGE);
+        api.readImageFromDevice(RAYTRACE, ALL_RAYTRACE_IMAGE);
 
         
     }
     
     public void pauseRender()            
     {
-        renderThread.pauseExecution();
+        raytraceThread.pauseExecution();
     }
     
     public void stopRender()
     {
-        renderThread.stopExecution();
+        raytraceThread.stopExecution();
     }
     
     public boolean isRenderPaused()
     {
-        return renderThread.isPaused();
+        return raytraceThread.isPaused();
     }
     
     @Override
@@ -254,6 +272,7 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
         fastShadeKernel = api.configurationCL().program().createKernel("fastShade", mesh.clMaterials(), isectBuffer);
         shadeBackgroundKernel = api.configurationCL().program().createKernel("shadeBackground", isectBuffer, width, height, imageBuffer);
         updateShadeImageKernel = api.configurationCL().program().createKernel("updateShadeImage", isectBuffer, width, height, imageBuffer);
+        updateNormalShadeImageKernel = api.configurationCL().program().createKernel("updateNormalShadeImage", isectBuffer, width, height, imageBuffer);
         groupBufferPassKernel = api.configurationCL().program().createKernel("groupBufferPass", isectBuffer, width, height, groupBuffer);
         findBoundKernel = api.configurationCL().program().createKernel("findBound", groupIndex, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), groupBound);        
         
@@ -281,22 +300,22 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
 
     @Override
     public void pause() {
-        renderThread.pauseExecution();
+        raytraceThread.pauseExecution();
     }
 
     @Override
     public void stop() {
-        renderThread.stopExecution();
+        raytraceThread.stopExecution();
     }
 
     @Override
     public boolean isPaused() {
-        return renderThread.isPaused();
+        return raytraceThread.isPaused();
     }
 
     @Override
     public boolean isRunning() {
-        return !renderThread.isPaused();
+        return !raytraceThread.isPaused();
     }
 
     @Override
@@ -306,12 +325,27 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
 
     @Override
     public void resume() {
-        renderThread.resumeExecution();
+        raytraceThread.resumeExecution();
     }
 
     @Override
     public void setGlobalSize(int globalSize) {
         this.globalSize = globalSize;
+    }
+
+    @Override
+    public boolean isStopped() {
+        return raytraceThread.isTerminated();
+    }
+
+    @Override
+    public void setShadeType(ShadeType type) {
+        this.type = type;
+    }
+
+    @Override
+    public ShadeType getShadeType() {
+        return type;
     }
     
 }

@@ -6,7 +6,7 @@
 package test.build;
 
 import cl.shapes.CMesh;
-import coordinate.parser.OBJParser;
+import coordinate.parser.obj.OBJParser;
 import java.math.BigInteger;
 import java.util.Random;
 

@@ -8,7 +8,7 @@ package test.morton;
 import cl.core.data.CPoint3;
 import cl.core.kernel.CLSource;
 import cl.shapes.CMesh;
-import coordinate.parser.OBJParser;
+import coordinate.parser.obj.OBJParser;
 import coordinate.struct.FloatStruct;
 import coordinate.struct.StructFloatArray;
 import coordinate.struct.IntStruct;

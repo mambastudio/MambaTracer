@@ -274,8 +274,11 @@ public class RenderWindowController implements Initializable, RenderControllerIn
             renderButton.setDisable(true);
             editButton.setDisable(true);
             
-            //if(!RenderViewModel.getDevice().isRenderPaused())
-            //    display.set("render", new BitmapARGB(render.getWidth(), render.getHeight(), true));
+            if(api.getDevice(RENDER).isStopped())
+                api.applyImage(RENDER_IMAGE, () -> {
+                    return new BitmapARGB(api.getImageSize(RENDER_IMAGE).x, api.getImageSize(RENDER_IMAGE).y, true);
+                });
+                    
             
             //RenderViewModel.getDevice().render();
         });
@@ -297,7 +300,7 @@ public class RenderWindowController implements Initializable, RenderControllerIn
         });
         editButton.setOnAction(e -> {            
             api.applyImage(RENDER_IMAGE, () -> {
-                return new BitmapARGB(api.getImageSize(RENDER_IMAGE).x, api.getImageSize(RENDER_IMAGE).x, false);
+                return new BitmapARGB(api.getImageSize(RENDER_IMAGE).x, api.getImageSize(RENDER_IMAGE).y, false);
             });
             editButton.setDisable(true);
         });

@@ -168,17 +168,17 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
 
     @Override
     public void pause() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        
     }
 
     @Override
     public void stop() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        
     }
 
     @Override
     public boolean isPaused() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return true;
     }
 
     @Override
@@ -188,12 +188,12 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
 
     @Override
     public void setCamera(CCamera camera) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        
     }
 
     @Override
     public void resume() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+       
     }
 
     @Override
@@ -208,6 +208,21 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
 
     @Override
     public CBoundingBox getGroupBound(int value) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public boolean isStopped() {
+        return true;
+    }
+
+    @Override
+    public void setShadeType(ShadeType type) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public ShadeType getShadeType() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     

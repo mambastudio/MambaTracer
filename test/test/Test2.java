@@ -12,7 +12,7 @@ import cl.core.data.struct.array.CStructFloatArray;
 import cl.core.data.struct.array.CStructIntArray;
 import cl.core.kernel.CLSource;
 import cl.shapes.CMesh;
-import coordinate.parser.OBJParser;
+import coordinate.parser.obj.OBJParser;
 import org.jocl.CL;
 import wrapper.core.OpenCLPlatform;
 import wrapper.util.CLFileReader;
@@ -40,7 +40,7 @@ public class Test2 {
         String source1 = CLFileReader.readFile(CLSource.class, "Common.cl");
         String source2 = CLFileReader.readFile(CLSource.class, "Primitive.cl");
         String source3 = CLFileReader.readFile(CLSource.class, "NormalBVH.cl");
-        String source4 = CLFileReader.readFile(CLSource.class, "SimpleTrace.cl");
+        String source4 = CLFileReader.readFile(CLSource.class, "RayTracing.cl");
                 
         OpenCLPlatform configuration = OpenCLPlatform.getDefault(source1, source2, source3, source4);        
         

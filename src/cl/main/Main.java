@@ -6,10 +6,13 @@
 package cl.main;
 
 import bitmap.display.BlendDisplay;
-import cl.core.api.MambaAPIInterface;
+import static cl.core.api.MambaAPIInterface.DeviceType.RAYTRACE;
 import static cl.core.api.MambaAPIInterface.ImageType.OVERLAY_IMAGE;
 import static cl.core.api.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
 import static cl.core.api.MambaAPIInterface.ImageType.RENDER_IMAGE;
+import cl.core.api.RayDeviceInterface;
+import static cl.core.api.RayDeviceInterface.ShadeType.NORMAL_SHADE;
+import static cl.core.api.RayDeviceInterface.ShadeType.RAYTRACE_SHADE;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
 import javafx.fxml.FXMLLoader;
@@ -34,7 +37,7 @@ public class Main extends Application {
         
         //create api and set display
         TracerAPI api = new TracerAPI();   //api creates devices inside    
-        api.setBlendDisplay(new BlendDisplay(RAYTRACE_IMAGE.name(), OVERLAY_IMAGE.name(), RENDER_IMAGE.name()));
+        api.setBlendDisplay(new BlendDisplay(RAYTRACE_IMAGE.name(),RENDER_IMAGE.name(), OVERLAY_IMAGE.name()));
         
         //set controller (which sets display inside)
         RenderWindowController controller = (RenderWindowController)loader.getController();        
@@ -45,6 +48,23 @@ public class Main extends Application {
         
         //complete launch of ui
         Scene scene = new Scene(root);        
+        
+        //keyboard listener
+        scene.setOnKeyPressed(e-> {
+            RayDeviceInterface device = api.getDevice(RAYTRACE);
+            switch(e.getCode())
+            {
+                case DIGIT1: 
+                    device.setShadeType(NORMAL_SHADE);
+                    device.resume();
+                    break;
+                case DIGIT2:
+                    device.setShadeType(RAYTRACE_SHADE);
+                    device.resume();
+                    break;
+            }
+        });
+        
         primaryStage.setScene(scene);
         primaryStage.setTitle("Mamba Tracer");
         primaryStage.setMinWidth(1250);

@@ -25,9 +25,16 @@ import wrapper.core.CallBackFunction;
 public interface RayDeviceInterface <A extends MambaAPIInterface, B extends Buffer, D extends BlendDisplay, M extends MaterialT> {    
     public enum DeviceBuffer{
         IMAGE_BUFFER,
-        GROUP_BUFFER
+        GROUP_BUFFER,
+        RENDER_BUFFER
     }
     
+
+    enum ShadeType{
+        NORMAL_SHADE,
+        RAYTRACE_SHADE
+    };
+        
     public void setAPI(A api);
     
     public void set(CMesh mesh, CNormalBVH bvhBuild);        
@@ -39,8 +46,10 @@ public interface RayDeviceInterface <A extends MambaAPIInterface, B extends Buff
     public void pause();
     public void stop();
     public void resume();
+    
     public boolean isPaused();
     public boolean isRunning();
+    public boolean isStopped();
     
     public void readBuffer(DeviceBuffer name, CallBackFunction<B> callback);   
     
@@ -51,6 +60,9 @@ public interface RayDeviceInterface <A extends MambaAPIInterface, B extends Buff
     public int getTotalSize();    
     public CBoundingBox getBound(); 
     public CBoundingBox getGroupBound(int value);
+    
+    public void setShadeType(ShadeType type);
+    public ShadeType getShadeType();
     
    
 }

@@ -29,15 +29,13 @@ public interface MambaAPIInterface <B extends Buffer, D extends BlendDisplay, M 
         RAYTRACE_IMAGE, 
         RENDER_IMAGE,
         OVERLAY_IMAGE,
-        ALL_IMAGE
+        ALL_RAYTRACE_IMAGE
     };
     
     enum DeviceType{
         RAYTRACE,
         RENDER
     }
-    
-    enum RenderType{};
     
     public void initOpenCLConfiguration();    
     public OpenCLPlatform configurationCL();

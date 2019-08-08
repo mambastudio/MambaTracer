@@ -225,6 +225,33 @@ __kernel void updateShadeImage(
     }
 }
 
+__kernel void updateNormalShadeImage(
+    global Intersection* isects,
+    global int* width,
+    global int* height,
+    global int* imageBuffer
+)
+{
+    int id= get_global_id( 0 );
+
+    //updated the intersected areas color
+    global Intersection* isect = isects + id;
+    if(isect->hit)
+    {
+        //shade normal if facing camera or not
+        float ndotd = dot(isect->d, isect->n);
+        float4 shade = ndotd < 0 ? (float4)(1, 0, 0, 1) : (float4)(0, 0, 1, 1);
+        shade.xyz *= fabs(ndotd);
+
+        //pixel index
+        int index = isect->pixel.x + width[0] * isect->pixel.y;
+
+        //update
+       imageBuffer[index] = getIntARGB(shade);
+    }
+}
+
+
 __kernel void groupBufferPass(
     global Intersection* isects,
     global int* width,
