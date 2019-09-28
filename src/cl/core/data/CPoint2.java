@@ -5,13 +5,13 @@
  */
 package cl.core.data;
 
-import coordinate.generic.AbstractCoordinate;
+import coordinate.generic.AbstractCoordinateFloat;
 
 /**
  *
  * @author user
  */
-public class CPoint2 extends AbstractCoordinate
+public class CPoint2 implements AbstractCoordinateFloat
 {
     public float x, y;
     
@@ -78,4 +78,15 @@ public class CPoint2 extends AbstractCoordinate
                 break;                
         }
     }    
+    @Override
+    public String toString()
+    {
+        float[] array = getArray();
+        return String.format("(%3.2f, %3.2f)", array[0], array[1]);
+    }
+
+    @Override
+    public int getByteSize() {
+        return 4;
+    }
 }

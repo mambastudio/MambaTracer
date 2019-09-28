@@ -76,3 +76,46 @@ bool intersectGlobal(global Ray* ray, global Intersection* isect, TriangleMesh m
      }
 
 }      
+
+__kernel void intersectPrimitives(
+    global Ray* rays,
+    global Intersection* isects,
+    global int* count,
+
+    //mesh
+    global const float4* points,
+    global const float4* normals,
+    global const Face*   faces,
+    global const int*    size,
+
+    //bvh
+    global const BVHNode* nodes,
+    global const BoundingBox* bounds
+)
+{
+    //get thread id
+    int id = get_global_id( 0 );
+
+    //get ray, create both isect and mesh
+    global Ray* ray = rays + id;
+    global Intersection* isect = isects + id;
+    TriangleMesh mesh = {points, normals, faces, size[0]};
+    
+    if(id < *count)
+    {
+      if(isRayActive(*ray))
+      {
+        //intersect
+        bool hit = intersectGlobal(ray, isect, mesh, nodes, bounds);    
+  
+        //update hit status and what pixel it represent
+        isect->pixel = ray->pixel;
+        isect->hit = hit;
+      }
+      else
+      {
+        isect->hit = MISS_MARKER;
+        isect->mat = -1;
+      }
+    }
+}

@@ -8,8 +8,6 @@ package cl.core.device;
 import bitmap.display.BlendDisplay;
 import cl.core.CBoundingBox;
 import cl.core.CCamera;
-import cl.core.CCompaction;
-import cl.core.data.struct.CRay;
 import cl.core.CNormalBVH;
 import static cl.core.api.MambaAPIInterface.DeviceType.RAYTRACE;
 import static cl.core.api.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
@@ -18,7 +16,6 @@ import static cl.core.api.RayDeviceInterface.DeviceBuffer.GROUP_BUFFER;
 import static cl.core.api.RayDeviceInterface.DeviceBuffer.IMAGE_BUFFER;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
-import cl.core.data.struct.CIntersection;
 import cl.core.data.struct.CMaterial;
 import cl.main.TracerAPI;
 import cl.shapes.CMesh;
@@ -38,6 +35,9 @@ import wrapper.core.buffer.CStructBuffer;
 import static cl.core.api.MambaAPIInterface.ImageType.ALL_RAYTRACE_IMAGE;
 import static cl.core.api.RayDeviceInterface.ShadeType.NORMAL_SHADE;
 import static cl.core.api.RayDeviceInterface.ShadeType.RAYTRACE_SHADE;
+import cl.core.data.struct.CIntersection;
+import cl.core.data.struct.CRay;
+import wrapper.core.buffer.CStructTypeBuffer;
 
 /**
  *
@@ -65,9 +65,9 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     CFloatBuffer pixels = null;
     
     //Ray & intersects
-    CStructBuffer<CRay> raysBuffer;
-    CStructBuffer<CIntersection> isectBuffer;
-     
+    CStructTypeBuffer<CRay> raysBuffer;
+    CStructTypeBuffer<CIntersection> isectBuffer;
+         
     //global count
     CIntBuffer count = null;
     
@@ -79,10 +79,10 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     CKernel initCameraRaysKernel = null;    
     CKernel intersectPrimitivesKernel = null;
     CKernel fastShadeKernel = null;
-    CKernel shadeBackgroundKernel = null;
+    CKernel backgroundShadeKernel = null;
     CKernel updateShadeImageKernel = null;
     CKernel updateNormalShadeImageKernel = null;
-    CKernel groupBufferPassKernel = null;
+    CKernel updateGroupbufferShadeImageKernel = null;
     
     //iterate primitives to get bound of specific group
     CKernel findBoundKernel = null;
@@ -93,9 +93,6 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     
     //render thread
     LambdaThread raytraceThread = new LambdaThread();
-    
-    //Compaction
-    CCompaction compactIsect;
     
     //Shade type
     ShadeType type = RAYTRACE_SHADE;
@@ -133,8 +130,7 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
         api.configurationCL().queue().put1DRangeKernel(initGroupBufferKernel, globalSize, localSize);
         api.configurationCL().queue().put1DRangeKernel(initCameraRaysKernel, globalSize, localSize); 
         api.configurationCL().queue().put1DRangeKernel(intersectPrimitivesKernel, globalSize, localSize);    
-        api.configurationCL().queue().put1DRangeKernel(shadeBackgroundKernel, globalSize, localSize);        
-        //compactIsect.execute();   //compact intersections      
+        api.configurationCL().queue().put1DRangeKernel(backgroundShadeKernel, globalSize, localSize);          
         api.configurationCL().queue().put1DRangeKernel(fastShadeKernel, globalSize, localSize);       
         
         //shade type
@@ -149,12 +145,13 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
                 throw new UnsupportedOperationException("shade type not supported yet.");
         }
         
-        api.configurationCL().queue().put1DRangeKernel(groupBufferPassKernel, globalSize, localSize);
+        api.configurationCL().queue().put1DRangeKernel(updateGroupbufferShadeImageKernel, globalSize, localSize);
 
          /*
              Why implementing this makes opencl run faster?
             Probable answer is this... https://stackoverflow.com/questions/18471170/commenting-clfinish-out-makes-program-100-faster
-        */       
+        */  
+                 
         api.configurationCL().queue().finish();
 
         //update image
@@ -187,7 +184,8 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
                 OutputFactory.print("dir", camera.forward().toString());
                 OutputFactory.print("fov", Float.toString(camera.fov));
                 
-            });}
+            });
+    }
     
     public void setMaterial(int index, CMaterial material)
     {    
@@ -243,18 +241,15 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
         this.hitCount           = CBufferFactory.initIntValue("hitCount", api.configurationCL().context(), api.configurationCL().queue(), 0, READ_WRITE);
         this.imageBuffer        = CBufferFactory.allocInt("image", api.configurationCL().context(), globalSize, READ_WRITE);
         this.groupBuffer        = CBufferFactory.allocInt("group", api.configurationCL().context(), globalSize, READ_WRITE);
-        this.isectBuffer        = CBufferFactory.allocStruct("intersctions", api.configurationCL().context(), CIntersection.class, globalSize, READ_WRITE);
-        this.raysBuffer         = CBufferFactory.allocStruct("rays", api.configurationCL().context(), CRay.class, globalSize, READ_WRITE);
+        this.isectBuffer        = CBufferFactory.allocStructType("intersections", api.configurationCL().context(), CIntersection.class, globalSize, READ_WRITE);
+        this.raysBuffer         = CBufferFactory.allocStructType("rays", api.configurationCL().context(), CRay.class, globalSize, READ_WRITE);
         this.cameraBuffer       = CBufferFactory.allocStruct("camera", api.configurationCL().context(), CCamera.CameraStruct.class, 1, READ_ONLY);
         this.width              = CBufferFactory.initIntValue("width", api.configurationCL().context(), api.configurationCL().queue(), api.getImageSize(RAYTRACE_IMAGE).x, READ_ONLY);
         this.height             = CBufferFactory.initIntValue("height", api.configurationCL().context(), api.configurationCL().queue(), api.getImageSize(RAYTRACE_IMAGE).y, READ_ONLY);
         this.pixels             = CBufferFactory.allocFloat("pixels", api.configurationCL().context(), 2, READ_WRITE);
         this.count              = CBufferFactory.initIntValue("count", api.configurationCL().context(), api.configurationCL().queue(), 0, READ_WRITE);
         this.groupIndex         = CBufferFactory.initIntValue("groupIndex", api.configurationCL().context(), api.configurationCL().queue(), 0, READ_ONLY);
-        this.groupBound         = CBufferFactory.allocFloat("groupBound", api.configurationCL().context(), 6 , READ_WRITE);
-        
-        this.compactIsect       = new CCompaction(api.configurationCL());
-        this.compactIsect.init(isectBuffer, count);
+        this.groupBound         = CBufferFactory.allocFloat("groupBound", api.configurationCL().context(), 6 , READ_WRITE);             
     }
 
     @Override
@@ -266,15 +261,15 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
         OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
         orientation.reposition(camera, mesh.getBound());
         
-        initGroupBufferKernel = api.configurationCL().program().createKernel("InitIntData_1", groupBuffer);
-        initCameraRaysKernel = api.configurationCL().program().createKernel("InitCameraRayData", cameraBuffer, raysBuffer, width, height);
-        intersectPrimitivesKernel = api.configurationCL().program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, count, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvhBuild.getCNodes(), bvhBuild.getCBounds());
-        fastShadeKernel = api.configurationCL().program().createKernel("fastShade", mesh.clMaterials(), isectBuffer);
-        shadeBackgroundKernel = api.configurationCL().program().createKernel("shadeBackground", isectBuffer, width, height, imageBuffer);
-        updateShadeImageKernel = api.configurationCL().program().createKernel("updateShadeImage", isectBuffer, width, height, imageBuffer);
-        updateNormalShadeImageKernel = api.configurationCL().program().createKernel("updateNormalShadeImage", isectBuffer, width, height, imageBuffer);
-        groupBufferPassKernel = api.configurationCL().program().createKernel("groupBufferPass", isectBuffer, width, height, groupBuffer);
-        findBoundKernel = api.configurationCL().program().createKernel("findBound", groupIndex, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), groupBound);        
+        initGroupBufferKernel               = api.configurationCL().program().createKernel("InitIntData_1", groupBuffer);
+        initCameraRaysKernel                = api.configurationCL().program().createKernel("InitCameraRayData", cameraBuffer, raysBuffer, width, height);
+        intersectPrimitivesKernel           = api.configurationCL().program().createKernel("intersectPrimitives", raysBuffer, isectBuffer, count, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvhBuild.getCNodes(), bvhBuild.getCBounds());
+        fastShadeKernel                     = api.configurationCL().program().createKernel("fastShade", mesh.clMaterials(), isectBuffer);
+        backgroundShadeKernel               = api.configurationCL().program().createKernel("backgroundShade", isectBuffer, width, height, imageBuffer);
+        updateShadeImageKernel              = api.configurationCL().program().createKernel("updateShadeImage", isectBuffer, width, height, imageBuffer);
+        updateNormalShadeImageKernel        = api.configurationCL().program().createKernel("updateNormalShadeImage", isectBuffer, width, height, imageBuffer);
+        updateGroupbufferShadeImageKernel   = api.configurationCL().program().createKernel("updateGroupbufferShadeImage", isectBuffer, width, height, groupBuffer);
+        findBoundKernel                     = api.configurationCL().program().createKernel("findBound", groupIndex, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), groupBound);        
         
     }
 
@@ -347,5 +342,4 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     public ShadeType getShadeType() {
         return type;
     }
-    
 }

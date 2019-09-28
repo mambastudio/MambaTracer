@@ -16,7 +16,7 @@ import org.jocl.struct.CLTypes.cl_float4;
  * This is only used for mesh data only, OpenCL handles data differently.
  * 
  */
-public class CPoint3 extends SCoord<CPoint3, CVector3>{
+public class CPoint3 implements SCoord<CPoint3, CVector3>{
 public float x, y, z;
     public CPoint3(){
         super();
@@ -152,6 +152,11 @@ public float x, y, z;
     public String toString()
     {
         float[] array = getArray();
-        return String.format("(%8.2f, %8.2f, %8.2f)", array[0], array[1], array[2]);
+        return String.format("(%3.2f, %3.2f, %3.2f)", array[0], array[1], array[2]);
+    }
+
+    @Override
+    public int getByteSize() {
+        return 4;
     }
 }

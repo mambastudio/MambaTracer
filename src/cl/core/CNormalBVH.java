@@ -5,10 +5,10 @@
  */
 package cl.core;
 
-import cl.core.data.struct.CIntersection;
-import cl.core.data.struct.CRay;
 import cl.core.data.struct.CBound;
 import cl.core.data.struct.CNode;
+import cl.core.data.struct.CIntersection;
+import cl.core.data.struct.CRay;
 import cl.core.data.struct.array.CStructFloatArray;
 import cl.core.data.struct.array.CStructIntArray;
 import cl.shapes.CMesh;

@@ -5,9 +5,9 @@
  */
 package cl.core;
 
-import cl.core.data.struct.CRay;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
+import cl.core.data.struct.CRay;
 import coordinate.model.CameraModel;
 import org.jocl.struct.CLTypes.cl_float4;
 import org.jocl.struct.Struct;

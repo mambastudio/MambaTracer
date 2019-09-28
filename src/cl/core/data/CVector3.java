@@ -12,7 +12,7 @@ import org.jocl.struct.CLTypes.cl_float4;
  *
  * @author user
  */
-public class CVector3 extends VCoord<CVector3>{
+public class CVector3 implements VCoord<CVector3>{
     public float x, y, z;
     
     public CVector3(){}
@@ -108,5 +108,10 @@ public class CVector3 extends VCoord<CVector3>{
     {
         float[] array = getArray();
         return String.format("(%8.2f, %8.2f, %8.2f)", array[0], array[1], array[2]);
+    }
+
+    @Override
+    public int getByteSize() {
+        return 4;
     }
 }

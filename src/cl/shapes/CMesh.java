@@ -7,12 +7,12 @@ package cl.shapes;
 
 import cl.core.CNormalBVH;
 import cl.core.CBoundingBox;
-import cl.core.data.struct.CIntersection;
-import cl.core.data.struct.CRay;
 import cl.core.data.CPoint2;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import cl.core.data.struct.CMaterial;
+import cl.core.data.struct.CIntersection;
+import cl.core.data.struct.CRay;
 import coordinate.generic.AbstractMesh;
 import coordinate.generic.raytrace.AbstractPrimitive;
 import coordinate.list.CoordinateList;

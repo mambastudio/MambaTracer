@@ -7,6 +7,11 @@
   https://github.com/LariscusObscurus/HPC_Exercise/blob/master/src/kernels/scan.cl
 */
 
+bool isIsectOkay(global Intersection* isect)
+{
+    return isect->hit && isect->sampled_brdf;
+}
+
 int getData(int index, global int* length, global int* data)
 {
     if(index < *length)
@@ -18,7 +23,7 @@ int getData(int index, global int* length, global int* data)
 int getDataIsect(int index, global int* length, global Intersection* isects)
 {
     if(index < *length)
-        return isects[index].hit;
+        return isIsectOkay(isects + index);
     else 
         return 0;
 }
@@ -29,65 +34,22 @@ void setData(int index, int value, global int* length, global int* data)
         data[index] = value;
 }
 
-__kernel void  blelloch_scan_isect_g(global Intersection* isects,
-                                     global int* data,
-                                     global int* group_sum,
-                                     global int* length,
-                                     local  int* temp)
+__kernel void initIntArray(
+    global int* array)
 {
-     uint global_id = get_global_id ( 0 );
-     uint local_id = get_local_id ( 0 );
-
-     uint group_id = get_group_id ( 0 );
-     uint group_size = get_local_size ( 0 );
-
-     uint depth = 1 ;
-
-     temp [local_id] = INPUT_ISECT(global_id);
-     
-     // upsweep   
-     for ( uint stride = group_size >> 1 ; stride> 0 ; stride >>= 1 )
-     {
-          barrier (CLK_LOCAL_MEM_FENCE);
-  
-          if (local_id <stride) 
-          {
-              uint i = depth * ( 2 * local_id + 1 ) - 1 ;
-              uint j = depth * ( 2 * local_id + 2 ) - 1 ;
-              temp [j] += temp [i];
-          }
-  
-          depth <<= 1 ;
-     }
-
-     // set identity before downsweep
-     if (local_id == 0 )
-     {
-        group_sum[group_id] = temp[group_size - 1];
-        temp [group_size - 1] = 0 ;
-     }
-
-     // downsweep
-     for (uint stride = 1 ; stride <group_size; stride <<= 1 ) {
-
-        depth >>= 1 ;
-        barrier (CLK_LOCAL_MEM_FENCE);
-
-        if (local_id <stride) {
-            uint i = depth * (2 * local_id + 1 ) - 1 ;
-            uint j = depth * (2 * local_id + 2 ) - 1 ;
-
-            int t = temp [j];
-            temp [j] += temp [i];
-            temp [i] = t;
-        }
-    }
-
-    barrier (CLK_LOCAL_MEM_FENCE);
-    setOutput(global_id, temp[local_id]);
-  
+    uint global_id = get_global_id(0);
+    array[global_id] = 0;
 }
 
+__kernel void processIsectData(
+    global Intersection* isects,
+    global int* data)
+{
+    uint global_id   = get_global_id ( 0 );
+    global Intersection* isect = isects + global_id;
+    data[global_id]  = isIsectOkay(isect);
+  
+}
 __kernel void  blelloch_scan_g(global int* data,
                                global int* group_sum,
                                global int* length,
@@ -102,13 +64,13 @@ __kernel void  blelloch_scan_g(global int* data,
      uint depth = 1 ;
 
      temp [local_id] = getInput(global_id);
-     
+
      // upsweep   
      for ( uint stride = group_size >> 1 ; stride> 0 ; stride >>= 1 )
      {
           barrier (CLK_LOCAL_MEM_FENCE);
   
-          if (local_id <stride) 
+          if (local_id <stride)
           {
               uint i = depth * ( 2 * local_id + 1 ) - 1 ;
               uint j = depth * ( 2 * local_id + 2 ) - 1 ;
@@ -225,11 +187,19 @@ __kernel void resetIntersection(global Intersection* isects)
 {
     int global_id = get_global_id(0);
 
-    Intersection defaultIsect;
-    defaultIsect.hit = MISS_MARKER;
-    defaultIsect.mat = -1;
-
-    isects[global_id] = defaultIsect;
+    global Intersection* isect = isects + global_id;
+    isect->p             = (float4)(0, 0, 0, 0);
+    isect->n             = (float4)(0, 0, 0, 0);
+    isect->d             = (float4)(0, 0, 0, 0);
+    isect->uv            = (float2)(0, 0);
+    isect->mat           = 0;
+    isect->sampled_brdf  = 0;
+    isect->id            = 0;
+    isect->hit           = 0;
+    isect->throughput    = (float4)(1, 1, 1, 1);
+    isect->pixel         = (float2)(0, 0);
+    isect->hit           = MISS_MARKER;
+    isect->mat           = -1;
 }
 
 __kernel void compactIntersection(__global Intersection* isects,
@@ -239,7 +209,7 @@ __kernel void compactIntersection(__global Intersection* isects,
     int global_id   = get_global_id(0);
     global Intersection* isect = isects + global_id;
     
-    if(isect->hit)
+    if(isIsectOkay(isect))
         temp_isects[prefixsum[global_id]] = *isect;
 }
 
@@ -254,8 +224,8 @@ __kernel void totalIntersection(__global Intersection* isects,
                                 __global int* length,
                                 __global int* count)
 {
-     int i    = isects[*length - 1].hit;
-     int j    = prefixsum[*length - 1];
-     count[0] = i+j;
-
+    global Intersection* isect = isects + (*length - 1);
+    int i    = isIsectOkay(isect);
+    int j    = prefixsum[*length - 1];
+    count[0] = i+j;
 }

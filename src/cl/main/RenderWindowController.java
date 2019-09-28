@@ -264,9 +264,12 @@ public class RenderWindowController implements Initializable, RenderControllerIn
         stopButton.setGraphic(IconAssetManager.getStopIcon());
         editButton.setGraphic(IconAssetManager.getEditIcon());        
         
-        //render button actions
+        //button states
         pauseButton.setDisable(true);
-        stopButton.setDisable(true);        
+        stopButton.setDisable(true); 
+        editButton.setDisable(true);
+        
+        //button listeners
         renderButton.setOnAction(e -> {
 
             pauseButton.setDisable(false);
@@ -274,13 +277,12 @@ public class RenderWindowController implements Initializable, RenderControllerIn
             renderButton.setDisable(true);
             editButton.setDisable(true);
             
-            if(api.getDevice(RENDER).isStopped())
-                api.applyImage(RENDER_IMAGE, () -> {
-                    return new BitmapARGB(api.getImageSize(RENDER_IMAGE).x, api.getImageSize(RENDER_IMAGE).y, true);
-                });
-                    
+            api.setDevicePriority(RENDER);            
             
-            //RenderViewModel.getDevice().render();
+            if(api.getDevice(RENDER).isStopped())            
+                api.startDevice(RENDER);           
+            else if(api.getDevice(RENDER).isPaused())           
+                api.resumeDevice(RENDER); 
         });
         pauseButton.setOnAction(e -> {            
             pauseButton.setDisable(true);
@@ -303,6 +305,8 @@ public class RenderWindowController implements Initializable, RenderControllerIn
                 return new BitmapARGB(api.getImageSize(RENDER_IMAGE).x, api.getImageSize(RENDER_IMAGE).y, false);
             });
             editButton.setDisable(true);
+            
+            api.setDevicePriority(RAYTRACE);
         });
         
         //Editor register
@@ -414,20 +418,20 @@ public class RenderWindowController implements Initializable, RenderControllerIn
         this.pane.setCenter(api.getBlendDisplay());         
         
         api.getBlendDisplay().translationDepth.addListener((observable, old_value, new_value) -> {               
-            if(api.isDeviceRunning(RENDER)) return;
+            if(!api.isDevicePriority(RAYTRACE)) return;
             orientation.translateDistance(api.getDevice(RAYTRACE).getCamera(), new_value.floatValue() * api.getDevice(RAYTRACE).getBound().getMaximumExtent());     
             api.getDevice(RAYTRACE).resume();
         });
         
         api.getBlendDisplay().translationXY.addListener((observable, old_value, new_value) -> {    
-            if(api.isDeviceRunning(RENDER)) return;
+            if(!api.isDevicePriority(RAYTRACE)) return;
             orientation.rotateX(api.getDevice(RAYTRACE).getCamera(), (float) new_value.getX());
             orientation.rotateY(api.getDevice(RAYTRACE).getCamera(), (float) new_value.getY());
             api.getDevice(RAYTRACE).resume();
         });
         
         api.getBlendDisplay().setOnDragOver(e -> {
-            if(api.isDeviceRunning(RENDER)) return;            
+            if(!api.isDevicePriority(RAYTRACE)) return;            
             Bounds imageViewInScreen = api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).localToScreen(api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).getBoundsInLocal());
             double x = e.getScreenX() - imageViewInScreen.getMinX();
             double y = e.getScreenY() - imageViewInScreen.getMinY();
@@ -453,14 +457,14 @@ public class RenderWindowController implements Initializable, RenderControllerIn
             }
         });
         api.getBlendDisplay().setOnDragExited(e -> {
-            if(api.isDeviceRunning(RENDER)) return;
+            if(!api.isDevicePriority(RAYTRACE)) return;
             
             BitmapARGB selectionBitmap = api.overlay.getNull();
             api.getBlendDisplay().set(ImageType.OVERLAY_IMAGE.name(), selectionBitmap);            
             currentinstance = -2;
         });
         api.getBlendDisplay().setOnDragDropped(e -> {
-            if(api.isDeviceRunning(RENDER)) return;
+            if(!api.isDevicePriority(RAYTRACE)) return;
             
             Bounds imageViewInScreen = api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).localToScreen(api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).getBoundsInLocal());
             double x = e.getScreenX() - imageViewInScreen.getMinX();
@@ -479,7 +483,7 @@ public class RenderWindowController implements Initializable, RenderControllerIn
         });
         
         api.getBlendDisplay().get(RAYTRACE_IMAGE.name()).setOnMousePressed(e -> {
-            if(api.isDeviceRunning(RENDER)) return;
+            if(!api.isDevicePriority(RAYTRACE)) return;
             
             if(e.getButton().equals(MouseButton.PRIMARY)){
                 if(e.getClickCount() == 2){
@@ -502,7 +506,7 @@ public class RenderWindowController implements Initializable, RenderControllerIn
             
         });
     }
-
+    
     public void initSceneTreeData(TreeView treeView)
     {
         sceneRoot = new TreeItem(new CustomData("Scene Material", null));      

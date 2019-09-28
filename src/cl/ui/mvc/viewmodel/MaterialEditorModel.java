@@ -181,7 +181,7 @@ public class MaterialEditorModel {
     
     public void registerEmitterPowerSpinner(Spinner<Double> emitterSpinner)
     {
-        SpinnerValueFactory<Double> factory = new SpinnerValueFactory.DoubleSpinnerValueFactory(5, 100, 5, 5);
+        SpinnerValueFactory<Double> factory = new SpinnerValueFactory.DoubleSpinnerValueFactory(1, 100, 5, 5);
         emitterSpinner.setValueFactory(factory);
         BindingProperties.bindBidirectional(factory.valueProperty(), emitter, 'w');
     }

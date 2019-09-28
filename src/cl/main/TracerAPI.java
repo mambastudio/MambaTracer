@@ -76,6 +76,9 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
     private CMesh mesh;
     private CNormalBVH bvhBuild;
     
+    //device priority
+    private DeviceType devicePriority = RAYTRACE;
+    
     public TracerAPI()
     {
          CL.setExceptionsEnabled(true);
@@ -184,14 +187,16 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
                 break;
             case RENDER_IMAGE:
                 renderBitmap = new BitmapARGB(renderImageDimension.x, renderImageDimension.y, true);
+                display.set(RENDER_IMAGE.name(), renderBitmap);
                 break;
             case ALL_RAYTRACE_IMAGE:
                 raytraceBitmap = new BitmapARGB(raytraceImageDimension.x, raytraceImageDimension.y, true);
                 overlayBitmap = new BitmapARGB(raytraceImageDimension.x, raytraceImageDimension.y, false);
                 overlay = new Overlay(raytraceImageDimension.x, raytraceImageDimension.y);
-                renderBitmap = new BitmapARGB(renderImageDimension.x, renderImageDimension.y, true);
+                renderBitmap = new BitmapARGB(renderImageDimension.x, renderImageDimension.y, false);
                 
                 display.set(RAYTRACE_IMAGE.name(), raytraceBitmap); 
+                display.set(RENDER_IMAGE.name(), renderBitmap);
                 break;
             default:
                 break;
@@ -219,35 +224,28 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
 
     @Override
     public void readImageFromDevice(DeviceType device, ImageType image) {        
-        if(device.equals(RAYTRACE))         
-            if(image == RAYTRACE_IMAGE)
-            {                
-                deviceRaytrace.readBuffer(IMAGE_BUFFER, buffer-> {            
-                    this.getBitmap(image).writeColor(buffer.array(), 0, 0, raytraceImageDimension.x, raytraceImageDimension.y);
-                    this.display.imageFill(RAYTRACE_IMAGE.name(), this.getBitmap(RAYTRACE_IMAGE));                    
-                });
+        if(device.equals(RAYTRACE))     
+        {
+            switch (image) {               
+                case ALL_RAYTRACE_IMAGE:
+                    deviceRaytrace.readBuffer(IMAGE_BUFFER, buffer-> {
+                        this.getBitmap(RAYTRACE_IMAGE).writeColor(buffer.array(), 0, 0, raytraceImageDimension.x, raytraceImageDimension.y);
+                        this.display.imageFill(RAYTRACE_IMAGE.name(), this.getBitmap(RAYTRACE_IMAGE));
+                    }); 
+                    deviceRaytrace.readBuffer(GROUP_BUFFER, buffer-> {
+                        overlay.copyToArray(buffer.array());
+                    }); break;
+                default:
+                    break;
             }
-            else if(image == OVERLAY_IMAGE)
-                deviceRaytrace.readBuffer(GROUP_BUFFER, buffer-> {
-                    overlay.copyToArray(buffer.array()); 
-                });
-            else if(image == ALL_RAYTRACE_IMAGE)
-            {
-                deviceRaytrace.readBuffer(IMAGE_BUFFER, buffer-> {            
-                    this.getBitmap(RAYTRACE_IMAGE).writeColor(buffer.array(), 0, 0, raytraceImageDimension.x, raytraceImageDimension.y);
-                    this.display.imageFill(RAYTRACE_IMAGE.name(), this.getBitmap(RAYTRACE_IMAGE));
-                });
-                deviceRaytrace.readBuffer(GROUP_BUFFER, buffer-> {
-                    overlay.copyToArray(buffer.array()); 
-                });
-            }
-            else if(device.equals(RENDER))
-            {
-                deviceRender.readBuffer(RENDER_BUFFER, buffer-> {
-                    this.getBitmap(RENDER_IMAGE).writeColor(buffer.array(), 0, 0, raytraceImageDimension.x, raytraceImageDimension.y);
-                    this.display.imageFill(RENDER_IMAGE.name(), this.getBitmap(RENDER_IMAGE));
-                });
-            }
+        }
+        else if(device.equals(RENDER))
+        {
+            deviceRender.readBuffer(RENDER_BUFFER, buffer-> {
+                this.getBitmap(RENDER_IMAGE).writeColor(buffer.array(), 0, 0, renderImageDimension.x, renderImageDimension.y);
+                this.display.imageFill(RENDER_IMAGE.name(), this.getBitmap(RENDER_IMAGE));
+            });
+        }            
     }
 
     @Override
@@ -272,6 +270,7 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
         
         //set to device for rendering/raytracing
         this.deviceRaytrace.set(mesh, bvhBuild);
+        this.deviceRender.set(mesh, bvhBuild);
     }
     
     @Override
@@ -322,6 +321,7 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
         
         //set to device for rendering/raytracing
         this.deviceRaytrace.set(mesh, bvhBuild);
+        this.deviceRender.set(mesh, bvhBuild);
     }
 
     @Override
@@ -417,7 +417,7 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
             case RAYTRACE:
                 return this.deviceRaytrace.isRunning();
             case RENDER:
-                return false;
+                return this.deviceRender.isRunning();
             default:
                 throw new UnsupportedOperationException(device+ " not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
@@ -435,5 +435,18 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
         }
     }
 
-    
+    @Override
+    public boolean isDevicePriority(DeviceType device) {
+        return devicePriority.equals(device);
+    }
+
+    @Override
+    public void setDevicePriority(DeviceType device) {
+        this.devicePriority = device;
+    }
+
+    @Override
+    public DeviceType getDevicePriority() {
+        return this.devicePriority;
+    }
 }

@@ -5,17 +5,13 @@
  */
 package test;
 
-import cl.core.CNormalBVH;
-import cl.core.data.struct.CBound;
-import cl.core.data.struct.CNode;
-import cl.core.data.struct.array.CStructFloatArray;
-import cl.core.data.struct.array.CStructIntArray;
-import cl.core.kernel.CLSource;
-import cl.shapes.CMesh;
-import coordinate.parser.obj.OBJParser;
-import org.jocl.CL;
-import wrapper.core.OpenCLPlatform;
-import wrapper.util.CLFileReader;
+import coordinate.utility.StructInfo;
+import cl.core.data.struct.CBSDF;
+import cl.core.data.struct.CFrame;
+import cl.core.data.struct.CPath;
+import java.util.Arrays;
+import org.jocl.struct.CLTypes.cl_float4;
+import org.jocl.struct.Struct;
 
 /**
  *
@@ -23,40 +19,32 @@ import wrapper.util.CLFileReader;
  */
 public class Test2 {
     public static void main(String... args)
+    {                 
+        Struct.showLayout(Path.class);
+        
+        StructInfo info = new StructInfo(CPath.class);
+        System.out.println(Arrays.toString(info.offsets()));
+    }
+    
+    
+    public static class Path extends Struct
     {
-        String plane =  "o Plane\n" +
-                        "v -1.000000 0.000000 1.000000\n" +
-                        "v 1.000000 0.000000 1.000000\n" +
-                        "v -1.000000 0.000000 -1.000000\n" +
-                        "v 1.000000 0.000000 -1.000000\n" +
-                        "vn 0.0000 1.0000 0.0000\n" +
-                        "s off\n" +
-                        "f 2//1 3//1 1//1\n" +
-                        "f 2//1 4//1 3//1";
-        
-        String directory = "raytracing/";       
-        CL.setExceptionsEnabled(true);
-        
-        String source1 = CLFileReader.readFile(CLSource.class, "Common.cl");
-        String source2 = CLFileReader.readFile(CLSource.class, "Primitive.cl");
-        String source3 = CLFileReader.readFile(CLSource.class, "NormalBVH.cl");
-        String source4 = CLFileReader.readFile(CLSource.class, "RayTracing.cl");
-                
-        OpenCLPlatform configuration = OpenCLPlatform.getDefault(source1, source2, source3, source4);        
-        
-        CMesh mesh = new CMesh(configuration);
-        OBJParser parser = new OBJParser();
-        parser.read("C:\\Users\\user\\Documents\\Scene3d\\simplebox\\box.obj", mesh);
-        
-        CNormalBVH bvh = new CNormalBVH(configuration);
-        bvh.build(mesh);
-        
-        CStructIntArray<CNode> nodes = bvh.getNodes();
-        CStructFloatArray<CBound> bounds = bvh.getBounds();
-        
-        for(int i = 0; i<bounds.getSize(); i++)
-            System.out.println(bounds.get(i));
-            
-        
+        public cl_float4 throughput;
+        public boolean active;
+        public BSDF bsdf;
+    }
+    
+    public static class BSDF extends Struct
+    {
+        public int materialID;              //material id
+        public Frame frame;                //local frame of reference
+        public cl_float4 localDirFix;       //incoming (fixed) incoming direction, in local
+    }
+    
+    public static class Frame extends Struct
+    {
+        public cl_float4 mX;
+        public cl_float4 mY;
+        public cl_float4 mZ;
     }
 }

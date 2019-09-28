@@ -68,6 +68,10 @@ public interface MambaAPIInterface <B extends Buffer, D extends BlendDisplay, M 
     public void stopDevice(DeviceType device);
     public void resumeDevice(DeviceType device);
     public boolean isDeviceRunning(DeviceType device);
+    
+    public void setDevicePriority(DeviceType device);
+    public DeviceType getDevicePriority();
+    public boolean isDevicePriority(DeviceType device);
         
     public RayDeviceInterface getDevice(DeviceType device);
     public void set(DeviceType device, RayDeviceInterface deviceImplementation);

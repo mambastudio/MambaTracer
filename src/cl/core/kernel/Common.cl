@@ -11,6 +11,11 @@ void printFloat(float v)
     printf("%4.8f\n", v);
 }
 
+void printFloat2(float2 v)
+{
+    printf("%4.8v2f\n", v);
+}
+
 void printFloat3(float3 v)
 {
     printf("%4.8v3f\n", v);
@@ -41,6 +46,11 @@ void printInt2(int2 v)
    printf("%d, %d\n", v.x, v.y);
 }
 
+void printInt4(int4 v)
+{
+   printf("%d, %d, %d, %d\n", v.x, v.y, v.z, v.w);
+}
+
 // print boolean
 void printBoolean(bool value)
 {
@@ -55,6 +65,41 @@ int getMaterial(int data)
 int getGroup(int data)
 {
     return (data >> 16) & 0xFFFF;
+}
+
+float4 makeFloat4(float x, float y, float z, float w)
+{
+    float4 res;
+    res.x = x;
+    res.y = y;
+    res.z = z;
+    res.w = w;
+    return res;
+}
+
+float3 makeFloat3(float x, float y, float z)
+{
+    float3 res;
+    res.x = x;
+    res.y = y;
+    res.z = z;
+    return res;
+}
+
+float2 makeFloat2(float x, float y)
+{
+    float2 res;
+    res.x = x;
+    res.y = y;
+    return res;
+}
+
+int2 makeInt2(int x, int y)
+{
+    int2 res;
+    res.x = x;
+    res.y = y;
+    return res;
 }
 
 // camera info
@@ -111,31 +156,27 @@ typedef struct
 {
    float4 o;
    float4 d;
-
    float4 inv_d;
-   float tMin;
-   float tMax;
-   
-   float2 pixel;
-   
    int4 sign;
    int2 extra;
+   float2 pixel;
+   float tMin;
+   float tMax;
 }Ray;
 
 // intersection
 typedef struct
 {
+   float4 throughput;
    float4 p;
    float4 n;
    float4 d;
-   float4 dOut;
+   float2 pixel;
    float2 uv;
    int mat;
    int sampled_brdf;
    int id;
-   int hit;    
-   float4 throughput;       
-   float2 pixel;
+   int hit;  
 }Intersection;
 
 typedef struct
@@ -155,12 +196,12 @@ Frame get_frame(float4 z)
    return frame;
 }
 
-float4 to_world(Frame frame, float4 a)
+float4 world_coordinate(Frame frame, float4 a)
 {
    return frame.mX*a.x + frame.mY*a.y + frame.mZ*a.z;
 }
 
-float4 to_local(Frame frame, float4 a)
+float4 local_coordinate(Frame frame, float4 a)
 {
    return (float4)(dot(frame.mX, a), dot(frame.mY, a), dot(frame.mZ, a), 0);
 }
@@ -535,14 +576,14 @@ inline void atomicMax(volatile __global float *source, float operand) {
     union {
            unsigned int u32;
            float        f32;
-       } next, expected, current;
-   	current.f32    = *source;
-       do {
+    } next, expected, current;
+    current.f32    = *source;
+    do {
    	   expected.f32 = current.f32;
            next.f32     = max(expected.f32, operand);
-   		current.u32  = atomic_cmpxchg( (volatile __global unsigned int *)source,
+           current.u32  = atomic_cmpxchg( (volatile __global unsigned int *)source,
                                expected.u32, next.u32);
-       } while( current.u32 != expected.u32 );
+    } while( current.u32 != expected.u32 );
 }
 
 //Function to perform the atomic min
@@ -550,14 +591,62 @@ inline void atomicMin(volatile __global float *source, float operand) {
    union {
            unsigned int u32;
            float        f32;
-       } next, expected, current;
-   	current.f32    = *source;
-       do {
+    } next, expected, current;
+    current.f32    = *source;
+    do {
    	   expected.f32 = current.f32;
            next.f32     = min(expected.f32, operand);
-   		current.u32  = atomic_cmpxchg( (volatile __global unsigned int *)source,
+           current.u32  = atomic_cmpxchg( (volatile __global unsigned int *)source,
                                expected.u32, next.u32);
-       } while( current.u32 != expected.u32 );
+    } while( current.u32 != expected.u32 );
+}
+
+//Function to perform the atomic add
+inline void atomicAdd(volatile __global float *source, float operand) {
+   union {
+           unsigned int u32;
+           float        f32;
+    } next, expected, current;
+    current.f32    = *source;
+    do {
+   	   expected.f32 = current.f32;
+           next.f32     = expected.f32 + operand;
+           current.u32  = atomic_cmpxchg( (volatile __global unsigned int *)source,
+                               expected.u32, next.u32);
+    } while( current.u32 != expected.u32 );
+}
+
+//Function to perform the atomic mul
+inline void atomicMul(volatile __global float *source, float operand) {
+   union {
+           unsigned int u32;
+           float        f32;
+    } next, expected, current;
+    current.f32    = *source;
+    do {
+   	   expected.f32 = current.f32;
+           next.f32     = expected.f32 * operand;
+           current.u32  = atomic_cmpxchg( (volatile __global unsigned int *)source,
+                               expected.u32, next.u32);
+    } while( current.u32 != expected.u32 );
+}
+
+void atomicAddFloat4(volatile __global float4* ptr, float4 value)
+{
+    volatile __global float* p = (volatile __global float*)ptr;
+    atomicAdd(p    , value.x);
+    atomicAdd(p + 1, value.y);
+    atomicAdd(p + 2, value.z);
+    atomicAdd(p + 3, value.w);
+}
+
+void atomicMulFloat4(volatile __global float4* ptr, float4 value)
+{
+    volatile __global float* p = (volatile __global float*)ptr;
+    atomicMul(p    , value.x);
+    atomicMul(p + 1, value.y);
+    atomicMul(p + 2, value.z);
+    atomicMul(p + 3, value.w);
 }
 
 __kernel void findBound(

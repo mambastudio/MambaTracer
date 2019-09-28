@@ -5,13 +5,10 @@
  */
 package test;
 
-import cl.core.data.struct.CMaterial;
-import cl.core.data.struct.MaterialC;
 import coordinate.parser.attribute.MaterialT;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 

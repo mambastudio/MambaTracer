@@ -3,8 +3,14 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/test/Test3.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/main/TracerAPI.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/device/RayDeviceMeshRender.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/data/struct/CFrame.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/test/Test4.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/data/struct/CBSDF.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/data/struct/CRay.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/test/Test2.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/data/struct/CPath.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/data/struct/CIntersection.java</file>
         </group>
     </open-files>
 </project-private>

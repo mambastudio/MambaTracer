@@ -5,21 +5,23 @@
  */
 package cl.core.data.struct;
 
-import coordinate.struct.FloatStruct;
-import java.io.Serializable;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
+import cl.core.data.CPoint3;
+import coordinate.struct.ByteStruct;
 
 /**
  *
  * @author user
  */
-public class MaterialC extends FloatStruct{
-     private final StringProperty nameP;
-     
-    public MaterialC()
+public class CBSDF extends ByteStruct {
+    public int materialID;              //material id
+    public CFrame frame;                //local frame of reference
+    public CPoint3 localDirFix;       //incoming (fixed) incoming direction, in local
+    
+    public CBSDF()
     {
-        nameP = new SimpleStringProperty();
+        materialID = 0;
+        frame = new CFrame();
+        localDirFix = new CPoint3();
     }
 
     @Override
@@ -28,12 +30,8 @@ public class MaterialC extends FloatStruct{
     }
 
     @Override
-    public float[] getArray() {
+    public byte[] getArray() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
-    @Override
-    public int getSize() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
 }

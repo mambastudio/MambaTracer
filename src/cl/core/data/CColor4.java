@@ -5,13 +5,13 @@
  */
 package cl.core.data;
 
-import coordinate.generic.AbstractCoordinate;
+import coordinate.generic.AbstractCoordinateFloat;
 
 /**
  *
  * @author user
  */
-public class CColor4 extends AbstractCoordinate {
+public class CColor4  implements AbstractCoordinateFloat {
     float r, g, b, w;
     
     public CColor4()
@@ -103,4 +103,9 @@ public class CColor4 extends AbstractCoordinate {
                 break;    
         }
     }        
+
+    @Override
+    public int getByteSize() {
+        return 4;
+    }
 }
