@@ -279,8 +279,8 @@ public class RenderWindowController implements Initializable, RenderControllerIn
             
             api.setDevicePriority(RENDER);            
             
-            if(api.getDevice(RENDER).isStopped())            
-                api.startDevice(RENDER);           
+            if(api.getDevice(RENDER).isStopped())           
+                api.startDevice(RENDER);                  
             else if(api.getDevice(RENDER).isPaused())           
                 api.resumeDevice(RENDER); 
         });

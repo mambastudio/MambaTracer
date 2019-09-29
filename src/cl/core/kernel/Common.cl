@@ -53,8 +53,11 @@ void printInt4(int4 v)
 
 // print boolean
 void printBoolean(bool value)
-{
-    printf(value ? "true \n" : "false \n");
+{        
+   if(value)
+      printf("true \n");
+   else
+      printf("false \n");
 }
 
 int getMaterial(int data)

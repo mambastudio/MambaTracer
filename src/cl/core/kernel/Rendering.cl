@@ -17,26 +17,6 @@ __kernel void testRandom(
 
 }
 
-__kernel void testIntersect(
-    global Intersection* isects,
-    global int*   frameBuffer,
-    global int*   width,
-    global int*   height
-)
-{
-    //get thread id
-    int id = get_global_id( 0 );
-    global Intersection* isect = isects + id;
-    
-    int index = isect->pixel.x + width[0] * isect->pixel.y;
-
-    if(isect->hit)
-        frameBuffer[index] = getIntARGB(makeFloat4(1, 1, 1, 1));
-    else
-        frameBuffer[index] = getIntARGB(makeFloat4(0, 0, 0, 1));
-  
-}
-
 //mark the intersects and update path bsdf
 __kernel void UpdateBSDFIntersect(
     global Intersection* isects,
@@ -98,8 +78,8 @@ __kernel void LightHitPass(
                
                if(path->active)
                {
-                  atomicAddFloat4(&accum[pixelIndex], path->throughput * getEmitterColor(*material));    //add to accumulator
-                  // printFloat4(accum[pixelIndex]);
+                  float4 contribution = path->throughput * getEmitterColor(*material);
+                  atomicAddFloat4(&accum[pixelIndex], contribution);    //add to accumulator
                }
 
                //we are done with this intersect and path
@@ -126,7 +106,11 @@ __kernel void EvaluateBSDFIntersect(
         global Intersection* isect = isects + global_id;                int index = isect->pixel.x + width[0] * isect->pixel.y;
         global Path* path          = paths + index;
         global Material* material  = materials + isect->mat;
+
         atomicMulFloat4(&path->throughput, sampledMaterialColor(*material));  //mul
+        
+
+
     }
 
 }
@@ -157,7 +141,7 @@ __kernel void SampleBSDFRayDirection(
 
         //random sample direction
         float2 sample                = random_float2(&seedThread);
-        float4 d                     = sample_hemisphere(sample);//to_world(path->bsdf.frame, sample_hemisphere(sample));
+        float4 d                     = world_coordinate(path->bsdf.frame, sample_hemisphere(sample));
         float4 o                     = isect->p;
 
         //new ray direction

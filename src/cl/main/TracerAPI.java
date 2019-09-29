@@ -326,10 +326,13 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
 
     @Override
     public void startDevice(DeviceType device) {
+        
         if(device.equals(RAYTRACE))
             this.deviceRaytrace.start();
         else if(device.equals(RENDER))
+        { 
             this.deviceRender.start();
+        }
     }
 
     @Override

@@ -69,10 +69,6 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     private CKernel rSampleBSDFRayDirectionKernel;
     private CKernel rUpdateFrameImageKernel;
     
-    //test kernel
-    private CKernel testRandomKernel;
-    private CKernel testIntersectKernel;
-    
     //Compaction
     CCompaction compactIsect;
     
@@ -90,6 +86,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     
     //render thread
     LambdaThread renderThread = new LambdaThread();
+    Random random = new Random();
     
     public RayDeviceMeshRender()
     {
@@ -138,8 +135,6 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
         
         this.rInitAccumKernel               = api.configurationCL().program().createKernel("initFloat4DataXYZ", rAccum);
         this.rInitFrameKernel               = api.configurationCL().program().createKernel("initIntDataRGB", rFrame);
-        this.testRandomKernel               = api.configurationCL().program().createKernel("testRandom", rFrame, rSeed);
-        this.testIntersectKernel            = api.configurationCL().program().createKernel("testIntersect", rIsects, rFrame, rWidth, rHeight);
         this.rInitCameraRaysKernel          = api.configurationCL().program().createKernel("InitCameraRayData", rCamera, rRays, rWidth, rHeight);
         this.rInitPathsKernel               = api.configurationCL().program().createKernel("InitPathData", rPaths);
         this.rInitIsectsKernel              = api.configurationCL().program().createKernel("InitIsectData", rIsects);
@@ -157,10 +152,10 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     }
 
     @Override
-    public void execute() {
+    public void execute() {       
         updateCamera();        
         initBuffers();   
-        renderThread.startExecution(()->{            
+        renderThread.startExecution(()->{                 
             //path trace here
             loop();
             //add frame count
@@ -171,6 +166,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     
     public void loop()
     {         
+        
         //pause level
         renderThread.chill();   
         

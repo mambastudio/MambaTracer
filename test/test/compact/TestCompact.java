@@ -26,10 +26,11 @@ public class TestCompact {
     {
         CL.setExceptionsEnabled(true);
         
-        int isectSize                           = 18;
+        int isectSize                           = 10;
         
         String source1                          = CLFileReader.readFile(CLSource.class, "Common.cl");
         String source2                          = CLFileReader.readFile(CLSource.class, "ScanCompact.cl");
+        
         OpenCLPlatform configuration            = OpenCLPlatform.getDefault(source1, source2);
         
         CStructTypeBuffer<CIntersection> isects = CBufferFactory.allocStructType("intersections", configuration.context(), CIntersection.class, isectSize, READ_WRITE);
@@ -40,7 +41,9 @@ public class TestCompact {
         isects.mapWriteBuffer(configuration.queue(), intersections -> {
           
             for (CIntersection intersection : intersections) {
-                intersection.setHit(r.ints(isectSize, 0, 2).limit(1).findFirst().getAsInt());
+                int rValue = r.ints(isectSize, 0, 2).limit(1).findFirst().getAsInt(); 
+                intersection.setHit(rValue);
+                intersection.setSampledBRDF(rValue);
                 System.out.println(intersection.hit);
             }
         });
@@ -54,6 +57,6 @@ public class TestCompact {
         isects.mapReadBuffer(configuration.queue(), intersections-> {
             for(CIntersection isect : intersections)
                 System.out.println(isect.hit);
-        });        
+        });       
     }    
 }

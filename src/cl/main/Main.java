@@ -68,7 +68,7 @@ public class Main extends Application {
         primaryStage.setScene(scene);
         primaryStage.setTitle("Mamba Tracer");
         primaryStage.setMinWidth(1250);
-        primaryStage.setMinHeight(880);
+        primaryStage.setMinHeight(580);
         primaryStage.show();
         primaryStage.setOnCloseRequest(e -> {
             System.exit(0);

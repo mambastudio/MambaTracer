@@ -55,6 +55,12 @@ public class CIntersection extends ByteStruct implements AbstractIntersection {
         this.refreshGlobalArray();
     }
     
+    public void setSampledBRDF(int sample)
+    {
+        this.sampled_brdf = sample;
+        this.refreshGlobalArray();
+    }
+    
     public int getHit()
     {
         return hit;

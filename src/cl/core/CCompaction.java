@@ -69,6 +69,7 @@ public final class CCompaction {
         this.isectBuffer = isectBuffer;        
         initCBuffers(size);
         initCKernels();
+        
     }
     
     private void initCBuffers(int size)
