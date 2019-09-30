@@ -42,12 +42,15 @@ float4 sample_hemisphere(
     float2 sample
 )
 {
-    float r1 = sample.x;
-    float r2 = sample.y;
+    float r1 = sample.y;
+    float r2 = 1 - r1; //sample.y;
     
-    float x = cos(2*PI*r1)*sqrt(1-r2);
-    float z = sin(2*PI*r1)*sqrt(1-r2);
-    float y = sqrt(r2);
+    float term1 = 2.f * PI * r1;
+    float term2 = sqrt(1.f - r2);
+    
+    float x = cos(term1) * term2;
+    float y = sin(term1) * term2;
+    float z = sqrt(r2);
     
     return (float4)(x, y, z, 0);
 }

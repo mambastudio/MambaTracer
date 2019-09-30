@@ -193,9 +193,24 @@ Frame get_frame(float4 z)
 {
    Frame frame;
    float4 tmpZ = frame.mZ = normalize(z);
-   float4 tmpX = fabs(tmpZ.x) > 0.99f ? (float4)(0,1,0,0) : (float4)(1,0,0,0);
+   float4 tmpX;
+   if(fabs(tmpZ.x) > 0.99f)
+      tmpX = (float4)(0,1,0,0);
+   else
+      tmpX = (float4)(1,0,0,0);
    frame.mY    = normalize(cross(tmpZ,tmpX) );
    frame.mX    = cross(frame.mY, tmpZ);
+   return frame;
+}
+
+Frame get_frame2(float4 n)
+{
+   Frame frame;
+   float sign  = copysign(1.0f, n.z);
+   float a     = -1.0f / (sign + n.z);
+   float b     = n.x * n.y * a;
+   frame.mX    = (float4)(1.0f + sign * n.x * n.x * a, sign * b, -sign * n.x, 0);
+   frame.mY    = (float4)(b, sign + n.y * n.y * a, -n.y, 0);
    return frame;
 }
 
