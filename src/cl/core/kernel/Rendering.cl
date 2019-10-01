@@ -1,3 +1,4 @@
+/*
 __kernel void testRandom(
     global int*   frameBuffer,
     global int*   seed
@@ -15,6 +16,19 @@ __kernel void testRandom(
     //set pixel color
     frameBuffer[pixel.x + pixel.y * 800] = getIntARGB((float4)(1, 0, 0, 1));
 
+}
+*/
+
+float4 ACESFilm(float4 x)
+{
+    float4 toned;
+    float a = 2.51f;
+    float b = 0.03f;
+    float c = 2.43f;
+    float d = 0.59f;
+    float e = 0.14f;
+    toned = clamp((float4)((x.xyz*(a*x.xyz+b))/(x.xyz*(c*x.xyz+d)+e), 1), 0.f, 1.f);
+    return toned;
 }
 
 //mark the intersects and update path bsdf
@@ -121,13 +135,20 @@ __kernel void SampleBSDFRayDirection(
     global int*          width,
     global int*          height,
     global int*          num_rays,
-    global int*          seed
+    global int*          random0,
+    global int*          random1,
+    global float*        frameCount
 )
 {
     int global_id = get_global_id(0);
+    
+    unsigned int x_coord = global_id % width[0];			/* x-coordinate of the pixel */
+    unsigned int y_coord = global_id / width[0];			/* y-coordinate of the pixel */
 
-    //seed for this thread
-    int seedThread               = WangHash(*seed * global_id);
+
+    //seeds for this thread
+    unsigned int seed0 = x_coord * (int)(frameCount[0]) % 1000 + (random0[0] * 100);
+    unsigned int seed1 = y_coord * (int)(frameCount[0]) % 1000 + (random1[0] * 100);
 
     //get intersection and index
     global Intersection* isect   = isects + global_id;
@@ -140,7 +161,7 @@ __kernel void SampleBSDFRayDirection(
         global Ray* ray              = rays + global_id;
 
         //random sample direction
-        float2 sample                = random_float2(&seedThread);
+        float2 sample                = random_float2(&seed0, &seed1);
         float4 d                     = world_coordinate(path->bsdf.frame, sample_hemisphere(sample));
         float4 o                     = isect->p;
 
@@ -166,7 +187,8 @@ __kernel void UpdateFrameImage(
     int id = get_global_id( 0 );
     
    // printFloat(*frameCount);
+   float4 toned = ACESFilm((float4)(accum[id].xyz/frameCount[0], 1.f));
 
     //update frame render
-    frame[id] = getIntARGB((float4)(accum[id].xyz/frameCount[0], 1.f));
+    frame[id] = getIntARGB(toned);
 }

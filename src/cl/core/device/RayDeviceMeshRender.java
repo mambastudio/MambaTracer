@@ -51,7 +51,9 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     
     //count and seed
     private CIntBuffer   rCount; 
-    private CIntBuffer   rSeed;
+    
+    private CIntBuffer   random0;
+    private CIntBuffer   random1;
     
     //camera buffer
     private CStructBuffer<CCamera.CameraStruct> rCamera;
@@ -101,8 +103,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
         api.configurationCL().queue().put1DRangeKernel(rInitAccumKernel, globalSize, localSize);        
         //init frame count
         rFrameCount.mapWriteValue(api.configurationCL().queue(), 1);      
-        //init seed
-        rSeed.mapWriteValue(api.configurationCL().queue(), BigInteger.probablePrime(30, new Random()).intValue());                      
+        
     }   
     
     @Override
@@ -119,7 +120,9 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
         this.rWidth                 = CBufferFactory.initIntValue("width", api.configurationCL().context(), api.configurationCL().queue(), api.getImageSize(RENDER_IMAGE).x, READ_ONLY);
         this.rHeight                = CBufferFactory.initIntValue("height", api.configurationCL().context(), api.configurationCL().queue(), api.getImageSize(RENDER_IMAGE).y, READ_ONLY);
         
-        this.rSeed                  = CBufferFactory.allocInt("seed", api.configurationCL().context(), 1, READ_WRITE);
+        this.random0                = CBufferFactory.allocInt("random0", api.configurationCL().context(), 1, READ_WRITE);
+        this.random1                = CBufferFactory.allocInt("random1", api.configurationCL().context(), 1, READ_WRITE);
+        
         this.rFrame                 = CBufferFactory.allocInt("frameBuffer", api.configurationCL().context(), globalSize, READ_WRITE);
         this.rFrameCount            = CBufferFactory.allocFloat("frameCount", api.configurationCL().context(), 1, READ_WRITE);
         this.rAccum                 = CBufferFactory.allocFloat("accumBuffer", api.configurationCL().context(), globalSize*4, READ_WRITE); //float * 4 = float4
@@ -142,7 +145,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
         this.rUpdateBSDFIntersectKernel     = api.configurationCL().program().createKernel("UpdateBSDFIntersect", rIsects, rRays, rPaths, rWidth, rHeight, rCount);
         this.rLightHitPassKernel            = api.configurationCL().program().createKernel("LightHitPass", rIsects, rPaths, mesh.clMaterials(), rAccum, rWidth, rHeight, rCount);
         this.rEvaluateBSDFIntersectKernel   = api.configurationCL().program().createKernel("EvaluateBSDFIntersect", rIsects, rPaths, mesh.clMaterials(), rWidth, rHeight, rCount);
-        this.rSampleBSDFRayDirectionKernel  = api.configurationCL().program().createKernel("SampleBSDFRayDirection", rIsects, rRays, rPaths, rWidth, rHeight, rCount, rSeed);
+        this.rSampleBSDFRayDirectionKernel  = api.configurationCL().program().createKernel("SampleBSDFRayDirection", rIsects, rRays, rPaths, rWidth, rHeight, rCount, random0, random1, rFrameCount);
         this.rUpdateFrameImageKernel        = api.configurationCL().program().createKernel("UpdateFrameImage", rAccum, rFrame, rFrameCount);
     }
 
@@ -179,7 +182,8 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
         //reset intersection count
         rCount.mapWriteValue(api.configurationCL().queue(), globalSize);
         
-        rSeed.mapWriteValue(api.configurationCL().queue(), BigInteger.probablePrime(30, new Random()).intValue()); 
+        random0.mapWriteValue(api.configurationCL().queue(), BigInteger.probablePrime(30, new Random()).intValue()); 
+        random1.mapWriteValue(api.configurationCL().queue(), BigInteger.probablePrime(30, new Random()).intValue());
         
         //path trace
         for(int i = 0; i<2; i++)

@@ -35,7 +35,7 @@ float4 getMaterialColor(Material mat, float coeff)
 
 float4 getEmitterColor(Material mat)
 {
-   return mat.emitter * 50.f;
+   return mat.emitter * 10.f;
 }
 
 float4 sampledMaterialColor(Material mat)
