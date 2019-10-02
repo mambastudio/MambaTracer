@@ -21,7 +21,13 @@ typedef struct
 BSDF setupBSDF(global Ray* ray, global Intersection* isect)
 {
    BSDF bsdf;
-   bsdf.frame = get_frame(isect->n);
+   //check normals first
+   if(dot(isect->n, ray->d)>0)
+      bsdf.frame = get_frame(-isect->n);
+   else
+      bsdf.frame = get_frame(isect->n);
+   
+   //set local dir fix for ray incoming
    bsdf.localDirFix = local_coordinate(bsdf.frame, -ray->d);
 
    return bsdf;

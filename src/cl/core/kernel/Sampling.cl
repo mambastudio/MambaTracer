@@ -14,9 +14,9 @@ uint WangHash(int seed)
 //https://github.com/straaljager/OpenCL-path-tracing-tutorial-3-Part-2/blob/master/opencl_kernel.cl
 float get_random(unsigned int *seed0, unsigned int *seed1) 
 {
-    /* hash the seeds using bitwise AND operations and bitshifts */ 
-    *seed0 = 36969 * ((*seed0) & 65535) + ((*seed0) >> 16);
-    *seed1 = 18000 * ((*seed1) & 65535) + ((*seed1) >> 16);
+    /* hash the seeds */
+    *seed0 = WangHash(*seed0);
+    *seed1 = WangHash(*seed1);
 
     unsigned int ires = ((*seed0) << 16) + (*seed1);
 
@@ -30,15 +30,6 @@ float get_random(unsigned int *seed0, unsigned int *seed1)
     return (res.f - 2.0f) / 2.0f;
 }
 
-//xor32 from Lecture 12 -  GPU Ray Tracing (2) by Jacco Bikker
-float random_float(int* seed)
-{
-    *seed ^= *seed << 13;
-    *seed ^= *seed >> 17;
-    *seed ^= *seed << 5;
-    return *seed * 2.3283064365387e-10f;
-}
-
 float2 random_float2(unsigned int *randSeed0, unsigned int *randSeed1)
 {
     float2 r;
@@ -47,17 +38,16 @@ float2 random_float2(unsigned int *randSeed0, unsigned int *randSeed1)
     return r;
 }
 
-/*
 //Refer to https://stackoverflow.com/questions/363681/how-do-i-generate-random-integers-within-a-specific-range-in-java
-int2 random_int2_range(int* seed, int rangeX, int rangeY)
+int2 random_int2_range(unsigned int* seed0, unsigned int* seed1, int rangeX, int rangeY)
 {
     int2 ri;
-    float2 rf  = random_float2(seed);
+    float2 rf  = random_float2(seed0, seed1);
     ri.x       = (int)(rf.x * rangeX);
     ri.y       = (int)(rf.y * rangeY);
     return ri;   
 }
-*/
+
 float4 sample_hemisphere(
     float2 sample
 )
