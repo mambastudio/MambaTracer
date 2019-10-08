@@ -3,26 +3,23 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cl.core;
+package test.scan;
 
-import cl.core.data.struct.CIntersection;
-import wrapper.core.CBufferFactory;
 import wrapper.core.CBufferMemory;
 import wrapper.core.CKernel;
 import static wrapper.core.CMemory.READ_ONLY;
 import static wrapper.core.CMemory.READ_WRITE;
 import wrapper.core.OpenCLPlatform;
 import wrapper.core.buffer.CIntBuffer;
-import wrapper.core.buffer.CStructTypeBuffer;
 
 /**
  *
  * @author user
  */
-public final class CCompaction {    
+public class CScan {
     private final OpenCLPlatform configuration;   
     private int size;
-    private final int LOCALSIZECONSTANT = 64;
+    private final int LOCALSIZECONSTANT = 16;
     
     private CIntBuffer total = null;
     private CIntBuffer array_size = null;
@@ -48,25 +45,17 @@ public final class CCompaction {
     
     private CKernel sumgKernel9, sumgKernel8, sumgKernel7, sumgKernel6, sumgKernel5, sumgKernel4, sumgKernel3, sumgKernel2, sumgKernel1;
     
-    //optional kernel
-    private CKernel totalIntersectionKernel;
-    private CKernel processIsectDataKernel;
+    //optional kernel   
     private CKernel initIntArrayKernel;
-    private CKernel resetTempIntersection, compactIntersection, transferIntersection;
     
-    private CStructTypeBuffer<CIntersection> isectBuffer;
-    private CStructTypeBuffer<CIntersection> tempIsectBuffer;
-    
-    public CCompaction(OpenCLPlatform configuration)
+    public CScan(OpenCLPlatform configuration)
     {
         this.configuration = configuration;       
     }
     
-    public void init(CStructTypeBuffer<CIntersection> isectBuffer, CIntBuffer total)
+    public void init(int size)
     {
-        this.size = isectBuffer.getSize();
-        this.total = total;
-        this.isectBuffer = isectBuffer;        
+        this.size = size;         
         initCBuffers(size);
         initCKernels();
         
@@ -95,10 +84,9 @@ public final class CCompaction {
         gSize10             = length(size, 10);
         lSize10             = localsize(gSize10);
         
-        this.tempIsectBuffer = CBufferFactory.allocStructType("temp_intersections", configuration.context(), CIntersection.class, this.size, READ_ONLY);
-        this.array_size           = configuration.allocIntValue("array_size", size, READ_ONLY);
-        
-                
+        this.total          = configuration.allocIntValue("total", 0, READ_WRITE);
+        this.array_size     = configuration.allocIntValue("array_size", size, READ_ONLY);
+              
         sum_level1            = configuration.allocInt("sum_level1", gSize1, READ_WRITE);
         sum_level1_length     = configuration.allocIntValue("sum_level1_length", gSize1, READ_WRITE);
         sum_level2            = configuration.allocInt("sum_level2", gSize2, READ_WRITE);
@@ -123,69 +111,27 @@ public final class CCompaction {
     
     private void initCKernels()
     {
-        initIntArrayKernel      = configuration.createKernel("initIntArray", sum_level1);
-        processIsectDataKernel  = configuration.createKernel("processIsectData", isectBuffer, sum_level1);
-                        
-        scanKernel1    = configuration.createKernel("blelloch_scan_g"       , sum_level1,   sum_level2,  sum_level1_length, CBufferMemory.LOCALINT);  
-        scanKernel2    = configuration.createKernel("blelloch_scan_g"       , sum_level2,   sum_level3,  sum_level2_length, CBufferMemory.LOCALINT);
-        scanKernel3    = configuration.createKernel("blelloch_scan_g"       , sum_level3,   sum_level4,  sum_level3_length, CBufferMemory.LOCALINT);  
-        scanKernel4    = configuration.createKernel("blelloch_scan_g"       , sum_level4,   sum_level5,  sum_level4_length, CBufferMemory.LOCALINT);
-        scanKernel5    = configuration.createKernel("blelloch_scan_g"       , sum_level5,   sum_level6,  sum_level5_length, CBufferMemory.LOCALINT);  
-        scanKernel6    = configuration.createKernel("blelloch_scan_g"       , sum_level6,   sum_level7,  sum_level6_length, CBufferMemory.LOCALINT);
-        scanKernel7    = configuration.createKernel("blelloch_scan_g"       , sum_level7,   sum_level8,  sum_level7_length, CBufferMemory.LOCALINT);  
-        scanKernel8    = configuration.createKernel("blelloch_scan_g"       , sum_level8,   sum_level9,  sum_level8_length, CBufferMemory.LOCALINT);
-        scanKernel9    = configuration.createKernel("blelloch_scan_g"       , sum_level9,   sum_level10, sum_level9_length, CBufferMemory.LOCALINT);          
-        scanKernel10   = configuration.createKernel("blelloch_scan"         , sum_level10,  sum_level10_length, CBufferMemory.LOCALINT); 
-        sumgKernel9    = configuration.createKernel("add_groups"            , sum_level9,  sum_level10);
-        sumgKernel8    = configuration.createKernel("add_groups"            , sum_level8,  sum_level9);
-        sumgKernel7    = configuration.createKernel("add_groups"            , sum_level7,  sum_level8);
-        sumgKernel6    = configuration.createKernel("add_groups"            , sum_level6,  sum_level7);
-        sumgKernel5    = configuration.createKernel("add_groups"            , sum_level5,  sum_level6);
-        sumgKernel4    = configuration.createKernel("add_groups"            , sum_level4,  sum_level5);
-        sumgKernel3    = configuration.createKernel("add_groups"            , sum_level3,  sum_level4);
-        sumgKernel2    = configuration.createKernel("add_groups"            , sum_level2,  sum_level3);
-        sumgKernel1    = configuration.createKernel("add_groups_n"          , sum_level1,  sum_level2, sum_level1_length);
-        
-        resetTempIntersection   = configuration.createKernel("resetIntersection"          , tempIsectBuffer);       
-        compactIntersection     = configuration.createKernel("compactIntersection"        , isectBuffer, tempIsectBuffer, sum_level1);       
-        transferIntersection    = configuration.createKernel("transferIntersection"       , isectBuffer, tempIsectBuffer);      
-        
-        totalIntersectionKernel = configuration.createKernel("totalIntersection", isectBuffer, sum_level1, array_size, total);
+        scanKernel1    = configuration.createKernel("blelloch_scan_g_f"       , sum_level1,   sum_level2,  sum_level1_length, CBufferMemory.LOCALINT);  
+        scanKernel2    = configuration.createKernel("blelloch_scan_g_f"       , sum_level2,   sum_level3,  sum_level2_length, CBufferMemory.LOCALINT);
+        scanKernel3    = configuration.createKernel("blelloch_scan_g_f"       , sum_level3,   sum_level4,  sum_level3_length, CBufferMemory.LOCALINT);  
+        scanKernel4    = configuration.createKernel("blelloch_scan_g_f"       , sum_level4,   sum_level5,  sum_level4_length, CBufferMemory.LOCALINT);
+        scanKernel5    = configuration.createKernel("blelloch_scan_g_f"       , sum_level5,   sum_level6,  sum_level5_length, CBufferMemory.LOCALINT);  
+        scanKernel6    = configuration.createKernel("blelloch_scan_g_f"       , sum_level6,   sum_level7,  sum_level6_length, CBufferMemory.LOCALINT);
+        scanKernel7    = configuration.createKernel("blelloch_scan_g_f"       , sum_level7,   sum_level8,  sum_level7_length, CBufferMemory.LOCALINT);  
+        scanKernel8    = configuration.createKernel("blelloch_scan_g_f"       , sum_level8,   sum_level9,  sum_level8_length, CBufferMemory.LOCALINT);
+        scanKernel9    = configuration.createKernel("blelloch_scan_g_f"       , sum_level9,   sum_level10, sum_level9_length, CBufferMemory.LOCALINT);          
+        scanKernel10   = configuration.createKernel("blelloch_scan_f"         , sum_level10,  sum_level10_length, CBufferMemory.LOCALINT); 
+        sumgKernel9    = configuration.createKernel("add_groups_f"            , sum_level9,  sum_level10);
+        sumgKernel8    = configuration.createKernel("add_groups_f"            , sum_level8,  sum_level9);
+        sumgKernel7    = configuration.createKernel("add_groups_f"            , sum_level7,  sum_level8);
+        sumgKernel6    = configuration.createKernel("add_groups_f"            , sum_level6,  sum_level7);
+        sumgKernel5    = configuration.createKernel("add_groups_f"            , sum_level5,  sum_level6);
+        sumgKernel4    = configuration.createKernel("add_groups_f"            , sum_level4,  sum_level5);
+        sumgKernel3    = configuration.createKernel("add_groups_f"            , sum_level3,  sum_level4);
+        sumgKernel2    = configuration.createKernel("add_groups_f"            , sum_level2,  sum_level3);
+        sumgKernel1    = configuration.createKernel("add_groups_n_f"          , sum_level1,  sum_level2, sum_level1_length);        
     }
-        
-    public void execute()
-    {
-        configuration.executeKernel1D(initIntArrayKernel,       gSize1, lSize1);
-        configuration.executeKernel1D(processIsectDataKernel,   size,   1);  
-        
-        configuration.executeKernel1D(scanKernel1,  gSize1,  lSize1);        
-        configuration.executeKernel1D(scanKernel2,  gSize2,  lSize2);       
-        configuration.executeKernel1D(scanKernel3,  gSize3,  lSize3);   
-        configuration.executeKernel1D(scanKernel4,  gSize4,  lSize4);        
-        configuration.executeKernel1D(scanKernel5,  gSize5,  lSize5);       
-        configuration.executeKernel1D(scanKernel6,  gSize6,  lSize6);   
-        configuration.executeKernel1D(scanKernel7,  gSize7,  lSize7);        
-        configuration.executeKernel1D(scanKernel8,  gSize8,  lSize8);       
-        configuration.executeKernel1D(scanKernel9,  gSize9,  lSize9); 
-        configuration.executeKernel1D(scanKernel10, gSize10, lSize10);
-        configuration.executeKernel1D(sumgKernel9,  gSize9,  lSize9);
-        configuration.executeKernel1D(sumgKernel8,  gSize8,  lSize8);
-        configuration.executeKernel1D(sumgKernel7,  gSize7,  lSize7);
-        configuration.executeKernel1D(sumgKernel6,  gSize6,  lSize6);
-        configuration.executeKernel1D(sumgKernel5,  gSize5,  lSize5);
-        configuration.executeKernel1D(sumgKernel4,  gSize4,  lSize4);
-        configuration.executeKernel1D(sumgKernel3,  gSize3,  lSize3);
-        configuration.executeKernel1D(sumgKernel2,  gSize2,  lSize2);
-        configuration.executeKernel1D(sumgKernel1,  gSize1,  lSize1);
-        
-        configuration.executeKernel1D(totalIntersectionKernel, 1, 1);
-        
-        configuration.executeKernel1D(resetTempIntersection,    size, 1);
-        configuration.executeKernel1D(compactIntersection,      size, 1);
-        configuration.executeKernel1D(transferIntersection,     size, 1);
-        
-    }
-        
+    
     public int log2( int bits ) // returns 0 for bits=0
     {
         int log = 0;
@@ -195,7 +141,7 @@ public final class CCompaction {
         if( bits >= 4   ) { bits >>>= 2; log += 2; }
         return log + ( bits >>> 1 );
     }
-        
+    
     public int pow2length(int length)
     {
         int log2 = log2(length);

@@ -18,6 +18,11 @@ __kernel void testRandom(
 
 }
 */
+float luminance(float4 v)
+{
+    // Luminance
+    return 0.2126f * v.x + 0.7152f * v.y + 0.0722f * v.z;
+}
 
 float4 ACESFilm(float4 x)
 {
@@ -176,11 +181,31 @@ __kernel void SampleBSDFRayDirection(
 
 }
 
+__kernel void TotalLogLuminance(
+    global float4* accum,
+    global float*  frameCount,
+    global float*  totalLogLum
+)
+{
+    //get thread id
+    int id                     = get_global_id( 0 );
+    
+    local int tmpSum[1];
+    if(get_local_id(0)==0){
+        tmpSum[0]=0;
+    }                            
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    //average color and accumulate log luminance
+    float4 color               = (float4)(accum[id].xyz/frameCount[0], 1.f);
+    atomicAdd(&totalLogLum[0], log(0.01f + luminance(color)));
+}
+
 
 __kernel void UpdateFrameImage(
     global float4* accum,
-    global int* frame,
-    global float* frameCount
+    global int*    frame,
+    global float*  frameCount
 )
 {
     //get thread id

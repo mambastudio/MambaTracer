@@ -26,7 +26,7 @@ public class TestCompact {
     {
         CL.setExceptionsEnabled(true);
         
-        int isectSize                           = 10;
+        int isectSize                           = 256;
         
         String source1                          = CLFileReader.readFile(CLSource.class, "Common.cl");
         String source2                          = CLFileReader.readFile(CLSource.class, "ScanCompact.cl");
@@ -41,7 +41,7 @@ public class TestCompact {
         isects.mapWriteBuffer(configuration.queue(), intersections -> {
           
             for (CIntersection intersection : intersections) {
-                int rValue = r.ints(isectSize, 0, 2).limit(1).findFirst().getAsInt(); 
+                int rValue = r.ints(isectSize, 1, 2).limit(1).findFirst().getAsInt(); 
                 intersection.setHit(rValue);
                 intersection.setSampledBRDF(rValue);
                 System.out.println(intersection.hit);
