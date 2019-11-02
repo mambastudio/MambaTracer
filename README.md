@@ -18,7 +18,8 @@ A simple Java OpenCL Tracer mainly targeting OpenCL 1.2 with AMD and Intel Drive
 * JOCL Library http://www.jocl.org/
 
 ## Future Implementation
-
+* Enhance UI
+  - Use of WorkbenchFX UI framework - https://github.com/dlsc-software-consulting-gmbh/WorkbenchFX
 * Fast Acceleration Structure   
   - Fast Build BVH
     - Parallel Locally-Ordered Clustering for Bounding Volume Hierarchy Construction
