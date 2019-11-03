@@ -16,7 +16,7 @@ public class CInt4 implements AbstractCoordinateInteger{
     
     public CInt4()
     {
-        
+        x = y = z = w = 0;
     }
 
     @Override
