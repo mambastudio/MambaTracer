@@ -31,7 +31,7 @@ public class CInt4 implements AbstractCoordinateInteger{
 
     @Override
     public void set(int... values) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("Not supported yet. Make necessary changes"); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
