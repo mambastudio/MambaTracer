@@ -8,6 +8,7 @@ package cl.core.device;
 import cl.core.CBoundingBox;
 import cl.core.CCamera;
 import cl.core.CCompaction;
+import cl.core.CImageFrame;
 import cl.core.CNormalBVH;
 import cl.core.api.MambaAPIInterface;
 import static cl.core.api.MambaAPIInterface.DeviceType.RAYTRACE;
@@ -29,7 +30,6 @@ import wrapper.core.CKernel;
 import static wrapper.core.CMemory.READ_ONLY;
 import static wrapper.core.CMemory.READ_WRITE;
 import wrapper.core.CallBackFunction;
-import wrapper.core.buffer.CFloatBuffer;
 import wrapper.core.buffer.CIntBuffer;
 import wrapper.core.buffer.CStructBuffer;
 import wrapper.core.buffer.CStructTypeBuffer;
@@ -42,13 +42,9 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     //API
     MambaAPIInterface api;
     
-    //frame buffer
-    private CIntBuffer   rFrame;
-    private CFloatBuffer rFrameCount;
     private CIntBuffer   rWidth;
     private CIntBuffer   rHeight;
-    private CFloatBuffer rAccum;
-    private CFloatBuffer rTotalLogLum;
+    private CImageFrame  rFrame;
     
     //count and seed
     private CIntBuffer   rCount; 
@@ -59,9 +55,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     //camera buffer
     private CStructBuffer<CCamera.CameraStruct> rCamera;
         
-    //kernels
-    private CKernel rInitFrameKernel;
-    private CKernel rInitAccumKernel;    
+    //kernels   
     private CKernel rInitCameraRaysKernel;
     private CKernel rInitIsectsKernel;
     private CKernel rInitPathsKernel;
@@ -69,9 +63,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     private CKernel rUpdateBSDFIntersectKernel;
     private CKernel rLightHitPassKernel;  
     private CKernel rEvaluateBSDFIntersectKernel;
-    private CKernel rSampleBSDFRayDirectionKernel;
-    private CKernel rTotalLogLuminanceKernel;
-    private CKernel rUpdateFrameImageKernel;
+    private CKernel rSampleBSDFRayDirectionKernel;   
     
     //Compaction
     CCompaction compactIsect;
@@ -99,13 +91,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
         
     public void initBuffers()
     {
-        //init frame buffer
-        api.configurationCL().queue().put1DRangeKernel(rInitFrameKernel, globalSize, localSize);        
-        //init accumulation buffer
-        api.configurationCL().queue().put1DRangeKernel(rInitAccumKernel, globalSize, localSize);        
-        //init frame count
-        rFrameCount.mapWriteValue(api.configurationCL().queue(), 1);      
-        
+        rFrame.initBuffers();       
     }   
     
     @Override
@@ -125,11 +111,8 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
         this.random0                = CBufferFactory.allocInt("random0", api.configurationCL().context(), 1, READ_WRITE);
         this.random1                = CBufferFactory.allocInt("random1", api.configurationCL().context(), 1, READ_WRITE);
         
-        this.rFrame                 = CBufferFactory.allocInt("frameBuffer", api.configurationCL().context(), globalSize, READ_WRITE);
-        this.rFrameCount            = CBufferFactory.allocFloat("frameCount", api.configurationCL().context(), 1, READ_WRITE);
-        this.rAccum                 = CBufferFactory.allocFloat("accumBuffer", api.configurationCL().context(), globalSize*4, READ_WRITE); //float * 4 = float4
-        this.rTotalLogLum           = CBufferFactory.allocFloat("totalLogLum", api.configurationCL().context(), 1, READ_WRITE);
-        
+        this.rFrame                 = new CImageFrame(api.configurationCL(), api.getImageWidth(RENDER_IMAGE), api.getImageHeight(RENDER_IMAGE));
+      
         compactIsect = new CCompaction(api.configurationCL());
         compactIsect.init(rIsects, rCount);
     }
@@ -139,18 +122,15 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
         this.mesh = mesh;
         this.bvhBuild = bvhBuild;
         
-        this.rInitAccumKernel               = api.configurationCL().program().createKernel("initFloat4DataXYZ", rAccum);
-        this.rInitFrameKernel               = api.configurationCL().program().createKernel("initIntDataRGB", rFrame);
         this.rInitCameraRaysKernel          = api.configurationCL().program().createKernel("InitCameraRayData", rCamera, rRays, rWidth, rHeight);
         this.rInitPathsKernel               = api.configurationCL().program().createKernel("InitPathData", rPaths);
         this.rInitIsectsKernel              = api.configurationCL().program().createKernel("InitIsectData", rIsects);
         this.rIntersectPrimitivesKernel     = api.configurationCL().program().createKernel("intersectPrimitives", rRays, rIsects, rCount, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvhBuild.getCNodes(), bvhBuild.getCBounds());
         this.rUpdateBSDFIntersectKernel     = api.configurationCL().program().createKernel("UpdateBSDFIntersect", rIsects, rRays, rPaths, rWidth, rHeight, rCount);
-        this.rLightHitPassKernel            = api.configurationCL().program().createKernel("LightHitPass", rIsects, rPaths, mesh.clMaterials(), rAccum, rWidth, rHeight, rCount);
+        this.rLightHitPassKernel            = api.configurationCL().program().createKernel("LightHitPass", rIsects, rPaths, mesh.clMaterials(), rFrame.getFrameAccum(), rWidth, rHeight, rCount);
         this.rEvaluateBSDFIntersectKernel   = api.configurationCL().program().createKernel("EvaluateBSDFIntersect", rIsects, rPaths, mesh.clMaterials(), rWidth, rHeight, rCount);
-        this.rSampleBSDFRayDirectionKernel  = api.configurationCL().program().createKernel("SampleBSDFRayDirection", rIsects, rRays, rPaths, rWidth, rHeight, rCount, random0, random1, rFrameCount);
-        this.rTotalLogLuminanceKernel       = api.configurationCL().program().createKernel("TotalLogLuminance", rAccum, rFrameCount, rTotalLogLum);
-        this.rUpdateFrameImageKernel        = api.configurationCL().program().createKernel("UpdateFrameImage", rAccum, rFrame, rFrameCount);
+        this.rSampleBSDFRayDirectionKernel  = api.configurationCL().program().createKernel("SampleBSDFRayDirection", rIsects, rRays, rPaths, rWidth, rHeight, rCount, random0, random1, rFrame.getFrameCount());
+        
     }
 
     @Override
@@ -166,7 +146,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
             //path trace here
             loop();
             //add frame count
-            rFrameCount.mapWriteValue(api.configurationCL().queue(), rFrameCount.mapReadValue(api.configurationCL().queue()) + 1);
+            rFrame.incrementFrameCount();
         });
         
     }
@@ -212,9 +192,8 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
             api.configurationCL().queue().put1DRangeKernel(this.rSampleBSDFRayDirectionKernel, globalSize, localSize);
         }
         
-        //api.configurationCL().queue().put1DRangeKernel(this.rTotalLogLuminanceKernel, globalSize, localSize);
-        api.configurationCL().queue().put1DRangeKernel(this.rUpdateFrameImageKernel, globalSize, localSize);
-        
+        rFrame.processImage();
+       
         api.configurationCL().queue().finish();
         
          //read image
@@ -295,7 +274,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     @Override
     public void readBuffer(DeviceBuffer name, CallBackFunction callback) {
         if(name == RENDER_BUFFER)
-            rFrame.mapReadBuffer(api.configurationCL().queue(), callback);
+            rFrame.getFrameARGB().mapReadBuffer(api.configurationCL().queue(), callback);
     }
 
     @Override

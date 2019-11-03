@@ -8,7 +8,7 @@
 // print float value
 void printFloat(float v)
 {
-    printf("%4.8f\n", v);
+    printf("%4.12f\n", v);
 }
 
 void printFloat2(float2 v)

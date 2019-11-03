@@ -127,9 +127,6 @@ __kernel void EvaluateBSDFIntersect(
         global Material* material  = materials + isect->mat;
 
         atomicMulFloat4(&path->throughput, sampledMaterialColor(*material));  //mul
-        
-
-
     }
 
 }
@@ -179,41 +176,4 @@ __kernel void SampleBSDFRayDirection(
 
     }
 
-}
-
-__kernel void TotalLogLuminance(
-    global float4* accum,
-    global float*  frameCount,
-    global float*  totalLogLum
-)
-{
-    //get thread id
-    int id                     = get_global_id( 0 );
-    
-    local int tmpSum[1];
-    if(get_local_id(0)==0){
-        tmpSum[0]=0;
-    }                            
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    //average color and accumulate log luminance
-    float4 color               = (float4)(accum[id].xyz/frameCount[0], 1.f);
-    atomicAdd(&totalLogLum[0], log(0.01f + luminance(color)));
-}
-
-
-__kernel void UpdateFrameImage(
-    global float4* accum,
-    global int*    frame,
-    global float*  frameCount
-)
-{
-    //get thread id
-    int id = get_global_id( 0 );
-    
-   // printFloat(*frameCount);
-   float4 toned = ACESFilm((float4)(accum[id].xyz/frameCount[0], 1.f));
-
-    //update frame render
-    frame[id] = getIntARGB(toned);
-}
+} 
