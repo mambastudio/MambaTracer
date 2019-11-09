@@ -5,9 +5,11 @@
         <group>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/kernel/CLSource.java</file>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/data/CVector3.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/device/RayDeviceMeshRender.java</file>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/CCompaction.java</file>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/CFloatScan.java</file>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/data/CInt4.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/CInitBuffer.java</file>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/CImageFrame.java</file>
         </group>
     </open-files>
