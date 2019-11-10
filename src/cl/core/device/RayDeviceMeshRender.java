@@ -69,9 +69,11 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     CCompaction compactIsect;
     
      //Ray & intersects
-    CStructTypeBuffer<CRay> rRays;
-    CStructTypeBuffer<CIntersection> rIsects;
-    CStructTypeBuffer<CPath> rPaths;
+    private CStructTypeBuffer<CRay> rRays;
+    private CStructTypeBuffer<CRay> rShadowRays;
+    private CStructTypeBuffer<CIntersection> rIsects;
+    private CStructTypeBuffer<CIntersection> rLightSample;
+    private CStructTypeBuffer<CPath> rPaths;
     
     //mesh and accelerator
     CMesh mesh;
@@ -166,6 +168,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
         //reset intersection count
         rCount.mapWriteValue(api.configurationCL().queue(), globalSize);
         
+        //init seeds
         random0.mapWriteValue(api.configurationCL().queue(), BigInteger.probablePrime(30, new Random()).intValue()); 
         random1.mapWriteValue(api.configurationCL().queue(), BigInteger.probablePrime(30, new Random()).intValue());
         
@@ -188,17 +191,33 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
             //evaluate bsdf
             api.configurationCL().queue().put1DRangeKernel(this.rEvaluateBSDFIntersectKernel, globalSize, localSize);
             
+            //direct light evaluation
+            directLightEvaluation();
+            
             //sample new directions
             api.configurationCL().queue().put1DRangeKernel(this.rSampleBSDFRayDirectionKernel, globalSize, localSize);
         }
         
+        //process image (tonemapping, average luminance, etc)
         rFrame.processImage();
        
+        //ensure queue clears up (makes it faster)
         api.configurationCL().queue().finish();
         
          //read image
         api.readImageFromDevice(RENDER, RENDER_IMAGE);   
         
+        
+    }
+    
+    /*
+     * sample light
+     * generate shadow rays
+     * intersect shadow rays
+     * evaluate direct light bsdf
+    */
+    public void directLightEvaluation()
+    {
         
     }
 

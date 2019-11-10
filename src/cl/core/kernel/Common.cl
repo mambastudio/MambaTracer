@@ -182,6 +182,13 @@ typedef struct
    int hit;  
 }Intersection;
 
+//soon to implement unions
+typedef struct
+{
+   int faceId;
+  
+}Light;
+
 typedef struct
 {
    float4 mX;
@@ -397,6 +404,15 @@ float4 getPoint(Ray r, float t)
    point.y = r.o.y + t * r.d.y;
    point.z = r.o.z + t * r.d.z;
    return point;
+}
+
+float distance_between(float4 p1, float4 p2)
+{
+   float dx = p2.x - p1.x;
+   float dy = p2.y - p1.y;
+   float dz = p2.z - p1.z;
+   
+   return sqrt((dx * dx) + (dy * dy) + (dz * dz));
 }
 
 // get ray initialized (CONSIDER DELETING)

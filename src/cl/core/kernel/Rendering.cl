@@ -130,6 +130,21 @@ __kernel void EvaluateBSDFIntersect(
     }
 
 }
+
+__kernel void GenerateShadowRays(
+    global Intersection* isects,
+    global Ray*          rays,
+    global Light*        lights,
+    global int*          count
+)
+{
+    int global_id = get_global_id(0);
+    if(global_id < *count)
+    {
+
+    }
+}
+
 __kernel void SampleBSDFRayDirection(
     global Intersection* isects,
     global Ray*          rays,
@@ -176,4 +191,4 @@ __kernel void SampleBSDFRayDirection(
 
     }
 
-} 
+}
