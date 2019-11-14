@@ -40,10 +40,10 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
        
     private final OpenCLPlatform configuration;
     
-    //mesh bound
+    //opencl mesh bound
     private final CBoundingBox bounds;
     
-    //mesh data
+    //opencl mesh data
     private CFloatBuffer pointsBuffer = null;
     private CFloatBuffer normalsBuffer = null;
     private CIntBuffer facesBuffer = null;

@@ -16,13 +16,17 @@ import static cl.core.api.MambaAPIInterface.DeviceType.RENDER;
 import static cl.core.api.MambaAPIInterface.ImageType.RENDER_IMAGE;
 import cl.core.api.RayDeviceInterface;
 import static cl.core.api.RayDeviceInterface.DeviceBuffer.RENDER_BUFFER;
+import cl.core.data.struct.CFace;
 import cl.core.data.struct.CPath;
 import cl.core.data.struct.CIntersection;
+import cl.core.data.struct.CMaterial;
 import cl.core.data.struct.CRay;
 import cl.shapes.CMesh;
 import coordinate.parser.attribute.MaterialT;
+import coordinate.struct.StructIntArray;
 import filesystem.core.OutputFactory;
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Random;
 import thread.model.LambdaThread;
 import wrapper.core.CBufferFactory;
@@ -77,7 +81,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     
     //mesh and accelerator
     CMesh mesh;
-    CNormalBVH bvhBuild;
+    CNormalBVH bvhBuild; 
     
     //global and local size
     private int globalSize, localSize;
@@ -139,11 +143,28 @@ public class RayDeviceMeshRender implements RayDeviceInterface {
     public void setMaterial(int index, MaterialT aterial) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
+    
+    public void initLight()
+    {
+        StructIntArray<CFace> faces = new StructIntArray<>(CFace.class, mesh.getCount());
+        faces.setIntArray(mesh.getTriangleFacesArray());        
+        int lightCount = 0;
+        
+        for(int i = 0; i<faces.size(); i++)
+        {
+            CFace face = faces.get(i);
+            CMaterial material = mesh.clMaterials().get(face.mat);
+            if(material.emitterEnabled) lightCount++;            
+        }
+        
+        System.out.println("light count: " +lightCount);
+    }
 
     @Override
     public void execute() {       
         updateCamera();        
         initBuffers();   
+        initLight();
         renderThread.startExecution(()->{                 
             //path trace here
             loop();
