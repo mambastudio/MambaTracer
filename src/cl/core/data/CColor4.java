@@ -12,7 +12,7 @@ import coordinate.generic.AbstractCoordinateFloat;
  * @author user
  */
 public class CColor4  implements AbstractCoordinateFloat {
-    float r, g, b, w;
+    public float r, g, b, w;
     
     public CColor4()
     {
@@ -57,7 +57,6 @@ public class CColor4  implements AbstractCoordinateFloat {
         }
     }
 
-    @Override
     public void set(char axis, float value) {
         switch (axis) {
             case 'r':

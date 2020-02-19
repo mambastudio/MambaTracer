@@ -22,32 +22,6 @@ public class CNode extends IntStruct
     public int child;
 
     @Override
-    public void initFromGlobalArray() {
-        int[] globalArray = getGlobalArray();
-        if(globalArray == null)
-            return;
-        int globalArrayIndex = getGlobalArrayIndex();
-
-        bound   = globalArray[globalArrayIndex + 0];
-        sibling = globalArray[globalArrayIndex + 1];
-        left    = globalArray[globalArrayIndex + 2];
-        right   = globalArray[globalArrayIndex + 3];
-        parent  = globalArray[globalArrayIndex + 4];
-        isLeaf  = globalArray[globalArrayIndex + 5];
-        child   = globalArray[globalArrayIndex + 6];
-    }
-
-    @Override
-    public int[] getArray() {
-        return new int[]{bound, sibling, left, right, parent, isLeaf, child};
-    }
-
-    @Override
-    public int getSize() {
-        return 7;
-    } 
-
-    @Override
     public String toString()
     {
         StringBuilder builder = new StringBuilder(); 

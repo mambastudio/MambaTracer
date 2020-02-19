@@ -6,6 +6,7 @@
 package cl.core.data;
 
 import coordinate.generic.AbstractCoordinateFloat;
+import coordinate.utility.Value2Di;
 
 /**
  *
@@ -22,6 +23,12 @@ public class CPoint2 implements AbstractCoordinateFloat
     public CPoint2(float x, float y) {
         this.x = x;
         this.y = y;        
+    }
+    
+    public CPoint2(Value2Di value)
+    {
+        this.x = value.x;
+        this.y = value.y;
     }
 
     @Override
@@ -46,7 +53,6 @@ public class CPoint2 implements AbstractCoordinateFloat
         }
     }
 
-    @Override
     public void set(char axis, float value) {
         switch (axis) {
             case 'x':

@@ -6,6 +6,7 @@
 package cl.core.data;
 
 import coordinate.generic.VCoord;
+import java.util.Arrays;
 import org.jocl.struct.CLTypes.cl_float4;
 
 /**
@@ -44,7 +45,6 @@ public class CVector3 implements VCoord<CVector3>{
         }
     }
 
-    @Override
     public void set(char axis, float value) {
         switch (axis) {
             case 'x':
@@ -62,7 +62,7 @@ public class CVector3 implements VCoord<CVector3>{
     }
 
     @Override
-    public void set(float... values) {
+    public void set(float... values) {        
         x = values[0];
         y = values[1];
         z = values[2];
@@ -93,16 +93,7 @@ public class CVector3 implements VCoord<CVector3>{
     public float[] getArray() {
         return new float[]{x, y, z, 0};
     }
-    
-    public cl_float4 getFloatCL4()
-    {
-        cl_float4 float4 = new cl_float4();
-        float4.set(0, x);
-        float4.set(1, y);
-        float4.set(2, z);
-        return float4;
-    }
-    
+      
     @Override
     public String toString()
     {

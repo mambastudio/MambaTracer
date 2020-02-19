@@ -10,7 +10,7 @@ typedef struct
 
 }BVHNode;
 
-bool intersectGlobal(global Ray* ray, global Intersection* isect, TriangleMesh mesh, global BVHNode* nodes, global BoundingBox* bounds)
+bool intersectMesh(global Ray* ray, int* childIndex, TriangleMesh mesh, global BVHNode* nodes, global BoundingBox* bounds, bool bailout)
 {
      //BVH Accelerator
      bool hit = false;
@@ -54,8 +54,22 @@ bool intersectGlobal(global Ray* ray, global Intersection* isect, TriangleMesh m
         if(nodes[nodeId].isLeaf)
         {
             BVHNode node        = nodes[nodeId];
-            if(intersectTriangleGlobal(ray, isect, mesh, node.child))
+
+            float4 p1 = getP1(mesh, node.child);
+            float4 p2 = getP2(mesh, node.child);
+            float4 p3 = getP3(mesh, node.child);
+            
+            float t = fastTriangleIntersection(*ray, p1, p2, p3);
+            
+            if(isInside(*ray, t))
+            {
+                if(bailout)
+                   return true;
+
                 hit = true;
+                ray->tMax = t;
+                *childIndex = node.child;
+            }
 
             //This is not in the paper.
             parentId            = node.parent;
@@ -74,8 +88,7 @@ bool intersectGlobal(global Ray* ray, global Intersection* isect, TriangleMesh m
         nodeId = siblingId;
         bitstack ^= 1;
      }
-
-}      
+}
 
 __kernel void intersectPrimitives(
     global Ray* rays,
@@ -95,6 +108,7 @@ __kernel void intersectPrimitives(
 {
     //get thread id
     int id = get_global_id( 0 );
+    int childIndex;
 
     //get ray, create both isect and mesh
     global Ray* ray = rays + id;
@@ -103,14 +117,44 @@ __kernel void intersectPrimitives(
     
     if(id < *count)
     {
-      if(isRayActive(*ray))
+      //intersect
+      bool hit = intersectMesh(ray, &childIndex, mesh, nodes, bounds, false);
+      if(hit)
       {
-        //intersect
-        bool hit = intersectGlobal(ray, isect, mesh, nodes, bounds);    
-  
-        //update hit status and what pixel it represent
-        isect->pixel = ray->pixel;
-        isect->hit = hit;
+          float4 p1 = getP1(mesh, childIndex);
+          float4 p2 = getP2(mesh, childIndex);
+          float4 p3 = getP3(mesh, childIndex);
+          float4 p  = getPoint(*ray, ray->tMax);
+
+          float2 uv = triangleBarycentrics(p, p1, p2, p3);
+          float tuv[3];
+          tuv[0] = ray->tMax;
+          tuv[1] = uv.x;
+          tuv[2] = uv.y;
+
+          float4 n;
+
+          if(hasNormals(mesh, childIndex))
+          {
+              float4 n1 = getN1(mesh, childIndex);
+              float4 n2 = getN2(mesh, childIndex);
+              float4 n3 = getN3(mesh, childIndex);
+
+              n = n1 * (1 - tuv[1] - tuv[2]) + n2 * tuv[1] + n3 * tuv[2];
+          }
+          else
+              n  = getNormal(p1, p2, p3);
+    
+          //set values
+          isect->p = p;
+          isect->n = n;
+          isect->d = ray->d;
+          isect->id = childIndex;
+          isect->mat = getMaterial(mesh.faces[childIndex].mat);  //because face - mat is encoded to include both group and material, as such, extract material index
+        
+          //update hit status and what pixel it represent
+          isect->pixel = ray->pixel;
+          isect->hit = hit;
       }
       else
       {
@@ -118,4 +162,34 @@ __kernel void intersectPrimitives(
         isect->mat = -1;
       }
     }
+}
+
+__kernel void intersectOcclusion(
+    global Ray* rays,
+    global int* hits,
+    global int* count,
+
+    //mesh
+    global const float4* points,
+    global const float4* normals,
+    global const Face*   faces,
+    global const int*    size,
+
+    //bvh
+    global const BVHNode* nodes,
+    global const BoundingBox* bounds
+)
+{
+    //get thread id
+    int id = get_global_id( 0 );
+    int childIndex;
+
+    //get ray, create both isect and mesh
+    global Ray* ray = rays + id;
+    global int* hit = hits + id;
+    TriangleMesh mesh = {points, normals, faces, size[0]};
+
+    if(id < *count)
+      //intersect
+      *hit = intersectMesh(ray, &childIndex, mesh, nodes, bounds, true);
 }

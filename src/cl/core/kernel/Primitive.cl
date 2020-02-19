@@ -40,6 +40,7 @@ bool mollerTriangleIntersectionGlobal(global Ray* r, float* tuv, float4 p1, floa
      return false;
 }
 
+//moller ray-triangle intersection
 float fastTriangleIntersection(Ray r, float4 p1, float4 p2, float4 p3)
 {
      float4 e1, e2, h, s, q;

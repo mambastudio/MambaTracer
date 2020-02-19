@@ -36,8 +36,21 @@ import org.jocl.CL;
 import wrapper.core.OpenCLPlatform;
 import static cl.core.api.MambaAPIInterface.ImageType.ALL_RAYTRACE_IMAGE;
 import static cl.core.api.RayDeviceInterface.DeviceBuffer.RENDER_BUFFER;
+import cl.core.data.struct.CIntersection;
+import cl.core.data.struct.CLight;
+import cl.core.data.struct.CPath;
+import cl.core.data.struct.CRay;
+import cl.core.data.struct.CState;
 import cl.core.device.RayDeviceMeshRender;
 import coordinate.parser.obj.OBJMappedParser;
+import coordinate.struct.ByteStruct;
+import coordinate.struct.StructByteArray;
+import wrapper.core.CBufferFactory;
+import wrapper.core.CKernel;
+import wrapper.core.CMemory;
+import wrapper.core.buffer.CFloatBuffer;
+import wrapper.core.buffer.CIntBuffer;
+import wrapper.core.buffer.CStructTypeBuffer;
 
 /**
  *
@@ -100,8 +113,8 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
         //instantiate devices
         deviceRaytrace = new RayDeviceMesh();
         deviceRaytrace.setAPI(this);
-        deviceRender = new RayDeviceMeshRender();
-        deviceRender.setAPI(this);
+        //deviceRender = new RayDeviceMeshRender();
+        //deviceRender.setAPI(this);
         
         //default mesh
         this.initDefaultMesh();
@@ -252,7 +265,7 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
     public void initMesh(Path path) 
     {
         //load mesh and init mesh variables
-        mesh = new CMesh(configuration);
+        mesh = new CMesh(configurationCL());
         OBJMappedParser parser = new OBJMappedParser();    
         Timer parseTime = Timer.timeThis(() -> parser.read(path.toString(), mesh)); //Time parsing
         OutputFactory.print("scene parse time", parseTime.toString());
@@ -270,41 +283,126 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
         
         //set to device for rendering/raytracing
         this.deviceRaytrace.set(mesh, bvhBuild);
-        this.deviceRender.set(mesh, bvhBuild);
+        //this.deviceRender.set(mesh, bvhBuild);
     }
     
     @Override
     public void initDefaultMesh()
     {
         //A simple cube
-        String cube =   "o Cube\n" +
-                        "v 1.000000 -1.000000 -1.000000\n" +
-                        "v 1.000000 -1.000000 1.000000\n" +
-                        "v -1.000000 -1.000000 1.000000\n" +
-                        "v -1.000000 -1.000000 -1.000000\n" +
-                        "v 1.000000 1.000000 -0.999999\n" +
-                        "v 0.999999 1.000000 1.000001\n" +
-                        "v -1.000000 1.000000 1.000000\n" +
-                        "v -1.000000 1.000000 -1.000000\n" +
-                        "vn 0.000000 -1.000000 0.000000\n" +
-                        "vn 0.000000 1.000000 0.000000\n" +
-                        "vn 1.000000 0.000000 0.000000\n" +
-                        "vn -0.000000 0.000000 1.000000\n" +
-                        "vn -1.000000 -0.000000 -0.000000\n" +
-                        "vn 0.000000 0.000000 -1.000000\n" +
+        String cube =   "# Cornell Box\n" +
+                        "o floor.005\n" +
+                        "v 1.014808 -1.001033 -0.985071\n" +
+                        "v -0.995168 -1.001033 -0.994857\n" +
+                        "v -1.005052 -1.001033 1.035119\n" +
+                        "v 0.984925 -1.001033 1.044808\n" +
+                        "vn 0.0000 1.0000 -0.0000\n" +
                         "s off\n" +
-                        "f 2//1 3//1 4//1\n" +
-                        "f 8//2 7//2 6//2\n" +
-                        "f 5//3 6//3 2//3\n" +
-                        "f 6//4 7//4 3//4\n" +
-                        "f 3//5 7//5 8//5\n" +
-                        "f 1//6 4//6 8//6\n" +
-                        "f 1//1 2//1 4//1\n" +
-                        "f 5//2 8//2 6//2\n" +
-                        "f 1//3 5//3 2//3\n" +
-                        "f 2//4 6//4 3//4\n" +
-                        "f 4//5 3//5 8//5\n" +
-                        "f 5//6 1//6 8//6";
+                        "f 1//1 2//1 3//1 4//1\n" +
+                        "o ceiling.005\n" +
+                        "v 1.024808 0.988967 -0.985022\n" +
+                        "v 1.014924 0.988967 1.044954\n" +
+                        "v -1.005052 0.988967 1.035119\n" +
+                        "v -0.995168 0.988967 -0.994857\n" +
+                        "vn -0.0000 -1.0000 0.0000\n" +
+                        "s off\n" +
+                        "f 5//2 6//2 7//2 8//2\n" +
+                        "o backWall.005\n" +
+                        "v 0.984925 -1.001033 1.044808\n" +
+                        "v -1.005052 -1.001033 1.035119\n" +
+                        "v -1.005052 0.988967 1.035119\n" +
+                        "v 1.014924 0.988967 1.044954\n" +
+                        "vn 0.0049 -0.0000 -1.0000\n" +
+                        "s off\n" +
+                        "f 9//3 10//3 11//3 12//3\n" +
+                        "o rightWall.005\n" +
+                        "v -1.005052 -1.001033 1.035119\n" +
+                        "v -0.995168 -1.001033 -0.994857\n" +
+                        "v -0.995168 0.988967 -0.994857\n" +
+                        "v -1.005052 0.988967 1.035119\n" +
+                        "vn 1.0000 0.0000 0.0049\n" +
+                        "s off\n" +
+                        "f 13//4 14//4 15//4 16//4\n" +
+                        "o Small_Box_Short_Box\n" +
+                        "v -0.526342 -0.401033 -0.752572\n" +
+                        "v -0.699164 -0.401033 -0.173406\n" +
+                        "v -0.129998 -0.401033 -0.000633\n" +
+                        "v 0.052775 -0.401033 -0.569750\n" +
+                        "v 0.052775 -1.001033 -0.569750\n" +
+                        "v 0.052775 -0.401033 -0.569750\n" +
+                        "v -0.129998 -0.401033 -0.000633\n" +
+                        "v -0.129998 -1.001033 -0.000633\n" +
+                        "v -0.526342 -1.001033 -0.752572\n" +
+                        "v -0.526342 -0.401033 -0.752572\n" +
+                        "v 0.052775 -0.401033 -0.569750\n" +
+                        "v 0.052775 -1.001033 -0.569750\n" +
+                        "v -0.699164 -1.001033 -0.173406\n" +
+                        "v -0.699164 -0.401033 -0.173406\n" +
+                        "v -0.526342 -0.401033 -0.752572\n" +
+                        "v -0.526342 -1.001033 -0.752572\n" +
+                        "v -0.129998 -1.001033 -0.000633\n" +
+                        "v -0.129998 -0.401033 -0.000633\n" +
+                        "v -0.699164 -0.401033 -0.173406\n" +
+                        "v -0.699164 -1.001033 -0.173406\n" +
+                        "vn 0.0000 1.0000 -0.0000\n" +
+                        "vn 0.9521 0.0000 0.3058\n" +
+                        "vn 0.3010 -0.0000 -0.9536\n" +
+                        "vn -0.2905 0.0000 0.9569\n" +
+                        "vn -0.9582 0.0000 -0.2859\n" +
+                        "s off\n" +
+                        "f 17//5 18//5 19//5 20//5\n" +
+                        "f 21//6 22//6 23//6 24//6\n" +
+                        "f 25//7 26//7 27//7 28//7\n" +
+                        "f 33//8 34//8 35//8 36//8\n" +
+                        "f 29//9 30//9 31//9 32//9\n" +
+                        "o tall_box\n" +
+                        "v 0.530432 0.198967 -0.087419\n" +
+                        "v -0.040438 0.198967 0.089804\n" +
+                        "v 0.136736 0.198967 0.670674\n" +
+                        "v 0.707606 0.198967 0.493451\n" +
+                        "v 0.530432 -1.001033 -0.087418\n" +
+                        "v 0.530432 0.198967 -0.087419\n" +
+                        "v 0.707606 0.198967 0.493451\n" +
+                        "v 0.707606 -1.001033 0.493451\n" +
+                        "v 0.707606 -1.001033 0.493451\n" +
+                        "v 0.707606 0.198967 0.493451\n" +
+                        "v 0.136736 0.198967 0.670674\n" +
+                        "v 0.136736 -1.001033 0.670674\n" +
+                        "v 0.136736 -1.001033 0.670674\n" +
+                        "v 0.136736 0.198967 0.670674\n" +
+                        "v -0.040438 0.198967 0.089804\n" +
+                        "v -0.040438 -1.001033 0.089804\n" +
+                        "v -0.040438 -1.001033 0.089804\n" +
+                        "v -0.040438 0.198967 0.089804\n" +
+                        "v 0.530432 0.198967 -0.087419\n" +
+                        "v 0.530432 -1.001033 -0.087418\n" +
+                        "vn -0.0000 1.0000 -0.0000\n" +
+                        "vn 0.9565 0.0000 -0.2917\n" +
+                        "vn 0.2965 0.0000 0.9550\n" +
+                        "vn -0.9565 0.0000 0.2917\n" +
+                        "vn -0.2965 -0.0000 -0.9550\n" +
+                        "s off\n" +
+                        "f 37//10 38//10 39//10 40//10\n" +
+                        "f 41//11 42//11 43//11 44//11\n" +
+                        "f 45//12 46//12 47//12 48//12\n" +
+                        "f 49//13 50//13 51//13 52//13\n" +
+                        "f 53//14 54//14 55//14 56//14\n" +
+                        "o light.005\n" +
+                        "v 0.240776 0.978967 -0.158830\n" +
+                        "v 0.238926 0.978967 0.221166\n" +
+                        "v -0.231068 0.978967 0.218877\n" +
+                        "v -0.229218 0.978967 -0.161118\n" +
+                        "vn 0.0000 -1.0000 0.0000\n" +
+                        "s off\n" +
+                        "f 57//15 58//15 59//15 60//15\n" +
+                        "o leftWall.000_leftWall.006\n" +
+                        "v 1.014808 -1.001033 -0.985071\n" +
+                        "v 0.984925 -1.001033 1.044808\n" +
+                        "v 1.014924 0.988967 1.044954\n" +
+                        "v 1.024808 0.988967 -0.985022\n" +
+                        "vn -0.9999 0.0100 -0.0098\n" +
+                        "s off\n" +
+                        "f 61//16 62//16 63//16 64//16";
         
         //load mesh and init mesh variables
         mesh = new CMesh(configurationCL());   
@@ -321,7 +419,7 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
         
         //set to device for rendering/raytracing
         this.deviceRaytrace.set(mesh, bvhBuild);
-        this.deviceRender.set(mesh, bvhBuild);
+//        this.deviceRender.set(mesh, bvhBuild);
     }
 
     @Override
@@ -451,5 +549,76 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
     @Override
     public DeviceType getDevicePriority() {
         return this.devicePriority;
+    }
+    
+    public CKernel createIntersectionKernel(
+            String kernelName, 
+            CStructTypeBuffer<CRay> raysBuffer,
+            CStructTypeBuffer<CIntersection> isectsBuffer,
+            CIntBuffer count,
+            CMesh mesh,
+            CNormalBVH bvhBuild)
+    {
+        return configurationCL().program().createKernel(kernelName, raysBuffer, isectsBuffer, count, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvhBuild.getCNodes(), bvhBuild.getCBounds());
+    }
+    
+    public CKernel createOcclusionKernel(
+            String kernelName, 
+            CStructTypeBuffer<CRay> raysBuffer,
+            CIntBuffer hits,
+            CIntBuffer count,
+            CMesh mesh,
+            CNormalBVH bvhBuild)
+    { 
+        return configurationCL().program().createKernel(kernelName, raysBuffer, hits, count, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvhBuild.getCNodes(), bvhBuild.getCBounds());
+    } 
+    
+    public CKernel sampleLightsKernel(
+            String kernelName,
+            CStructTypeBuffer<CPath> lightPaths,
+            CStructTypeBuffer<CLight> lights,
+            CIntBuffer totalLights,            
+            CIntBuffer count,
+            CStructTypeBuffer<CState> state,
+            CMesh mesh
+    )
+    {     
+        
+        return configurationCL().program().createKernel(kernelName, lightPaths, lights, totalLights, count, state, mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize());
+    }
+    
+    public CKernel createKernel(String kernelName, CMemory... buffers)
+    {
+        return configurationCL().program().createKernel(kernelName, buffers);
+    }
+    
+    public CIntBuffer intValue(String name, int value, long flag)
+    {
+        return CBufferFactory.initIntValue(name, configurationCL().context(), configurationCL().queue(), value, flag);
+    }
+    
+    public <B extends ByteStruct> CStructTypeBuffer<B> allocStructType(String name, Class<B> clazz, int size, long flag)
+    {
+        return CBufferFactory.allocStructType(name, configurationCL().context(), clazz, size, flag);
+    }
+    
+    public <B extends ByteStruct> CStructTypeBuffer<B> allocStructType(String name, StructByteArray structArray, int size, long flag)
+    {
+        return CBufferFactory.allocStructType(name, configurationCL().context(), structArray, flag);
+    }
+    
+    public CIntBuffer allocInt(String name, int size, long flag)
+    {
+        return CBufferFactory.allocInt(name, configurationCL().context(), size, flag);
+    }
+    
+    public CFloatBuffer allocFloat(String name, int size, long flag)
+    {
+        return CBufferFactory.allocFloat(name, configurationCL().context(), size, flag);
+    }
+    
+    public void execute1D(CKernel kernel, int globalSize, int localSize)
+    {
+        configurationCL().queue().put1DRangeKernel(kernel, globalSize, localSize);
     }
 }

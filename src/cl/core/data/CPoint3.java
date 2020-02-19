@@ -17,7 +17,7 @@ import org.jocl.struct.CLTypes.cl_float4;
  * 
  */
 public class CPoint3 implements SCoord<CPoint3, CVector3>{
-public float x, y, z;
+public float x, y, z, w;
     public CPoint3(){
         super();
     }

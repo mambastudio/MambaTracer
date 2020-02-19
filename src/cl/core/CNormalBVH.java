@@ -69,7 +69,7 @@ public class CNormalBVH implements AbstractAccelerator
         CNode root = new CNode();
         nodes.set(root, 0);        
         nodesPtr = 1;
-        
+                
         subdivide(0, 0, primitives.getCount());
         
         long time2 = System.nanoTime();

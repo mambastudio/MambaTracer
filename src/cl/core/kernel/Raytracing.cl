@@ -36,8 +36,7 @@ __kernel void fastShade(
 
 __kernel void backgroundShade(
     global Intersection* isects,
-    global int* width,
-    global int* height,
+    global CameraStruct* camera,
     global int* imageBuffer
 )
 {
@@ -49,7 +48,7 @@ __kernel void backgroundShade(
     if(!isect->hit)
     {
         //pixel index
-        int index = isect->pixel.x + width[0] * isect->pixel.y;
+        int index = isect->pixel.x + camera->dimension.x * isect->pixel.y;
         //update
         imageBuffer[id] = getIntARGB((float4)(0, 0, 0, 1));
     }
@@ -57,8 +56,7 @@ __kernel void backgroundShade(
 
 __kernel void updateShadeImage(
     global Intersection* isects,
-    global int* width,
-    global int* height,
+    global CameraStruct* camera,
     global int* imageBuffer
 )
 {
@@ -69,7 +67,7 @@ __kernel void updateShadeImage(
     if(isect->hit)
     {
         //pixel index
-        int index = isect->pixel.x + width[0] * isect->pixel.y;
+        int index = isect->pixel.x + camera->dimension.x * isect->pixel.y;
         //update
        imageBuffer[index] = getIntARGB(isect->throughput);
     }
@@ -77,8 +75,7 @@ __kernel void updateShadeImage(
 
 __kernel void updateNormalShadeImage(
     global Intersection* isects,
-    global int* width,
-    global int* height,
+    global CameraStruct* camera,
     global int* imageBuffer
 )
 {
@@ -94,7 +91,7 @@ __kernel void updateNormalShadeImage(
         shade.xyz *= fabs(ndotd);
 
         //pixel index
-        int index = isect->pixel.x + width[0] * isect->pixel.y;
+        int index = isect->pixel.x + camera->dimension.x * isect->pixel.y;
 
         //update
        imageBuffer[index] = getIntARGB(shade);
@@ -104,8 +101,7 @@ __kernel void updateNormalShadeImage(
 
 __kernel void updateGroupbufferShadeImage(
     global Intersection* isects,
-    global int* width,
-    global int* height,
+    global CameraStruct* camera,
     global int* groupBuffer
 )
 {
@@ -114,7 +110,7 @@ __kernel void updateGroupbufferShadeImage(
     global Intersection* isect = isects + id;
     if(isect->hit)
     {
-        int index = isect->pixel.x + width[0] * isect->pixel.y;
+        int index = isect->pixel.x + camera->dimension.x * isect->pixel.y;
         groupBuffer[index] = getMaterial(isect->mat);
 
     }    

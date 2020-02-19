@@ -31,7 +31,10 @@ public class CInt4 implements AbstractCoordinateInteger{
 
     @Override
     public void set(int... values) {
-        throw new UnsupportedOperationException("Not supported yet. Make necessary changes"); //To change body of generated methods, choose Tools | Templates.
+        x = values[0];
+        y = values[1];
+        z = values[2];
+        w = values[3];
     }
 
     @Override
@@ -46,7 +49,7 @@ public class CInt4 implements AbstractCoordinateInteger{
 
     @Override
     public int[] getArray() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return new int[]{x, y, z, w};
     }
 
     @Override

@@ -1,8 +1,11 @@
 typedef struct
 {
-    float4 throughput;
-    int active;
-    BSDF bsdf;
+    float4 throughput;        //throughput (multiplied by emission)
+    float4 hitpoint;          //position of vertex
+    int    pathlength;        //path length or number of segment between source and vertex
+
+    int active;               //is path active
+    BSDF bsdf;                //bsdf (stores local information together with incoming direction)
 
 }Path;
 

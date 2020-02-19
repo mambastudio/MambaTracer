@@ -23,15 +23,4 @@ public class CBSDF extends ByteStruct {
         frame = new CFrame();
         localDirFix = new CPoint3();
     }
-
-    @Override
-    public void initFromGlobalArray() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public byte[] getArray() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
 }
