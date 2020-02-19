@@ -25,34 +25,9 @@ public class CFace extends IntStruct{
         mat = -1;
     }
     
-    
-    @Override
-    public void initFromGlobalArray() {
-        int[] globalArray = getGlobalArray();
-        if(globalArray == null)
-            return;
-        int globalArrayIndex = getGlobalArrayIndex();
-
-        v1      = globalArray[globalArrayIndex + 0];
-        v2      = globalArray[globalArrayIndex + 1];
-        v3      = globalArray[globalArrayIndex + 2];
-        uv1     = globalArray[globalArrayIndex + 3];
-        uv2     = globalArray[globalArrayIndex + 4];
-        uv3     = globalArray[globalArrayIndex + 5];
-        n1      = globalArray[globalArrayIndex + 6];
-        n2      = globalArray[globalArrayIndex + 7];
-        n3      = globalArray[globalArrayIndex + 8];
-        mat     = globalArray[globalArrayIndex + 9] & 0xFFFF;
-    }
-
-    @Override
-    public int[] getArray() {
-        return new int[]{v1, v2, v3, uv1, uv2, uv3, n1, n2, n3, mat};
-    }
-
-    @Override
-    public int getSize() {
-        return 10;
+    public int getMaterialIndex()
+    {
+        return mat & 0xFFFF;
     }
     
     @Override

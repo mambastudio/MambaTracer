@@ -6,7 +6,6 @@
 package cl.core;
 
 import cl.core.data.struct.CIntersection;
-import wrapper.core.CBufferFactory;
 import wrapper.core.CBufferMemory;
 import wrapper.core.CKernel;
 import static wrapper.core.CMemory.READ_ONLY;
@@ -19,13 +18,16 @@ import wrapper.core.buffer.CStructTypeBuffer;
  *
  * @author user
  */
-public final class CCompaction {    
+public final class PrefixSum {    
     private final OpenCLPlatform configuration;   
+    
     private int size;
-    private final int LOCALSIZECONSTANT = 64;
+    private final int LOCALSIZECONSTANT = 16;
     
     private CIntBuffer total = null;
     private CIntBuffer array_size = null;
+    
+    private CIntBuffer predicate = null;
     
     private int gSize1, gSize2, gSize3, gSize4, gSize5, gSize6, gSize7, gSize8, gSize9, gSize10;
     private int lSize1, lSize2, lSize3, lSize4, lSize5, lSize6, lSize7, lSize8, lSize9, lSize10;
@@ -50,14 +52,13 @@ public final class CCompaction {
     
     //optional kernel
     private CKernel totalIntersectionKernel;
-    private CKernel processIsectDataKernel;
-    private CKernel initIntArrayKernel;
-    private CKernel resetTempIntersection, compactIntersection, transferIntersection;
+    
+    private CKernel initPrefixsumArrayKernel;
+    private CKernel initIsectPredicateAndPrefixSum;
     
     private CStructTypeBuffer<CIntersection> isectBuffer;
-    private CStructTypeBuffer<CIntersection> tempIsectBuffer;
-    
-    public CCompaction(OpenCLPlatform configuration)
+   
+    public PrefixSum(OpenCLPlatform configuration)
     {
         this.configuration = configuration;       
     }
@@ -94,13 +95,14 @@ public final class CCompaction {
         lSize9              = localsize(gSize9);
         gSize10             = length(size, 10);
         lSize10             = localsize(gSize10);
+              
+        this.array_size       = configuration.allocIntValue("array_size", size, READ_ONLY);
         
-        this.tempIsectBuffer = CBufferFactory.allocStructType("temp_intersections", configuration.context(), CIntersection.class, this.size, READ_ONLY);
-        this.array_size           = configuration.allocIntValue("array_size", size, READ_ONLY);
-        
-                
+        //predicate and prefix sum
+        predicate             = configuration.allocInt("predicate", gSize1, READ_WRITE);        
         sum_level1            = configuration.allocInt("sum_level1", gSize1, READ_WRITE);
         sum_level1_length     = configuration.allocIntValue("sum_level1_length", gSize1, READ_WRITE);
+        
         sum_level2            = configuration.allocInt("sum_level2", gSize2, READ_WRITE);
         sum_level2_length     = configuration.allocIntValue("sum_level2_length", gSize2, READ_WRITE);
         sum_level3            = configuration.allocInt("sum_level3", gSize3, READ_WRITE);
@@ -123,8 +125,8 @@ public final class CCompaction {
     
     private void initCKernels()
     {
-        initIntArrayKernel      = configuration.createKernel("initIntArray", sum_level1);
-        processIsectDataKernel  = configuration.createKernel("processIsectData", isectBuffer, sum_level1);
+        initPrefixsumArrayKernel        = configuration.createKernel("initIntArray", sum_level1);
+        initIsectPredicateAndPrefixSum  = configuration.createKernel("initIsectPredicateAndPrefixSum", isectBuffer, predicate, sum_level1);
                         
         scanKernel1    = configuration.createKernel("blelloch_scan_g"       , sum_level1,   sum_level2,  sum_level1_length, CBufferMemory.LOCALINT);  
         scanKernel2    = configuration.createKernel("blelloch_scan_g"       , sum_level2,   sum_level3,  sum_level2_length, CBufferMemory.LOCALINT);
@@ -145,18 +147,15 @@ public final class CCompaction {
         sumgKernel3    = configuration.createKernel("add_groups"            , sum_level3,  sum_level4);
         sumgKernel2    = configuration.createKernel("add_groups"            , sum_level2,  sum_level3);
         sumgKernel1    = configuration.createKernel("add_groups_n"          , sum_level1,  sum_level2, sum_level1_length);
-        
-        resetTempIntersection   = configuration.createKernel("resetIntersection"          , tempIsectBuffer);       
-        compactIntersection     = configuration.createKernel("compactIntersection"        , isectBuffer, tempIsectBuffer, sum_level1);       
-        transferIntersection    = configuration.createKernel("transferIntersection"       , isectBuffer, tempIsectBuffer);      
-        
-        totalIntersectionKernel = configuration.createKernel("totalIntersection", isectBuffer, sum_level1, array_size, total);
+      
+        totalIntersectionKernel = configuration.createKernel("totalCount", predicate, sum_level1, array_size, total);
     }
-        
+    
+   
     public void execute()
     {
-        configuration.executeKernel1D(initIntArrayKernel,       gSize1, lSize1);
-        configuration.executeKernel1D(processIsectDataKernel,   size,   1);  
+        configuration.executeKernel1D(initPrefixsumArrayKernel,       gSize1, lSize1);
+        configuration.executeKernel1D(initIsectPredicateAndPrefixSum,   size,   1);  
         
         configuration.executeKernel1D(scanKernel1,  gSize1,  lSize1);        
         configuration.executeKernel1D(scanKernel2,  gSize2,  lSize2);       
@@ -178,12 +177,22 @@ public final class CCompaction {
         configuration.executeKernel1D(sumgKernel2,  gSize2,  lSize2);
         configuration.executeKernel1D(sumgKernel1,  gSize1,  lSize1);
         
-        configuration.executeKernel1D(totalIntersectionKernel, 1, 1);
+        configuration.executeKernel1D(totalIntersectionKernel, 1, 1); 
         
-        configuration.executeKernel1D(resetTempIntersection,    size, 1);
-        configuration.executeKernel1D(compactIntersection,      size, 1);
-        configuration.executeKernel1D(transferIntersection,     size, 1);
-        
+        //configuration.executeKernel1D(resetTempIntersection,    size, 1);
+        //configuration.executeKernel1D(compactIntersection,      size, 1);
+        //configuration.executeKernel1D(transferIntersection,     size, 1);
+    }
+    
+    
+    public CIntBuffer getPredicate()
+    {
+        return predicate;
+    }
+    
+    public CIntBuffer getPrefixSum()
+    {
+        return sum_level1;
     }
         
     public int log2( int bits ) // returns 0 for bits=0

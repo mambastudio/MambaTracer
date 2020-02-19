@@ -3,13 +3,13 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/shapes/CMesh.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/device/RayDeviceMeshRender.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/data/struct/CFace.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/data/struct/CNode.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/data/struct/CLight.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/data/struct/CMaterial.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/core/CNormalBVH.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/test/minimaltracer/SLight.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/test/minimaltracer/SCompact.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/test/minimaltracer/SDeviceGI.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/test/minimaltracer/SPath.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/test/minimaltracer/SIsect.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/test/minimaltracer/cl/CSource.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/test/minimaltracer/SDeviceRT.java</file>
         </group>
     </open-files>
 </project-private>

@@ -1,7 +1,13 @@
 #define PI 3.14159265358979323846f
+typedef struct
+{
+   int2 seed;
+   float2 dimension;
+   float  frameCount;
+}State;
 
 /// Hash function
-uint WangHash(int seed)
+unsigned int WangHash(int seed)
 {
     seed = (seed ^ 61) ^ (seed >> 16);
     seed *= 9;
@@ -12,13 +18,13 @@ uint WangHash(int seed)
 }
 
 //https://github.com/straaljager/OpenCL-path-tracing-tutorial-3-Part-2/blob/master/opencl_kernel.cl
-float get_random(unsigned int *seed0, unsigned int *seed1) 
+float get_random(int2* state)
 {
     /* hash the seeds */
-    *seed0 = WangHash(*seed0);
-    *seed1 = WangHash(*seed1);
-
-    unsigned int ires = ((*seed0) << 16) + (*seed1);
+    state->x = WangHash(state->x);
+    state->y = WangHash(state->y);
+    
+    unsigned int ires = ((state->x) << 16) + (state->y);
 
     /* use union struct to convert int to float */
     union {
@@ -30,22 +36,35 @@ float get_random(unsigned int *seed0, unsigned int *seed1)
     return (res.f - 2.0f) / 2.0f;
 }
 
-float2 random_float2(unsigned int *randSeed0, unsigned int *randSeed1)
+float2 random_float2(int2* state)
 {
     float2 r;
-    r.x = get_random(randSeed0, randSeed1);
-    r.y = get_random(randSeed1, randSeed0);
+    r.x = get_random(state);
+    r.y = get_random(state);
     return r;
 }
 
+float2 rand2(int2 state)
+{
+  
+}  
+
 //Refer to https://stackoverflow.com/questions/363681/how-do-i-generate-random-integers-within-a-specific-range-in-java
-int2 random_int2_range(unsigned int* seed0, unsigned int* seed1, int rangeX, int rangeY)
+//between 0 (inclusive) to range (exclusive)
+int2 random_int2_range(int2* state, int rangeX, int rangeY)
 {
     int2 ri;
-    float2 rf  = random_float2(seed0, seed1);
+    float2 rf  = random_float2(state);
     ri.x       = (int)(rf.x * rangeX);
     ri.y       = (int)(rf.y * rangeY);
     return ri;   
+}
+
+//between 0 (inclusive) to range (exclusive)
+int random_int_range(int2* state, int range)
+{
+    float rf  = get_random(state);
+    return (int)(rf * range);
 }
 
 float4 sample_hemisphere(
@@ -63,4 +82,25 @@ float4 sample_hemisphere(
     float z = sqrt(r2);
     
     return (float4)(x, y, z, 0);
+}
+
+
+// returns barycentric coordinates
+float2 sample_barycentric(float2 samples)
+{
+    float term = (float) sqrt(samples.x);
+    return (float2)(1.f - term, samples.y * term);
+}
+
+//Sample Triangle
+float4 sample_triangle(float2 samples, float4 p1, float4 p2, float4 p3)
+{
+    float4 e1 = p2 - p1;
+    float4 e2 = p3 - p1;
+    
+    //uv
+    float2 uv = sample_barycentric(samples);
+    
+    //return point
+    return p1 + e1 * uv.x + e2 * uv.y;
 }

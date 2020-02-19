@@ -5,12 +5,6 @@
  */
 package test;
 
-import coordinate.utility.StructInfo;
-import java.util.Arrays;
-import org.jocl.struct.CLTypes.cl_float2;
-import org.jocl.struct.CLTypes.cl_float4;
-import org.jocl.struct.Struct;
-
 /**
  *
  * @author user
@@ -18,16 +12,24 @@ import org.jocl.struct.Struct;
 public class Test4 {
     public static void main(String... args)
     {
-        Struct.showLayout(Intersect.class);
+        State state = new State();
+        state.seed = (int)System.currentTimeMillis();
         
+        for(int i = 0; i<10; i++)
+            System.out.println(xor32(state));
     }
     
-    public static class Intersect extends Struct
+    public static float xor32(State state)
     {
-        public cl_float2 b;
-        public int c;     
-        public cl_float4 d;
-        public int e;
-        public int f;
+        state.seed ^= state.seed << 13;
+        state.seed ^= state.seed >>> 17;
+        state.seed ^= state.seed << 5;
+        state.seed = state.seed & Integer.MAX_VALUE; // zero out the sign bit
+        return state.seed * 2.3283064365387e-10f;
+    }
+    
+    static class State
+    {
+        int seed;
     }
 }

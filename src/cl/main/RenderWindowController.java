@@ -18,7 +18,6 @@ import cl.core.api.RayDeviceInterface;
 import cl.core.api.RenderControllerInterface;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
-import cl.core.data.struct.CMaterial;
 import cl.core.data.struct.CRay;
 import cl.core.device.RayDeviceMesh;
 import cl.ui.mvc.view.icons.IconAssetManager;
@@ -473,10 +472,8 @@ public class RenderWindowController implements Initializable, RenderControllerIn
             if(e.getGestureSource() instanceof TargetTreeCell)
             {
                 CustomData data = (CustomData) e.getDragboard().getContent(CustomData.getFormat());
-                MaterialT mat = (MaterialT) data.getData();                
-                CMaterial cmat = new CMaterial();
-                int cmatIndex = api.overlay.get(x, y);    
-                cmat.setMaterial(mat);
+                MaterialT mat = (MaterialT) data.getData();       
+                int cmatIndex = api.overlay.get(x, y);          
                 api.getDevice(RAYTRACE).setMaterial(cmatIndex, mat);
                 api.getDevice(RAYTRACE).resume();
             }

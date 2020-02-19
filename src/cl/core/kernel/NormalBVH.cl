@@ -117,59 +117,56 @@ __kernel void intersectPrimitives(
     
     if(id < *count)
     {
-      if(isRayActive(*ray))
+      //intersect
+      bool hit = intersectMesh(ray, &childIndex, mesh, nodes, bounds, false);
+      if(hit)
       {
-        //intersect
-        bool hit = intersectMesh(ray, &childIndex, mesh, nodes, bounds, false);
-        if(hit)
-        {
-            float4 p1 = getP1(mesh, childIndex);
-            float4 p2 = getP2(mesh, childIndex);
-            float4 p3 = getP3(mesh, childIndex);
-            float4 p  = getPoint(*ray, ray->tMax);
+          float4 p1 = getP1(mesh, childIndex);
+          float4 p2 = getP2(mesh, childIndex);
+          float4 p3 = getP3(mesh, childIndex);
+          float4 p  = getPoint(*ray, ray->tMax);
 
-            float2 uv = triangleBarycentrics(p, p1, p2, p3);
-            float tuv[3];
-            tuv[0] = ray->tMax;
-            tuv[1] = uv.x;
-            tuv[2] = uv.y;
+          float2 uv = triangleBarycentrics(p, p1, p2, p3);
+          float tuv[3];
+          tuv[0] = ray->tMax;
+          tuv[1] = uv.x;
+          tuv[2] = uv.y;
 
-            float4 n;
+          float4 n;
 
-            if(hasNormals(mesh, childIndex))
-            {
-                float4 n1 = getN1(mesh, childIndex);
-                float4 n2 = getN2(mesh, childIndex);
-                float4 n3 = getN3(mesh, childIndex);
+          if(hasNormals(mesh, childIndex))
+          {
+              float4 n1 = getN1(mesh, childIndex);
+              float4 n2 = getN2(mesh, childIndex);
+              float4 n3 = getN3(mesh, childIndex);
 
-                n = n1 * (1 - tuv[1] - tuv[2]) + n2 * tuv[1] + n3 * tuv[2];
-            }
-            else
-                n  = getNormal(p1, p2, p3);
-      
-            //set values
-            isect->p = p;
-            isect->n = n;
-            isect->d = ray->d;
-            isect->id = childIndex;
-            isect->mat = getMaterial(mesh.faces[childIndex].mat);  //because face - mat is encoded to include both group and material, as such, extract material index
-          
-            //update hit status and what pixel it represent
-            isect->pixel = ray->pixel;
-            isect->hit = hit;
-        }
-        else
-        {
-          isect->hit = MISS_MARKER;
-          isect->mat = -1;
-        }
+              n = n1 * (1 - tuv[1] - tuv[2]) + n2 * tuv[1] + n3 * tuv[2];
+          }
+          else
+              n  = getNormal(p1, p2, p3);
+    
+          //set values
+          isect->p = p;
+          isect->n = n;
+          isect->d = ray->d;
+          isect->id = childIndex;
+          isect->mat = getMaterial(mesh.faces[childIndex].mat);  //because face - mat is encoded to include both group and material, as such, extract material index
+        
+          //update hit status and what pixel it represent
+          isect->pixel = ray->pixel;
+          isect->hit = hit;
+      }
+      else
+      {
+        isect->hit = MISS_MARKER;
+        isect->mat = -1;
       }
     }
 }
 
 __kernel void intersectOcclusion(
     global Ray* rays,
-    global Intersection* isects,
+    global int* hits,
     global int* count,
 
     //mesh
@@ -189,20 +186,10 @@ __kernel void intersectOcclusion(
 
     //get ray, create both isect and mesh
     global Ray* ray = rays + id;
-    global Intersection* isect = isects + id;
+    global int* hit = hits + id;
     TriangleMesh mesh = {points, normals, faces, size[0]};
 
     if(id < *count)
-    {
-        if(isRayActive(*ray))
-        {
-            //intersect
-            bool hit = intersectMesh(ray, &childIndex, mesh, nodes, bounds, true);
-            isect->hit = hit;
-        }
-        else
-        {
-          isect->hit = MISS_MARKER;
-        }
-    }
+      //intersect
+      *hit = intersectMesh(ray, &childIndex, mesh, nodes, bounds, true);
 }

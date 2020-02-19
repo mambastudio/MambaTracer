@@ -5,7 +5,7 @@
  */
 package test;
 
-import coordinate.utility.StructInfo;
+import coordinate.struct.refl.ByteStructInfo;
 import cl.core.data.struct.CBSDF;
 import cl.core.data.struct.CFrame;
 import cl.core.data.struct.CPath;
@@ -22,7 +22,7 @@ public class Test2 {
     {                 
         Struct.showLayout(Path.class);
         
-        StructInfo info = new StructInfo(CPath.class);
+        ByteStructInfo info = new ByteStructInfo(CPath.class);
         System.out.println(Arrays.toString(info.offsets()));
     }
     

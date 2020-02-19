@@ -7,6 +7,7 @@ package cl.core.data;
 
 
 import coordinate.generic.AbstractCoordinateInteger;
+import java.util.Arrays;
 
 /**
  *
@@ -33,7 +34,8 @@ public class CInt2 implements AbstractCoordinateInteger{
 
     @Override
     public void set(int... values) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        x = values[0];
+        y = values[1];
     }
 
     @Override
@@ -48,7 +50,7 @@ public class CInt2 implements AbstractCoordinateInteger{
 
     @Override
     public int[] getArray() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return new int[]{x, y};
     }
 
     @Override
@@ -56,4 +58,11 @@ public class CInt2 implements AbstractCoordinateInteger{
         return 4;
     }
     
+    
+    @Override
+    public String toString()
+    {
+        int[] array = getArray();
+        return Arrays.toString(array);
+    }
 }

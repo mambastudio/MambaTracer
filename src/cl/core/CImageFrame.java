@@ -59,7 +59,7 @@ public class CImageFrame {
     {
         this.rFrameAccum    = CBufferFactory.allocFloat("frameAccum", configuration.context(), globalSize * 4, READ_WRITE);
         this.rFrameBuffer   = CBufferFactory.allocFloat("frameBuffer", configuration.context(), globalSize * 4, READ_WRITE);
-        this.rFrameCount    = CBufferFactory.initFloatValue("frameCount", configuration.context(), configuration.queue(),1, READ_WRITE);
+        this.rFrameCount    = CBufferFactory.initFloatValue("frameCount", configuration.context(), configuration.queue(), 1, READ_WRITE);
         this.rFrameARGB     = CBufferFactory.allocInt("frameARGB", configuration.context(), globalSize, READ_WRITE);
         this.rLogLuminance  = CBufferFactory.allocFloat("logLuminance", configuration.context(), globalSize, READ_WRITE);
         

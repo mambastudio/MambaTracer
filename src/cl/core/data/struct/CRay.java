@@ -12,8 +12,6 @@ import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import coordinate.generic.AbstractRay;
 import coordinate.struct.ByteStruct;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 
 /**
  *
@@ -145,69 +143,4 @@ public class CRay extends ByteStruct implements AbstractRay<CPoint3, CVector3>
         builder.append("d ").append(d.get(0)).append(" ").append(d.get(1)).append(" ").append(d.get(2));
         return builder.toString();
     }
-
-    @Override
-    public void initFromGlobalArray() {
-        ByteBuffer buffer = this.getLocalByteBuffer(ByteOrder.nativeOrder()); //main buffer but position set to index and limit to size of struct
-        int[] offsets = this.getOffsets();
-        int pos = buffer.position();
-        
-        buffer.position(pos + offsets[0]);
-        o.x = buffer.getFloat(); o.y = buffer.getFloat(); o.z = buffer.getFloat(); 
-        
-        buffer.position(pos + offsets[1]);
-        d.x = buffer.getFloat(); d.y = buffer.getFloat(); d.z = buffer.getFloat(); 
-       
-        buffer.position(pos + offsets[2]);
-        inv_d.x = buffer.getFloat(); inv_d.y = buffer.getFloat(); inv_d.z = buffer.getFloat(); 
-        
-        buffer.position(pos + offsets[3]);
-        sign.x = buffer.getInt(); sign.y = buffer.getInt(); sign.z = buffer.getInt(); sign.w = buffer.getInt();
-        
-        buffer.position(pos + offsets[4]);
-        extra.x = buffer.getInt(); extra.y = buffer.getInt();
-        
-        buffer.position(pos + offsets[5]);
-        pixel.x = buffer.getFloat(); pixel.y = buffer.getFloat();
-           
-        buffer.position(pos + offsets[6]);
-        tMin = buffer.getFloat();
-        
-        buffer.position(pos + offsets[7]);
-        tMax = buffer.getFloat();      
-    }
-
-    @Override
-    public byte[] getArray() {
-        ByteBuffer buffer = this.getEmptyLocalByteBuffer(ByteOrder.nativeOrder());            
-        int[] offsets = this.getOffsets();
-        int pos = buffer.position(); 
-        
-        buffer.position(pos + offsets[0]);
-        buffer.putFloat(o.x); buffer.putFloat(o.y); buffer.putFloat(o.z); 
-        
-        buffer.position(pos + offsets[1]);
-        buffer.putFloat(d.x); buffer.putFloat(d.y); buffer.putFloat(d.z); 
-        
-        buffer.position(pos + offsets[2]);
-        buffer.putFloat(inv_d.x); buffer.putFloat(inv_d.y); buffer.putFloat(inv_d.z); 
-        
-        buffer.position(pos + offsets[3]);
-        buffer.putInt(sign.x); buffer.putInt(sign.y); buffer.putInt(sign.z); buffer.putInt(sign.w);
-        
-        buffer.position(pos + offsets[4]);
-        buffer.putInt(extra.x); buffer.putInt(extra.y);
-        
-        buffer.position(pos + offsets[5]);
-        buffer.putFloat(pixel.x); buffer.putFloat(pixel.y);
-        
-        buffer.position(pos + offsets[6]);
-        buffer.putFloat(tMin);
-       
-        buffer.position(pos + offsets[7]);
-        buffer.putFloat(tMax);
-                         
-        return buffer.array();
-    }
-
 }

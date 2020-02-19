@@ -5,12 +5,12 @@
  */
 package cl.core;
 
+import cl.core.data.CPoint2;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import cl.core.data.struct.CRay;
 import coordinate.model.CameraModel;
-import org.jocl.struct.CLTypes.cl_float4;
-import org.jocl.struct.Struct;
+import coordinate.struct.ByteStruct;
 
 /**
  *
@@ -31,10 +31,12 @@ public class CCamera extends CameraModel <CPoint3, CVector3, CRay>{
     public CameraStruct getCameraStruct()
     {
         CameraStruct camera = new CameraStruct();
-        camera.position = position.getFloatCL4();
-        camera.lookat = lookat.getFloatCL4();
-        camera.up = up.getFloatCL4();
-        camera.fov = fov; 
+        
+        camera.setPosition(position);
+        camera.setLookat(lookat);
+        camera.setUp(up);
+        camera.setFov(fov);
+        
         return camera;        
     }
     
@@ -45,13 +47,53 @@ public class CCamera extends CameraModel <CPoint3, CVector3, CRay>{
         return transform;
     }
     
-    public static class CameraStruct extends Struct
+    public static class CameraStruct extends ByteStruct
     {
-        public cl_float4 position; 
-        public cl_float4 lookat;
-        public cl_float4 up;
+        public CPoint3 position; 
+        public CPoint3 lookat;
+        public CVector3 up;
+        public CPoint2 dimension;
         public float fov;
-    }     
+        
+        public CameraStruct()
+        {
+            position = new CPoint3();
+            lookat = new CPoint3();
+            dimension = new CPoint2();
+            up = new CVector3();            
+        }
+        
+        public void setPosition(CPoint3 position)
+        {
+            this.position = position;
+            this.refreshGlobalArray();
+        }
+        
+        public void setLookat(CPoint3 lookat)
+        {
+            this.lookat = lookat;
+            this.refreshGlobalArray();
+        }
+        
+        public void setUp(CVector3 up)
+        {
+            this.up = up;
+            this.refreshGlobalArray();
+        }
+        
+        public void setDimension(CPoint2 dimension)
+        {
+            this.dimension = dimension;
+            this.refreshGlobalArray();
+        }
+        
+        public void setFov(float fov)
+        {
+            this.fov = fov;
+            this.refreshGlobalArray();
+        }
+    }  
+    
     
     public boolean isSynched(CameraStruct cameraStruct)
     {

@@ -5,7 +5,7 @@
  */
 package test.compact;
 
-import cl.core.CCompaction;
+import cl.core.PrefixSum;
 import cl.core.data.struct.CIntersection;
 import cl.core.kernel.CLSource;
 import java.util.Random;
@@ -35,7 +35,7 @@ public class TestCompact {
         
         CStructTypeBuffer<CIntersection> isects = CBufferFactory.allocStructType("intersections", configuration.context(), CIntersection.class, isectSize, READ_WRITE);
         CIntBuffer hitCount                     = CBufferFactory.initIntValue("hitCount", configuration.context(), configuration.queue(), isectSize, READ_WRITE);
-        CCompaction compactIsect                = new CCompaction(configuration);
+        PrefixSum compactIsect                = new PrefixSum(configuration);
         
         Random r = new Random();
         isects.mapWriteBuffer(configuration.queue(), intersections -> {

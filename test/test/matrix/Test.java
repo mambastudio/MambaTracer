@@ -23,6 +23,7 @@ import wrapper.core.CPlatform;
 import wrapper.core.CProgram;
 import wrapper.core.CResourceFactory;
 import wrapper.core.buffer.CStructBuffer;
+import wrapper.core.buffer.CStructTypeBuffer;
 import wrapper.util.CLFileReader;
 
 /**
@@ -52,9 +53,9 @@ public class Test {
         CCamera camera = new CCamera(new CPoint3(7, 89, 9), new CPoint3(2, 1, 15), new CVector3(2, 1, 0), 45); 
         camera.setUp();
         
-        CStructBuffer<CameraStruct> transformBuffer = CBufferFactory.allocStruct("particles", context, CameraStruct.class, globalSize, READ_WRITE);
+        CStructTypeBuffer<CameraStruct> transformBuffer = CBufferFactory.allocStructType("particles", context, CameraStruct.class, globalSize, READ_WRITE);
         transformBuffer.mapWriteBuffer(queue, buffer -> {
-            buffer[0] = camera.getCameraStruct();
+            buffer.set(camera.getCameraStruct(), 0);
         });
         
         //execute kernel

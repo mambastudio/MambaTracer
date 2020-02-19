@@ -10,8 +10,8 @@ import cl.core.CBoundingBox;
 import cl.core.data.CPoint2;
 import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
-import cl.core.data.struct.CMaterial;
 import cl.core.data.struct.CIntersection;
+import cl.core.data.struct.CMaterial;
 import cl.core.data.struct.CRay;
 import coordinate.generic.AbstractMesh;
 import coordinate.generic.raytrace.AbstractPrimitive;
@@ -19,6 +19,7 @@ import coordinate.list.CoordinateList;
 import coordinate.list.IntList;
 import coordinate.parser.attribute.MaterialT;
 import wrapper.core.CBufferFactory;
+import wrapper.core.CMemory;
 import static wrapper.core.CMemory.READ_ONLY;
 import static wrapper.core.CMemory.READ_WRITE;
 import wrapper.core.CResourceFactory;
@@ -26,6 +27,7 @@ import wrapper.core.OpenCLPlatform;
 import wrapper.core.buffer.CFloatBuffer;
 import wrapper.core.buffer.CIntBuffer;
 import wrapper.core.buffer.CStructBuffer;
+import wrapper.core.buffer.CStructTypeBuffer;
 
 /**
  *
@@ -50,8 +52,7 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
     private CIntBuffer sizeBuffer = null;
     
     //materials
-    private CStructBuffer<CMaterial> cmaterials = null;
-    
+    private CStructTypeBuffer<CMaterial> cmaterials = null;
         
     public CMesh(OpenCLPlatform configuration)
     {
@@ -165,18 +166,17 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
         pointsBuffer = CBufferFactory.wrapFloat("points", configuration.context(), configuration.queue(), getPointArray(), READ_ONLY);
         normalsBuffer = CBufferFactory.wrapFloat("normals", configuration.context(), configuration.queue(), getNormalArray(), READ_ONLY); 
         facesBuffer = CBufferFactory.wrapInt("faces", configuration.context(), configuration.queue(), getTriangleFacesArray(), READ_ONLY);
-        sizeBuffer = CBufferFactory.wrapInt("size", configuration.context(), configuration.queue(), new int[]{triangleSize()}, READ_ONLY);
-        cmaterials = CBufferFactory.allocStruct("materials", configuration.context(), CMaterial.class, this.getMaterialList().size(), READ_WRITE);       
+        sizeBuffer = CBufferFactory.wrapInt("size", configuration.context(), configuration.queue(), new int[]{triangleSize()}, READ_ONLY);        
+        cmaterials = CBufferFactory.allocStructType("materials", configuration.context(), CMaterial.class, this.getMaterialList().size(), READ_WRITE);       
         cmaterials.mapWriteBuffer(configuration.queue(), materialArray -> {
-            for(int i = 0; i<materialArray.length; i++)
+            for(int i = 0; i<materialArray.size(); i++)
             {
-                MaterialT mat = this.getMaterialList().get(i);                 
-                materialArray[i].setMaterial(mat);   
-                
+                MaterialT mat = this.getMaterialList().get(i);   
+                materialArray.get(i).setMaterial(mat);               
             }
         });
     }
-    
+        
     public CFloatBuffer clPoints()
     {
         return pointsBuffer;
@@ -196,17 +196,22 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
     {
         return sizeBuffer;
     }
-    
-    public CStructBuffer<CMaterial> clMaterials()
+        
+    public CStructTypeBuffer<CMaterial> clMaterials()
     {
         return cmaterials;
     }
         
     public void setMaterial(int index, CMaterial material)    
     {
-        this.cmaterials.mapWriteBuffer(configuration.queue(), materialArray -> {            
-            materialArray[index] = material;            
-        });
+        this.cmaterials.mapWriteBuffer(configuration.queue(), materialArray -> {   
+            materialArray.set(material, index);
+        });        
+    }
+    
+    public CMaterial getMaterial(int index)
+    {
+        return cmaterials.get(index);
     }
    
 }

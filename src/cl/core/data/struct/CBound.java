@@ -15,8 +15,8 @@ import coordinate.struct.FloatStruct;
  */
 public class CBound  extends FloatStruct
 {
-    CPoint3 minimum;
-    CPoint3 maximum;
+    public CPoint3 minimum;
+    public CPoint3 maximum;
 
     public CBound()
     {
@@ -47,32 +47,6 @@ public class CBound  extends FloatStruct
     {
         return maximum;
     }
-
-    @Override
-    public void initFromGlobalArray() {
-        float[] globalArray = getGlobalArray();
-        if(globalArray == null)
-            return;
-        int globalArrayIndex = getGlobalArrayIndex();
-
-        minimum.x   = globalArray[globalArrayIndex + 0];
-        minimum.y   = globalArray[globalArrayIndex + 1];
-        minimum.z   = globalArray[globalArrayIndex + 2];
-        maximum.x   = globalArray[globalArrayIndex + 4];
-        maximum.y   = globalArray[globalArrayIndex + 5];
-        maximum.z   = globalArray[globalArrayIndex + 6];
-    }
-
-    @Override
-    public float[] getArray() {
-        return new float[]{minimum.x, minimum.y, minimum.z, 0,
-                           maximum.x, maximum.y, maximum.z, 0};
-    }
-
-    @Override
-    public int getSize() {
-        return 8;
-    } 
 
     @Override
     public String toString()

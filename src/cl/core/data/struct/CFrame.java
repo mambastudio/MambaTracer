@@ -19,17 +19,8 @@ public class CFrame extends ByteStruct{
     
     public CFrame()
     {
-        
+        mX = new CPoint3();
+        mY = new CPoint3();
+        mZ = new CPoint3();
     }
-
-    @Override
-    public void initFromGlobalArray() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public byte[] getArray() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
 }
