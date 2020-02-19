@@ -331,6 +331,20 @@ int getIntARGB(float4 color)
    return rgb;
 }
 
+bool isFloat3Zero(float3 value)
+{
+   union
+   {
+      float elarray[3];
+      float3 elvector;
+   } element;
+   element.elvector = value;
+   for (int i = 0; i < 3; i++)
+       if(fabs(element.elarray[i]) != 0.f)
+          return false;
+   return true;
+}
+
 bool isFloat4Zero(float4 value)
 {
    union

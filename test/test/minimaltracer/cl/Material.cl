@@ -21,12 +21,7 @@ typedef struct
 BSDF setupBSDF(global Ray* ray, global Intersection* isect)
 {
    BSDF bsdf;
-   //check normals first
-   if(dot(isect->n, ray->d)>0)
-      bsdf.frame = get_frame(-isect->n);
-   else
-      bsdf.frame = get_frame(isect->n);
-   
+   bsdf.frame = get_frame(isect->n);
    //set local dir fix for ray incoming
    bsdf.localDirFix = local_coordinate(bsdf.frame, -ray->d);
    bsdf.materialID  = isect->mat;
@@ -83,12 +78,14 @@ float4 sampleDiffuse(Material material, float2 sample, float4* localDirGen, floa
 }
 
 float4 evaluateBrdf(Material material, BSDF bsdf, float4 oWorldDirGen, float* oCosThetaGen, float* directPdfW)
-{
-   float4 result;
+{  
+  //if not initialized with value, it has an issue (is it always in opencl?)
+   float4 result = (float4)(0, 0, 0, 0);
+
    float4 localDirGen = local_coordinate(bsdf.frame, oWorldDirGen);
    if(localDirGen.z * bsdf.localDirFix.z < 0)
        return result;
-       
+
    if(localDirGen.z < EPS_COSINE || bsdf.localDirFix.z < EPS_COSINE)
        return result;
 

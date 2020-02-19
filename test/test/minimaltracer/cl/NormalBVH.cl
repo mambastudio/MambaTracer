@@ -144,7 +144,9 @@ __kernel void IntersectPrimitives(
           }
           else
               n  = getNormal(p1, p2, p3);
-    
+          if(dot(n, ray->d)>0)
+              n  = -n;
+              
           //set values
           isect->p = p;
           isect->n = n;

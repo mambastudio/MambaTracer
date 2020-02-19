@@ -157,11 +157,8 @@ __kernel void DirectLight(
     //get intersection and path_index
     global Intersection* isect   = isects + global_id;
     global Ray* ray              = occlusRays + global_id;
-    global int* path_index       = pixel_indices + global_id;
-    global Path* path            = paths + *path_index;
-
-    
-   // printlnInt(*totalLights);
+    global int* pixel_index       = pixel_indices + global_id;
+    global Path* path            = paths + *pixel_index;
 
     if(global_id < *activeCount)
     {        
@@ -185,27 +182,24 @@ __kernel void DirectLight(
         float distance, directPdfW;
         float4 radiance = illuminateAreaLight(aLight, isect->p, sample, &directionToLight, &distance, &directPdfW);
 
-        if(!isFloat4Zero(radiance))
+        if(!isFloat3Zero(radiance.xyz))
         {
             float bsdfPdfW, cosThetaOut;
             float4 factor =  evaluateBrdf(*material, path->bsdf, directionToLight, &cosThetaOut, &bsdfPdfW);
-            if(!isFloat4Zero(factor))
+
+            if(!isFloat3Zero(factor.xyz))
             {
-                float4 contrib = (float4)(0, 0, 0, 1);
+                float4 contrib;
                 contrib.xyz    = (cosThetaOut / (lightPickProb * directPdfW)) *
                                  (radiance.xyz * factor.xyz);
-                                 
-
-                                 
                 //new ray direction
                 initGlobalRay(ray, isect->p, directionToLight);
                 ray->tMax = distance;
-                //printFloat(ray->tMax);
+
+                //test occlusion
                 if(!testOcclusion(ray, mesh, nodes, bounds))
                 {
-                   // printFloat4(contrib);
-                    //addAccum(&accum[*path_index], contrib);
-                    addAccum(&accum[*path_index], contrib);
+                    addAccum(&accum[*pixel_index], contrib);
                 }
             }
         }
@@ -223,7 +217,7 @@ __kernel void UpdateImage(global float4*       accum,
     global int*    rgbAt       = imageBuffer + id;
     
     float4 color               = (float4)((*accumAt).xyz/frameCount[0], 1);
-    color.xyz = pow(color.xyz, (float3)(1.f/2.2f));
+    color.xyz = pow(color.xyz, (float3)(1.f/1.5f));
 
     *rgbAt                     = getIntARGB(color);
 }

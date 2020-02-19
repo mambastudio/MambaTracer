@@ -171,7 +171,7 @@ public class SDeviceGI {
         platform.executeKernel1D(gInitIsectsKernel, globalWorkSize, localWorkSize);  
         platform.executeKernel1D(gInitPixelIndicesKernel, globalWorkSize, localWorkSize);
         resetCount();
-        for(int pathLength = 1; pathLength<=1; pathLength++)
+        for(int pathLength = 1; pathLength<=5; pathLength++)
         {   
             platform.executeKernel1D(gIntersectPrimitivesKernel, globalWorkSize, localWorkSize);           
             platform.executeKernel1D(gLightHitPassKernel, globalWorkSize, localWorkSize);         
