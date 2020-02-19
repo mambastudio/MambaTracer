@@ -17,8 +17,8 @@ public class CSource {
     {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Print.cl"));
-        stringBuilder.append(CLFileReader.readFile(CSource.class, "Sampling.cl"));
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Util.cl"));
+        stringBuilder.append(CLFileReader.readFile(CSource.class, "Sampling.cl"));        
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Matrix.cl"));
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Primitive.cl"));
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Material.cl"));

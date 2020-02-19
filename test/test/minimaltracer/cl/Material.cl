@@ -88,6 +88,10 @@ float4 evaluateBrdf(Material material, BSDF bsdf, float4 oWorldDirGen, float* oC
    float4 localDirGen = local_coordinate(bsdf.frame, oWorldDirGen);
    if(localDirGen.z * bsdf.localDirFix.z < 0)
        return result;
+       
+   if(localDirGen.z < EPS_COSINE || bsdf.localDirFix.z < EPS_COSINE)
+       return result;
+
    *oCosThetaGen = fabs(localDirGen.z);
    result = evaluateDiffuse(material, localDirGen, directPdfW);
    return result;

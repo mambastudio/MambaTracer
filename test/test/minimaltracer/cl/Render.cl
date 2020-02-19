@@ -10,7 +10,7 @@ typedef struct
 
 }Path;
 
-addAccum(__global float4* accum, float4 value)
+void addAccum(__global float4* accum, float4 value)
 {
     if(isFloat4AbsValid(value))
         atomicAddFloat4(accum, value);

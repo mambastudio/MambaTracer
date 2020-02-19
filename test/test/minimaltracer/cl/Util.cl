@@ -1,8 +1,10 @@
-#define FLOATMAX  3.402823e+38
-#define FLOATMIN -3.402823e+38   //kindly change the naming, since it means least positive zero
+#define FLOATMAX  3.402823e+38f
+#define FLOATMIN -3.402823e+38f   //kindly change the naming, since it means least positive zero
 #define HIT_MARKER 1
 #define MISS_MARKER 0
 #define EPS_COSINE 1e-6f
+#define M_PI 3.14159265359f
+#define M_1_PI 1.f/M_PI
 
 int getMaterial(int data)
 {
@@ -433,7 +435,7 @@ void getGlobalCameraRay(global Ray* ray, global CameraStruct* camera, float x, f
      float4 Du   = cross(look, camera->up); Du = normalize(Du);
      float4 Dv   = cross(look, Du);        Dv = normalize(Dv);
      
-     float fl    = width / (2. * tan(0.5f * fv));
+     float fl    = width / (2.f * tan(0.5f * fv));
      float4 vp   = normalize(look);
 
      vp = vp*fl - 0.5f*(width*Du + height*Dv);
