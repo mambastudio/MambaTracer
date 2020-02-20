@@ -14,8 +14,7 @@ void addAccum(__global float4* accum, float4 value)
 {
     if(isFloat4AbsValid(value))
         atomicAddFloat4(accum, value);
-    else
-      printFloat4(value);
+
 }
 
 __kernel void InitPathData(
@@ -42,11 +41,19 @@ __kernel void LightHitPass(global Intersection* isects,
                            global Ray*          rays,
                            global Path*         paths,
                            global Material*     materials,
+
+                           //mesh
+                           global const float4* points,
+                           global const float4* normals,
+                           global const Face*   faces,
+                           global const int*    size,
+
                            global float4*       accum,
                            global int*          pixel_indices,
                            global int*          num_isects)
 {
     int global_id = get_global_id(0);
+    TriangleMesh mesh    = {points, normals, faces, size[0]};
 
     if(global_id < *num_isects)
     {
@@ -59,14 +66,29 @@ __kernel void LightHitPass(global Intersection* isects,
        {
            //UPDATE ALL BSDF FIRST IN PATH (could have been done in another kernel but that's waste of code)
            path->bsdf                = setupBSDF(ray, isect);
-           
+
            //deal with emitter
            global Material* material = materials + isect->mat;
            if(isEmitter(*material))
            {
-              float4 contribution = path->throughput * getEmitterColor(*material);
+              //get area light and contribution
+              AreaLight aLight = getAreaLight(materials, mesh, isect->id);
+              float directPdfA;
+              float4 contrib = getRadianceAreaLight(aLight, ray->d, isect->p, &directPdfA);
+              if(isFloat3Zero(contrib.xyz))
+                  return;
+              
+              //weight path
+              float misWeight = 1.f;
+              if(!path->lastSpecular)
+              {
+                   float directPdfW = pdfAtoW(directPdfA, ray->tMax, path->bsdf.localDirFix.z);
+                   //FIXME
+                   misWeight = mis2(path->lastPdfW, directPdfW);// * lightPickProb);
+              }
+
               //accum[*index]       += contribution;
-              addAccum(&accum[*index], contribution);
+              addAccum(&accum[*index], path->throughput * contrib * misWeight);
               //we are done with this intersect and path
               isect->hit = false;
            }
@@ -190,7 +212,11 @@ __kernel void DirectLight(
             if(!isFloat3Zero(factor.xyz))
             {
                 float4 contrib;
-                contrib.xyz    = (cosThetaOut / (lightPickProb * directPdfW)) *
+                float weight = 1.f;
+                //weight = mis2(directPdfW * lightPickProb, bsdfPdfW);
+                weight = mis2(directPdfW, bsdfPdfW);
+
+                contrib.xyz    = (weight * cosThetaOut / (lightPickProb * directPdfW)) *
                                  (radiance.xyz * factor.xyz);
                 //new ray direction
                 initGlobalRay(ray, isect->p, directionToLight);

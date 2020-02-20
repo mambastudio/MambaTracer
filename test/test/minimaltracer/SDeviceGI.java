@@ -61,17 +61,14 @@ public class SDeviceGI {
     private CFloatBuffer gFrameCountBuffer;
     private CIntBuffer gTotalLights;
     private CStructTypeBuffer<SLight> gLights;
-    private CStructTypeBuffer<SPath> gLightPaths;
-    
+  
     //kernels   
     private CKernel gInitCameraRaysKernel;
     private CKernel gInitIsectsKernel;
     private CKernel gInitPathsKernel;
     private CKernel gInitPixelIndicesKernel;
-    private CKernel gIntersectPrimitivesKernel;
-    private CKernel gUpdateBSDFIntersectKernel;
-    private CKernel gLightHitPassKernel;
-    private CKernel gEvaluateBSDFIntersectKernel;
+    private CKernel gIntersectPrimitivesKernel;  
+    private CKernel gLightHitPassKernel;    
     private CKernel gUpdateImageKernel;
     private CKernel gSampleBSDFRayDirectionKernel;
     private CKernel gDirectLightKernel;
@@ -121,7 +118,7 @@ public class SDeviceGI {
         compactHybrid        = new SCompact(platform);       
         gTotalLights         = CBufferFactory.initIntValue("totalLights", platform.context(), platform.queue(), 0, READ_WRITE);
         gLights              = CBufferFactory.allocStructType("lights", platform.context(), SLight.class, 1, READ_WRITE);
-        gLightPaths          = CBufferFactory.allocStructType("lightPaths", platform.context(), SPath.class, globalWorkSize, READ_WRITE);
+        
     }
     
     public void initKernels()
@@ -131,9 +128,7 @@ public class SDeviceGI {
         gInitIsectsKernel               = platform.createKernel("InitIntersection", gIsectBuffer);
         gInitPixelIndicesKernel         = platform.createKernel("InitIntDataToIndex", gPixelIndicesBuffer);
         gIntersectPrimitivesKernel      = platform.createKernel("IntersectPrimitives", gRaysBuffer, gIsectBuffer, gCountBuffer, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getCNodes(), bvh.getCBounds());
-        //gUpdateBSDFIntersectKernel      = platform.createKernel("UpdateBSDFIntersect", gIsectBuffer, gRaysBuffer, gBPathBuffer, gPixelIndicesBuffer, gCountBuffer);
-        gLightHitPassKernel             = platform.createKernel("LightHitPass", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), gAccumBuffer, gPixelIndicesBuffer, gCountBuffer);
-      //  gEvaluateBSDFIntersectKernel    = platform.createKernel("EvaluateBSDFIntersect", gIsectBuffer, gBPathBuffer, mesh.clMaterials(), gPixelIndicesBuffer, gCountBuffer);
+        gLightHitPassKernel             = platform.createKernel("LightHitPass", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), gAccumBuffer, gPixelIndicesBuffer, gCountBuffer);
         gUpdateImageKernel              = platform.createKernel("UpdateImage", gAccumBuffer, gFrameCountBuffer, gImageBuffer);
         gSampleBSDFRayDirectionKernel   = platform.createKernel("SampleBSDFRayDirection", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), gPixelIndicesBuffer, gStateBuffer, gCountBuffer);
         gDirectLightKernel              = platform.createKernel("DirectLight", gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, gAccumBuffer, gPixelIndicesBuffer, gCountBuffer, gStateBuffer, mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getCNodes(), bvh.getCBounds());

@@ -78,3 +78,21 @@ float4 illuminateAreaLight(
     *oDirectPdfW = aLight.invArea * distSqr / cosNormalDir;
     return aLight.intensity;
 }
+
+float4 getRadianceAreaLight(
+       AreaLight aLight,
+       float4    aRayDirection,
+       float4    aHitPoint,
+       float     *oDirectPdfA
+)
+{
+       float cosOutL         = max(0.f, dot(aLight.frame.mZ, -aRayDirection));
+       
+       if(cosOutL == 0)
+            return (float4)(0);
+            
+       if(oDirectPdfA)
+            *oDirectPdfA = aLight.invArea;
+            
+       return aLight.intensity;
+}

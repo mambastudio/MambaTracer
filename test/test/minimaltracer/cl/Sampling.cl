@@ -125,3 +125,23 @@ float mis2(float aSamplePdf, float aOtherPdf)
 {
     return mis(aSamplePdf) / (mis(aSamplePdf) + mis(aOtherPdf));
 }
+
+// Utilities for converting PDF between Area (A) and Solid angle (W)
+// WtoA = PdfW * cosine / distance_squared
+// AtoW = PdfA * distance_squared / cosine
+
+float pdfWtoA(
+    float aPdfW,
+    float aDist,
+    float aCosThere)
+{
+    return aPdfW * fabs(aCosThere) / (aDist*aDist);
+}
+
+float pdfAtoW(
+    float aPdfA,
+    float aDist,
+    float aCosThere)
+{
+    return aPdfA * (aDist*aDist) / fabs(aCosThere);
+}
