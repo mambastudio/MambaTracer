@@ -6,7 +6,6 @@
 package cl.core.device;
 
 import cl.core.CCamera;
-import cl.core.CCamera.CameraStruct;
 import cl.shapes.CBox;
 import java.nio.IntBuffer;
 import wrapper.core.CBufferFactory;
@@ -31,7 +30,7 @@ public class RayDeviceBox {
     
     //kernel variables
     CIntBuffer imageBuffer = null;
-    CStructTypeBuffer<CameraStruct> camera = null;
+    CStructTypeBuffer<CCamera> camera = null;
     CIntBuffer width = null;
     CIntBuffer height = null;
     CStructBuffer<CBox> boxes = null;
@@ -56,7 +55,7 @@ public class RayDeviceBox {
         this.globalSize  = globalSize; this.localSize = localSize;
         
         this.imageBuffer = CBufferFactory.allocInt("image", configuration.context(), globalSize * globalSize, WRITE_ONLY);
-        this.camera      = CBufferFactory.allocStructType("camera", configuration.context(), CameraStruct.class, 1, READ_ONLY);
+        this.camera      = CBufferFactory.allocStructType("camera", configuration.context(), CCamera.class, 1, READ_ONLY);
         this.width       = CBufferFactory.allocInt("width", configuration.context(), 1, READ_ONLY);
         this.height      = CBufferFactory.allocInt("height", configuration.context(), 1, READ_ONLY);
         this.boxes       = CBufferFactory.allocStruct("boxes", configuration.context(), CBox.class, 1, READ_ONLY);
@@ -71,6 +70,6 @@ public class RayDeviceBox {
     public void execute(){configuration.queue().put1DRangeKernel(kernelTraceBox, globalSize * globalSize, localSize);}
     
     public void readImageBuffer(CallBackFunction<IntBuffer> callback) {imageBuffer.mapReadBuffer(configuration.queue(), callback);}
-    public void setCamera(CCamera camera){this.camera.mapWriteBuffer(configuration.queue(), cameraStruct -> cameraStruct.set(camera.getCameraStruct(), 0)); }
+    
     public int getTotalSize(){return globalSize * globalSize;}
 }

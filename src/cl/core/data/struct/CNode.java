@@ -20,6 +20,8 @@ public class CNode extends IntStruct
     public int parent;
     public int isLeaf;
     public int child;
+    public int mortonCode;
+    public int ptr;
 
     @Override
     public String toString()

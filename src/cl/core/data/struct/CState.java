@@ -38,10 +38,11 @@ public class CState extends ByteStruct {
         dimension.y = dimension1;
         this.refreshGlobalArray();
     }
-        
-    public void incrementFrameCount()
+    
+    public void setFrameCount(float frameCount)
     {
-        this.frameCount++;
+        this.frameCount = frameCount;
         this.refreshGlobalArray();
     }
+      
 }

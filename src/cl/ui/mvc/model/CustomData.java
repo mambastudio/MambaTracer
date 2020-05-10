@@ -36,7 +36,7 @@ public class CustomData<Q> implements Serializable, CMaterialInterface {
     public void setMaterial(MaterialT mat) {
         if(q.get() instanceof MaterialT)
         {
-            this.name.setValue(mat.name);
+            this.name.setValue(mat.getNameString());
             this.q.setValue((Q)mat);
         }
     }

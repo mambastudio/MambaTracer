@@ -11,7 +11,6 @@ void printFloat2(float2 v)
     printf("%4.8v2f\n", v);
 }
 
-/*
 void printFloat3(float3 v)
 {
     printf("%4.8v3f\n", v);
@@ -55,4 +54,4 @@ void printBoolean(bool value)
    else
       printf("false \n");
 }
- */
+ 

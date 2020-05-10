@@ -2,6 +2,10 @@
 #define FLOATMIN -3.402823e+38   //kindly change the naming, since it means least positive zero
 #define HIT_MARKER 1
 #define MISS_MARKER 0
+#define EPS_COSINE 1e-6f
+#define EPS_RAY    1e-3f
+#define M_PI 3.14159265359f
+#define M_1_PI 1.f/M_PI
 
 int getMaterial(int data)
 {
@@ -12,6 +16,7 @@ int getGroup(int data)
 {
     return (data >> 16) & 0xFFFF;
 }
+
 
 float4 makeFloat4(float x, float y, float z, float w)
 {
@@ -114,14 +119,12 @@ typedef struct
 // intersection
 typedef struct
 {
-   float4 throughput;
    float4 p;
    float4 n;
+   float4 nDefault;
    float4 d;
-   float2 pixel;
    float2 uv;
    int mat;
-   int sampled_brdf;
    int id;
    int hit;  
 }Intersection;
@@ -249,7 +252,7 @@ BoundingBox getInitBoundingBox()
 BoundingBox unionBoundingBox(BoundingBox bound1, BoundingBox bound2)
 {
    BoundingBox res;
-   res.minimum = min(bound1.minimum, bound2.maximum);
+   res.minimum = min(bound1.minimum, bound2.minimum);
    res.maximum = max(bound1.maximum, bound2.maximum);
    return res;
 }
@@ -260,6 +263,12 @@ void addToBoundingBox(BoundingBox* bound, float4 point)
    bound->maximum = max(bound->maximum, point);
 }
 
+void addToBoundingBox2(BoundingBox* bound1, BoundingBox bound2)
+{
+   bound1->minimum = min(bound1->minimum, bound2.minimum);
+   bound1->maximum = max(bound1->maximum, bound2.maximum);
+}
+
 BoundingBox getBoundingBox(TriangleMesh mesh, int primID)
 {  
     BoundingBox bound = getInitBoundingBox();
@@ -267,6 +276,32 @@ BoundingBox getBoundingBox(TriangleMesh mesh, int primID)
     addToBoundingBox(&bound, getP2(mesh, primID));
     addToBoundingBox(&bound, getP3(mesh, primID));
     return bound;
+}
+
+float getBoundArea(BoundingBox bound)
+{
+    float4 w = bound.maximum - bound.minimum;
+    float ax = max(w.x, 0.f);
+    float ay = max(w.y, 0.f);
+    float az = max(w.z, 0.f);
+    return 2.f * (ax * ay + ay * az + az * ax);
+}
+
+int getMaximumExtentAxis(BoundingBox bound)
+{
+    float4 diag = bound.maximum - bound.minimum;
+    if (diag.x > diag.y && diag.x > diag.z) 
+    {
+        return 0;
+    } 
+    else if (diag.y > diag.z) 
+    {
+        return 1;
+    } 
+    else
+    {
+        return 2;        
+    }
 }
 
 float4 getNormal(float4 p1, float4 p2, float4 p3)
@@ -310,6 +345,23 @@ float3 make_float3(float x, float y, float z)
     return res;
 }
 
+int4 clamp255(float4 color)
+{
+   int4 argb;
+
+   argb.x = (int)(clamp( color.x, 0.f, 1.f ) * 255.0f);
+   argb.y = (int)(clamp( color.y, 0.f, 1.f ) * 255.0f);
+   argb.z = (int)(clamp( color.z, 0.f, 1.f ) * 255.0f);
+   argb.w = (int)(clamp( color.w, 0.f, 1.f ) * 255.0f);
+
+   return argb;
+}
+
+int toIntARGB(int4 color)
+{
+     return (color.w << 24)|(color.x << 16)|(color.y << 8)|color.z;
+}
+
 //int rgb from float3
 int getIntRGB(float3 color)
 {
@@ -326,15 +378,96 @@ int getIntRGB(float3 color)
 //int rgb from float3
 int getIntARGB(float4 color)
 {
-   int rgb;
+   int argb;
+   int4 clampColor = clamp255(color);
+   argb = toIntARGB(clampColor);
+   return argb;
+}
 
-   int r = (int)(clamp( color.x, 0.f, 1.f ) * 255.0f);
-   int g = (int)(clamp( color.y, 0.f, 1.f ) * 255.0f);
-   int b = (int)(clamp( color.z, 0.f, 1.f ) * 255.0f);
-   int a = (int)(clamp( color.w, 0.f, 1.f ) * 255.0f);
-   rgb = (a << 24)|(r << 16)|(g << 8)|b;
-   
-   return rgb;
+bool isFloat3Zero(float3 value)
+{
+   union
+   {
+      float elarray[3];
+      float3 elvector;
+   } element;
+   element.elvector = value;
+   for (int i = 0; i < 3; i++)
+       if(fabs(element.elarray[i]) != 0.f)
+          return false;
+   return true;
+}
+
+bool isFloat4Zero(float4 value)
+{
+   union
+   {
+      float elarray[4];
+      float4 elvector;
+   } element;
+   element.elvector = value;
+   for (int i = 0; i < 4; i++)
+       if(fabs(element.elarray[i]) != 0.f)
+          return false;
+   return true;
+}
+
+bool isFloat4Valid(float4 value)
+{
+   union
+   {
+      float elarray[4];
+      float4 elvector;
+   } element;
+   element.elvector = value;
+   for (int i = 0; i < 4; i++)
+       if(isnan(element.elarray[i]) || isinf(element.elarray[i]))
+          return false;
+   return true;
+}
+
+bool isFloat4AbsValid(float4 value)
+{
+   union
+   {
+      float elarray[4];
+      float4 elvector;
+   } element;
+   element.elvector = value;
+   for (int i = 0; i < 4; i++)
+       if(isnan(element.elarray[i]) || isinf(element.elarray[i]) || element.elarray[i]<0.f)
+          return false;
+   return true;
+}
+
+float maxComponentFloat4(float4 value)
+{
+   union
+   {
+      float elarray[4];
+      float4 elvector;
+   } element;
+   element.elvector = value;
+   float f = FLOATMIN;
+   for (int i = 0; i < 4; i++)
+       if(element.elarray[i] > f)
+           f = element.elarray[i];
+   return f;
+}
+
+float minComponentFloat4(float4 value)
+{
+   union
+   {
+      float elarray[4];
+      float4 elvector;
+   } element;
+   element.elvector = value;
+   float f = FLOATMAX;
+   for (int i = 0; i < 4; i++)
+       if(element.elarray[i] < f)
+           f = element.elarray[i];
+   return f;
 }
 
 // is distance 't' within ray boundary
@@ -388,7 +521,7 @@ void initGlobalRay(global Ray* ray, float4 position, float4 direction)
    ray->sign.x = ray->inv_d.x < 0 ? 1 : 0;
    ray->sign.y = ray->inv_d.y < 0 ? 1 : 0;
    ray->sign.z = ray->inv_d.z < 0 ? 1 : 0;
-   ray->tMin = 0.01f;
+   ray->tMin = 0.001f;
    ray->tMax = INFINITY;
 }
 
@@ -477,59 +610,130 @@ float max3(float a, float b, float c)
     return max(max(a, b), c);
 }
 
-// ray bounding box intersection
-bool intersectBound(Ray r, BoundingBox bound)
-{
-    float tmin  = (getExtent(r.sign.x, bound).x - r.o.x) * r.inv_d.x;
-    float tmax  = (getExtent(1-r.sign.x, bound).x - r.o.x) * r.inv_d.x;
-    float tymin = (getExtent(r.sign.y, bound).y - r.o.y) * r.inv_d.y;
-    float tymax = (getExtent(1-r.sign.y, bound).y - r.o.y) * r.inv_d.y;
-    if ( (tmin > tymax) || (tymin > tmax) )
-        return false;
-    if (tymin > tmin)
-        tmin = tymin;
-    if (tymax < tmax)
-        tmax = tymax;
-    float tzmin  = (getExtent(r.sign.z, bound).z - r.o.z) * r.inv_d.z;
-    float tzmax  = (getExtent(1-r.sign.z, bound).z - r.o.z) * r.inv_d.z;
-    if ( (tmin > tzmax) || (tzmin > tmax) )
-        return false;
-    if (tzmin > tmin)
-        tmin = tzmin;
-    if (tzmax < tmax)
-        tmax = tzmax;
-    return ((tmin < r.tMax) && (tmax > r.tMin));
-   //float tmax
-}
-
-// ray bounding box intersection
+// ray bounding box intersection (fastest method)
+// 1. Ray-Box Intersection Algorithm and Efficient Dynamic Voxel Rendering
+// 2. https://medium.com/@bromanz/another-view-on-the-classic-ray-aabb-intersection-algorithm-for-bvh-traversal-41125138b525
 bool intersectBoundT(Ray r, BoundingBox bound, float* t)
-{   
-    float tmin  = (getExtent(r.sign.x, bound).x - r.o.x) * r.inv_d.x;
-    float tmax  = (getExtent(1-r.sign.x, bound).x - r.o.x) * r.inv_d.x;
-    float tymin = (getExtent(r.sign.y, bound).y - r.o.y) * r.inv_d.y;
-    float tymax = (getExtent(1-r.sign.y, bound).y - r.o.y) * r.inv_d.y;
-    if ( (tmin > tymax) || (tymin > tmax) )
-        return false;
-    if (tymin > tmin)
-        tmin = tymin;
-    if (tymax < tmax)
-        tmax = tymax;
-    float tzmin  = (getExtent(r.sign.z, bound).z - r.o.z) * r.inv_d.z;
-    float tzmax  = (getExtent(1-r.sign.z, bound).z - r.o.z) * r.inv_d.z;
-    if ( (tmin > tzmax) || (tzmin > tmax) )
-        return false;
-    if (tzmin > tmin)
-        tmin = tzmin;
-    if (tzmax < tmax)
-        tmax = tzmax;
-    t[0] = tmin;
-    t[1] = tmax;
-    return ((tmin < r.tMax) && (tmax > r.tMin));
-   //float tmax
+{
+    float4 t0 = (bound.maximum - r.o) * r.inv_d;
+    float4 t1 = (bound.minimum - r.o) * r.inv_d;
+    float4 tmin = fmin(t0, t1), tmax = fmax(t0, t1);
+     
+    t[0] = max(r.tMin, max3(tmin.x, tmin.y, tmin.z));
+    t[1] = min(r.tMax, min3(tmax.x, tmax.y, tmax.z));
+
+    return t[0] <= t[1];
 }
 
+//128 bit simulation
+//https://www.codeproject.com/Tips/784635/UInt-Bit-Operations
+typedef struct
+{
+    long hi;
+    long lo;
+}uint128;
 
+uint128 or128_1(uint128 a)
+{
+    uint128 v = {0, 0};
+    v.lo = a.lo | 1;
+    return v;
+}
+
+uint128 xor128_1(uint128 a)
+{
+    uint128 v = {0, 0};
+    v.lo = a.lo ^ 1;
+    return v;
+}
+
+uint128 and128_1(uint128 a)
+{
+    uint128 v = {0, 0};
+    v.lo = a.lo & 1;
+    return v;
+}
+
+uint128 shiftleft128(uint128 N, int S1) //S should uint
+{
+    uint128 A = {0, 0};
+    int S = S1;
+    S &= 127;
+
+    if(S != 0)
+    {
+        if(S > 64)
+        {
+            A.hi = N.lo << (S - 64);
+            A.lo = 0;
+        }
+        else if(S < 64)
+        {
+            A.hi = (N.hi << S) | (N.lo >> (64 - S));
+            A.lo = N.lo << S;
+        }
+        else
+        {
+            A.hi = N.lo;
+            A.lo = 0;
+        }
+    }
+    else
+    {
+        A.hi = N.hi;
+        A.lo = N.lo;
+    }
+    
+    return A;
+}
+
+uint128 shiftleft128_1(uint128 N)
+{
+    return shiftleft128(N, 1);
+}
+
+uint128 shiftright128(uint128 N, int S1) //S should uint
+{
+    uint128 A = {0, 0};
+    int S = S1;
+    S &= 127;
+    
+    if(S != 0)
+    {
+        if(S > 64)
+        {
+            A.hi = N.hi >> (S - 64);
+            A.lo = 0;
+        }
+        else if(S < 64)
+        {
+            A.lo = (N.lo >> S) | (N.hi << (64 - S));
+            A.hi = N.hi >> S;
+        }
+        else
+        {
+            A.lo = N.hi;
+            A.hi = 0;
+        }
+    }
+    else
+    {
+        A.hi = N.hi;
+        A.lo = N.lo;
+    }
+    
+    return A;
+} 
+
+uint128 shiftright128_1(uint128 N)
+{
+    return shiftright128(N, 1);
+}
+
+bool isempty128(uint128 N)
+{
+    return ((N.hi == 0) && (N.lo == 0));
+}
 
 /*
      OpenCL 1.2 doesn't have atomic operations on floats...

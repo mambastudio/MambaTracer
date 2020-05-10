@@ -69,8 +69,8 @@ public class MaterialEditorModel {
     
     private void registerListeners()
     {
-        name.addListener((o, oldValue, newValue) -> {
-            material.name = newValue;
+        name.addListener((o, oldValue, newValue) -> {            
+            material.name = newValue.toCharArray();
         });
         diffuse.addListener((o, oldValue, newValue) -> {
             material.diffuse = newValue.copy();
@@ -103,7 +103,7 @@ public class MaterialEditorModel {
     
     public void initMaterial(MaterialT material)
     {      
-        name.setValue(material.name);
+        name.setValue(material.getNameString());
         
         diffuse.setValue(material.diffuse);       
         diffuseWeight.setValue(material.diffuseWeight);

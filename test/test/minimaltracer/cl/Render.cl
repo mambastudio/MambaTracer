@@ -4,7 +4,7 @@ typedef struct
     float4 hitpoint;             //position of vertex
     int    pathlength;           //path length or number of segment between source and vertex
     int    lastSpecular;
-    int    lastPdfW;
+    float  lastPdfW;
     int    active;               //is path active
     BSDF   bsdf;                 //bsdf (stores local information together with incoming direction)
 
@@ -12,6 +12,7 @@ typedef struct
 
 void addAccum(__global float4* accum, float4 value)
 {
+
     if(isFloat4AbsValid(value))
         atomicAddFloat4(accum, value);
 
@@ -40,9 +41,10 @@ __kernel void InitPathData(
 __kernel void LightHitPass(global Intersection* isects,
                            global Ray*          rays,
                            global Path*         paths,
-                           global Material*     materials,
+                           global int*          totalLights,
 
                            //mesh
+                           global Material*     materials,
                            global const float4* points,
                            global const float4* normals,
                            global const Face*   faces,
@@ -71,6 +73,8 @@ __kernel void LightHitPass(global Intersection* isects,
            global Material* material = materials + isect->mat;
            if(isEmitter(*material))
            {
+              //light pick probability
+              float lightPickProb = 1.f / *totalLights;
               //get area light and contribution
               AreaLight aLight = getAreaLight(materials, mesh, isect->id);
               float directPdfA;
@@ -83,10 +87,9 @@ __kernel void LightHitPass(global Intersection* isects,
               if(!path->lastSpecular)
               {
                    float directPdfW = pdfAtoW(directPdfA, ray->tMax, path->bsdf.localDirFix.z);
-                   //FIXME
-                   misWeight = mis2(path->lastPdfW, directPdfW);// * lightPickProb);
+                   misWeight = mis2(path->lastPdfW, directPdfW * lightPickProb);
               }
-
+             //  misWeight = 1.f;
               //accum[*index]       += contribution;
               addAccum(&accum[*index], path->throughput * contrib * misWeight);
               //we are done with this intersect and path
@@ -186,9 +189,10 @@ __kernel void DirectLight(
     {        
         //seeds for each thread
         int2 seed = generate_seed(state);
+
         //for light surface sample
         float2 sample                = random_float2(&seed);
-        //sample light index uniformly
+         //sample light index uniformly
         int lightIndex = random_int_range(&seed, *totalLights);
         //light and index of mesh
         global Light* light = lights + lightIndex;
@@ -200,7 +204,7 @@ __kernel void DirectLight(
         //material
         global Material* material    = materials + getMaterial(isect->mat);
         //radiance from direct light
-        float4 directionToLight;
+        float4 directionToLight = makeFloat4(0, 0, 0, 0);
         float distance, directPdfW;
         float4 radiance = illuminateAreaLight(aLight, isect->p, sample, &directionToLight, &distance, &directPdfW);
 
@@ -211,16 +215,15 @@ __kernel void DirectLight(
 
             if(!isFloat3Zero(factor.xyz))
             {
-                float4 contrib;
+                float4 contrib = makeFloat4(0, 0, 0, 0);    //important since undeclared variable might have issues when used
                 float weight = 1.f;
                 //weight = mis2(directPdfW * lightPickProb, bsdfPdfW);
                 weight = mis2(directPdfW, bsdfPdfW);
 
                 contrib.xyz    = (weight * cosThetaOut / (lightPickProb * directPdfW)) *
-                                 (radiance.xyz * factor.xyz);
+                                 (radiance.xyz * factor.xyz)* path->throughput.xyz;
                 //new ray direction
-                initGlobalRay(ray, isect->p, directionToLight);
-                ray->tMax = distance;
+                initGlobalRayT(ray, isect->p, directionToLight, distance - 2*EPS_RAY);
 
                 //test occlusion
                 if(!testOcclusion(ray, mesh, nodes, bounds))

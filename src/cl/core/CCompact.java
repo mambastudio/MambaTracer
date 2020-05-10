@@ -6,80 +6,84 @@
 package cl.core;
 
 import cl.core.data.struct.CIntersection;
-import cl.main.TracerAPI;
 import wrapper.core.CKernel;
 import static wrapper.core.CMemory.READ_WRITE;
+import wrapper.core.OpenCLPlatform;
 import wrapper.core.buffer.CIntBuffer;
 import wrapper.core.buffer.CStructTypeBuffer;
 
 /**
  *
  * @author user
+ * 
+ * I might have considered prefix sum here but honestly, the issues with barriers
+ * which is not hardware agnostic wasn't a good consideration and performance degradation
+ * was experienced due to alot of kernel calls.
+ * 
+ * Some algorithms avoid barriers but still require a lot of kernel calls in which doesn't
+ * give any merit if atomics are used.
+ * 
+ * Hence atomics are handled here instead
+ * 
+ * This is where wavefront for path tracing is considered.
+ * 
  */
-public class CCompact {
-    TracerAPI api;
+public final class CCompact {
+    OpenCLPlatform platform;
     
-    private final PrefixSum prefixsum;
+    int GLOBALSIZE =0;
+    int LOCALSIZE = 100; 
     
-    private CStructTypeBuffer<CIntersection>    isects;
-    private CStructTypeBuffer<CIntersection>    temp_isects;
-    private CKernel                             initTempIsectsKernel;
-    private CKernel                             compactIsectsKernel;
-    private CKernel                             transferIsectsKernel;
+    CStructTypeBuffer<CIntersection> origIsectBuffer;
+    CStructTypeBuffer<CIntersection> tempIsectBuffer;    
+    CIntBuffer origPixels;
+    CIntBuffer tempPixels;
     
-    private CIntBuffer                          pixels;
-    private CIntBuffer                          temp_pixels;
-    private CKernel                             initTempPixelsKernel;
-    private CKernel                             compactPixelsKernel;
-    private CKernel                             transferPixelsKernel;
+    CIntBuffer totalCount;
     
-    public CCompact(TracerAPI api)
+    CKernel initTempIsectsKernel;
+    CKernel initTempPixelsKernel;
+    CKernel compactAtomicKernel;
+    CKernel initOrigIsectsKernel;
+    CKernel initOrigPixelsKernel; 
+    CKernel tempToOriginalIsectsKernel;  
+    CKernel tempToOriginalPixelsKernel;
+    
+    
+    public CCompact(OpenCLPlatform platform)
+    {
+        this.platform = platform;        
+    }
+    public void init(CStructTypeBuffer<CIntersection> isectBuffer, CIntBuffer pixels, CIntBuffer totalCount)
     {        
-        this.api = api;        
-        this.prefixsum = new PrefixSum(api.configurationCL());
-    }
-    
-    public void initPrefixSumFrom(CStructTypeBuffer<CIntersection> isectBuffer, CIntBuffer total)
-    {
-        prefixsum.init(isectBuffer, total);
-    }
-    
-    public void initPixels(CIntBuffer pixels)
-    {
-        this.pixels = pixels;
-        this.temp_pixels = api.allocInt("temp_pixels", pixels.getBufferSize(), READ_WRITE);
-        this.initTempPixelsKernel = api.createKernel("InitIntData", temp_pixels);
-        this.compactPixelsKernel = api.createKernel("compactPixels", this.pixels, temp_pixels, prefixsum.getPredicate(), prefixsum.getPrefixSum());
-        this.transferPixelsKernel = api.createKernel("transferPixels", this.pixels, temp_pixels);
-    }
-    
-    public void initIsects(CStructTypeBuffer<CIntersection> isects)
-    {
+        this.GLOBALSIZE = isectBuffer.getSize();
         
-        this.isects = isects;
-        this.temp_isects = api.allocStructType("temp_isects", CIntersection.class, isects.getSize(), READ_WRITE); 
-        this.initTempIsectsKernel = api.createKernel("initIntersection", temp_isects);
-        this.compactIsectsKernel = api.createKernel("compactIntersection", this.isects, temp_isects, prefixsum.getPredicate(), prefixsum.getPrefixSum());
-        this.transferIsectsKernel = api.createKernel("transferIntersection", this.isects, temp_isects);
-
+        //init buffers
+        this.origIsectBuffer    = isectBuffer;
+        this.tempIsectBuffer    = platform.allocStructType("tempIsect", CIntersection.class, GLOBALSIZE, READ_WRITE);
+        this.origPixels         = pixels;
+        this.tempPixels         = platform.allocInt("tempPixels", GLOBALSIZE, READ_WRITE);
+        this.totalCount         = totalCount;
+               
+        //init kernels
+        initTempIsectsKernel        = platform.createKernel("InitIntersection", tempIsectBuffer);
+        initTempPixelsKernel        = platform.createKernel("InitIntData", tempPixels);
+        tempToOriginalIsectsKernel  = platform.createKernel("TransferIntersection",origIsectBuffer, tempIsectBuffer);
+        tempToOriginalPixelsKernel  = platform.createKernel("TransferPixels", origPixels, tempPixels);                
+        initOrigIsectsKernel        = platform.createKernel("InitIntersection", origIsectBuffer);
+        initOrigPixelsKernel        = platform.createKernel("InitIntData", origPixels);
+        compactAtomicKernel         = platform.createKernel("CompactAtomic", origIsectBuffer, tempIsectBuffer, origPixels, tempPixels, totalCount);
     }
     
-    public void compactPixels(int globalSize)
+    public void execute()
     {
-        api.execute1D(initTempPixelsKernel, globalSize, 1);
-        api.execute1D(compactPixelsKernel, globalSize, 1);
-        api.execute1D(transferPixelsKernel, globalSize, 1);
-    }
-    
-    public void compactIsects(int globalSize)
-    {
-        api.execute1D(initTempIsectsKernel, globalSize, 1);
-        api.execute1D(compactIsectsKernel, globalSize, 1);
-        api.execute1D(transferIsectsKernel, globalSize, 1);
-    }
-    
-    public void executePrefixSum()
-    {
-        prefixsum.execute();
-    }
+        totalCount.mapWriteValue(platform.queue(), 0);
+        platform.executeKernel1D(initTempIsectsKernel, GLOBALSIZE, LOCALSIZE);
+        platform.executeKernel1D(initTempPixelsKernel, GLOBALSIZE, LOCALSIZE);
+        platform.executeKernel1D(compactAtomicKernel, GLOBALSIZE, LOCALSIZE);
+        platform.executeKernel1D(initOrigIsectsKernel, GLOBALSIZE, LOCALSIZE);
+        platform.executeKernel1D(initOrigPixelsKernel, GLOBALSIZE, LOCALSIZE);
+        platform.executeKernel1D(tempToOriginalIsectsKernel, GLOBALSIZE, LOCALSIZE);
+        platform.executeKernel1D(tempToOriginalPixelsKernel, GLOBALSIZE, LOCALSIZE);
+    }  
 }

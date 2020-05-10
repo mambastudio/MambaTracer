@@ -8,6 +8,7 @@
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Slider?>
@@ -19,6 +20,7 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.control.TreeView?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
@@ -39,19 +41,20 @@
                     <menus>
                       <Menu mnemonicParsing="false" text="File">
                         <items>
+                              <MenuItem mnemonicParsing="false" onAction="#unspecifiedAction" text="Unspecified Action" />
                           <MenuItem mnemonicParsing="false" onAction="#exit" text="Close" />
                         </items>
                       </Menu>
                     </menus>
                   </MenuBar>
-                  <HBox spacing="5.0">
+                  <HBox prefHeight="24.0" prefWidth="1153.0" spacing="5.0">
                      <children>
-                        <Button fx:id="openButton" mnemonicParsing="false" onAction="#open" prefHeight="43.0" prefWidth="102.0" text="Open" />
-                        <Region prefHeight="43.0" prefWidth="36.0" HBox.hgrow="ALWAYS" />
-                        <Button fx:id="renderButton" mnemonicParsing="false" prefHeight="43.0" prefWidth="102.0" text="Render" />
-                        <Button fx:id="pauseButton" mnemonicParsing="false" prefHeight="43.0" prefWidth="102.0" text="Pause" />
-                        <Button fx:id="stopButton" mnemonicParsing="false" prefHeight="43.0" prefWidth="102.0" text="Stop" />
-                        <Button fx:id="editButton" mnemonicParsing="false" prefHeight="43.0" prefWidth="102.0" text="Edit" />
+                        <Button fx:id="openButton" mnemonicParsing="false" onAction="#open" prefHeight="25.0" prefWidth="56.0" text="Open" />
+                        <Region prefHeight="32.0" prefWidth="608.0" HBox.hgrow="ALWAYS" />
+                        <Button fx:id="renderButton" mnemonicParsing="false" prefHeight="25.0" prefWidth="57.0" text="Render" />
+                        <Button fx:id="pauseButton" mnemonicParsing="false" prefHeight="25.0" prefWidth="57.0" text="Pause" />
+                        <Button fx:id="stopButton" mnemonicParsing="false" prefHeight="25.0" prefWidth="63.0" text="Stop" />
+                        <Button fx:id="editButton" mnemonicParsing="false" prefHeight="25.0" prefWidth="60.0" text="Edit" />
                      </children>
                      <padding>
                         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
@@ -76,7 +79,7 @@
             </TabPane>
          </center>
          <left>
-            <HBox prefHeight="669.0" prefWidth="338.0" BorderPane.alignment="CENTER">
+            <HBox prefHeight="576.0" prefWidth="235.0" BorderPane.alignment="CENTER">
                <children>
                   <TabPane fx:id="tPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="669.0" prefWidth="336.0" side="LEFT" tabClosingPolicy="UNAVAILABLE">
                     <tabs>
@@ -88,7 +91,7 @@
                                        <children>
                                           <Label prefHeight="29.0" prefWidth="104.0" text="Scene Tree">
                                              <font>
-                                                <Font name="System Bold" size="15.0" />
+                                                <Font size="15.0" />
                                              </font>
                                           </Label>
                                           <TreeView fx:id="treeViewScene" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
@@ -113,7 +116,7 @@
                                        <children>
                                           <Label prefHeight="29.0" prefWidth="129.0" text="Material Database">
                                              <font>
-                                                <Font name="System Bold" size="15.0" />
+                                                <Font size="15.0" />
                                              </font>
                                           </Label>
                                           <TreeView fx:id="treeViewMaterial" prefHeight="200.0" prefWidth="200.0" VBox.vgrow="ALWAYS" />
@@ -124,6 +127,35 @@
                                     </VBox>
                                  </items>
                               </SplitPane>
+                           </content>
+                        </Tab>
+                        <Tab text="Viewport">
+                           <content>
+                              <VBox prefHeight="200.0" prefWidth="100.0" spacing="5.0">
+                                 <children>
+                                    <Label text="Camera FoV" />
+                                    <Slider fx:id="fovSlider" majorTickUnit="40.0" max="170.0" min="10.0" prefHeight="38.0" prefWidth="174.0" showTickLabels="true" showTickMarks="true" value="45.0" />
+                                    <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                       <children>
+                                          <Label fx:id="fovLabel" prefHeight="17.0" prefWidth="91.0" text="45 degrees" />
+                                          <Button fx:id="fovResetButton" mnemonicParsing="false" text="Reset FoV" />
+                                       </children>
+                                    </HBox>
+                                    <Separator prefWidth="200.0" />
+                                    <HBox alignment="CENTER_LEFT" prefHeight="29.0" prefWidth="298.0" spacing="5.0">
+                                       <children>
+                                          <Label text="Reset view bound to:" />
+                                          <Button fx:id="sceneboundButton" mnemonicParsing="false" text="Scene" />
+                                       </children>
+                                       <padding>
+                                          <Insets bottom="5.0" top="5.0" />
+                                       </padding>
+                                    </HBox>
+                                 </children>
+                                 <padding>
+                                    <Insets left="5.0" right="5.0" top="5.0" />
+                                 </padding>
+                              </VBox>
                            </content>
                         </Tab>
                         <Tab fx:id="brdfTab" text="BRDF Editor">
@@ -286,7 +318,7 @@
                                        </font>
                                     </Label>
                                     <Separator prefWidth="200.0" />
-                                    <TextArea fx:id="timeConsole" editable="false" prefHeight="171.0" prefWidth="205.0" wrapText="true" VBox.vgrow="ALWAYS">
+                                    <TextArea fx:id="timeConsole" editable="false" prefHeight="171.0" prefWidth="205.0" VBox.vgrow="ALWAYS">
                                        <font>
                                           <Font name="Consolas" size="12.0" />
                                        </font></TextArea>
@@ -296,7 +328,7 @@
                                        </font>
                                     </Label>
                                     <Separator prefWidth="200.0" />
-                                    <TextArea fx:id="sceneConsole" editable="false" prefHeight="171.0" prefWidth="205.0" wrapText="true" VBox.vgrow="ALWAYS">
+                                    <TextArea fx:id="sceneConsole" editable="false" prefHeight="171.0" prefWidth="205.0" VBox.vgrow="ALWAYS">
                                        <font>
                                           <Font name="Consolas" size="12.0" />
                                        </font></TextArea>
@@ -306,7 +338,7 @@
                                        </font>
                                     </Label>
                                     <Separator prefWidth="200.0" />
-                                    <TextArea fx:id="performanceConsole" editable="false" prefHeight="171.0" prefWidth="205.0" wrapText="true" VBox.vgrow="ALWAYS">
+                                    <TextArea fx:id="performanceConsole" editable="false" prefHeight="171.0" prefWidth="205.0" VBox.vgrow="ALWAYS">
                                        <font>
                                           <Font name="Consolas" size="12.0" />
                                        </font></TextArea>
@@ -316,30 +348,45 @@
                                  </padding>
                               </VBox>
                            </content></Tab>
+                        <Tab text="Environment">
+                           <content>
+                              <VBox prefHeight="200.0" prefWidth="100.0" spacing="7.0">
+                                 <children>
+                                    <HBox alignment="TOP_CENTER" prefHeight="29.0" prefWidth="200.0" spacing="5.0">
+                                       <children>
+                                          <RadioButton mnemonicParsing="false" prefHeight="17.0" prefWidth="68.0" text="Sun" />
+                                          <RadioButton mnemonicParsing="false" text="Envmap" />
+                                       </children>
+                                    </HBox>
+                                    <Separator prefWidth="200.0" />
+                                    <ImageView fitHeight="150.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true" />
+                                    <HBox alignment="CENTER">
+                                       <children>
+                                          <CheckBox mnemonicParsing="false" text="Apply" />
+                                       </children>
+                                    </HBox>
+                                    <Separator prefWidth="200.0" />
+                                    <HBox alignment="CENTER" spacing="5.0">
+                                       <children>
+                                          <Button mnemonicParsing="false" onAction="#showSunskyEditor" prefHeight="25.0" prefWidth="73.0" text="Load Sky" />
+                                          <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="73.0" text="Load Env" />
+                                       </children>
+                                    </HBox>
+                                 </children>
+                                 <padding>
+                                    <Insets top="5.0" />
+                                 </padding>
+                              </VBox>
+                           </content>
+                        </Tab>
                     </tabs>
                   </TabPane>
-                  <Separator orientation="VERTICAL" prefHeight="200.0" />
+                  <Separator orientation="VERTICAL" prefHeight="576.0" prefWidth="12.0" />
                </children>
             </HBox>
          </left>
          <bottom>
-            <HBox prefHeight="33.0" prefWidth="1153.0" spacing="5.0" BorderPane.alignment="CENTER">
-               <children>
-                  <CheckBox mnemonicParsing="false" text="Refresh Every" />
-                  <Spinner>
-                     <HBox.margin>
-                        <Insets />
-                     </HBox.margin>
-                  </Spinner>
-                  <Label text="Seconds" />
-               </children>
-               <BorderPane.margin>
-                  <Insets />
-               </BorderPane.margin>
-               <padding>
-                  <Insets left="5.0" top="5.0" />
-               </padding>
-            </HBox>
+            <HBox prefHeight="26.0" prefWidth="1153.0" BorderPane.alignment="CENTER" />
          </bottom>
       </BorderPane>
    </children>

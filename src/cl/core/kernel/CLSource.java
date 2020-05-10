@@ -18,18 +18,21 @@ public class CLSource {
         stringBuilder.append(CLFileReader.readFile(CLSource.class, "Print.cl"));       
         stringBuilder.append(CLFileReader.readFile(CLSource.class, "Matrix.cl"));
         stringBuilder.append(CLFileReader.readFile(CLSource.class, "Common.cl")); 
-        //stringBuilder.append(CLFileReader.readFile(CLSource.class, "Sampling.cl"));      
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "Sampling.cl"));      
         stringBuilder.append(CLFileReader.readFile(CLSource.class, "RGBSpace.cl"));
         stringBuilder.append(CLFileReader.readFile(CLSource.class, "Frame.cl"));
         stringBuilder.append(CLFileReader.readFile(CLSource.class, "Material.cl"));
         stringBuilder.append(CLFileReader.readFile(CLSource.class, "Primitive.cl"));
         stringBuilder.append(CLFileReader.readFile(CLSource.class, "NormalBVH.cl"));
-        //stringBuilder.append(CLFileReader.readFile(CLSource.class, "Path.cl"));
-        //stringBuilder.append(CLFileReader.readFile(CLSource.class, "PrefixSum.cl"));
-        //stringBuilder.append(CLFileReader.readFile(CLSource.class, "Compact.cl"));
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "ButterflySort.cl"));
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "Ploc.cl"));
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "Path.cl"));
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "PrefixSum.cl"));
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "Compact.cl"));
         stringBuilder.append(CLFileReader.readFile(CLSource.class, "Initialize.cl"));
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "Light.cl"));
         stringBuilder.append(CLFileReader.readFile(CLSource.class, "Raytracing.cl"));
-        //stringBuilder.append(CLFileReader.readFile(CLSource.class, "Rendering.cl"));
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "Rendering.cl"));
         
         return new String[]{stringBuilder.toString()};
         /*

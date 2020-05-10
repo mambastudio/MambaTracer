@@ -6,9 +6,10 @@
 package cl.core.api;
 
 import bitmap.display.BlendDisplay;
+import cl.core.CAccelerator;
 import cl.core.CBoundingBox;
 import cl.core.CCamera;
-import cl.core.CNormalBVH;
+import cl.core.CCameraModel;
 import cl.shapes.CMesh;
 import coordinate.parser.attribute.MaterialT;
 import java.nio.Buffer;
@@ -37,7 +38,7 @@ public interface RayDeviceInterface <A extends MambaAPIInterface, B extends Buff
         
     public void setAPI(A api);
     
-    public void set(CMesh mesh, CNormalBVH bvhBuild);        
+    public void set(CMesh mesh, CAccelerator bvhBuild);        
     public void setGlobalSize(int globalSize);
     public void setLocalSize(int localSize);
     
@@ -56,8 +57,10 @@ public interface RayDeviceInterface <A extends MambaAPIInterface, B extends Buff
     public void setMaterial(int index, M material);
     public void updateCamera();    
     public void setCamera(CCamera camera);    
-    public CCamera getCamera(); 
-    public int getTotalSize();    
+    public CCameraModel getCameraModel(); 
+    public int getTotalSize();
+    public CBoundingBox getPriorityBound();
+    public void setPriorityBound(CBoundingBox bound);
     public CBoundingBox getBound(); 
     public CBoundingBox getGroupBound(int value);
     

@@ -5,7 +5,7 @@
  */
 package cl.shapes;
 
-import cl.core.CNormalBVH;
+import cl.core.accelerator.CNormalBVH;
 import cl.core.CBoundingBox;
 import cl.core.data.CPoint2;
 import cl.core.data.CPoint3;

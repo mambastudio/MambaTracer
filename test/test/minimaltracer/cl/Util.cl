@@ -3,6 +3,7 @@
 #define HIT_MARKER 1
 #define MISS_MARKER 0
 #define EPS_COSINE 1e-6f
+#define EPS_RAY    1e-3f
 #define M_PI 3.14159265359f
 #define M_1_PI 1.f/M_PI
 
@@ -49,6 +50,20 @@ int2 makeInt2(int x, int y)
     res.x = x;
     res.y = y;
     return res;
+}
+
+float getFloat4At(float4 value, int index)
+{
+   if(index == 0)
+      return value.x;
+   else if(index == 1)
+      return value.y;
+   else if(index == 2)
+      return value.z;
+   else if (index == 3)
+      return value.w;
+   else
+      return NAN;
 }
 
 // camera info
@@ -367,11 +382,10 @@ bool isFloat4Valid(float4 value)
       float4 elvector;
    } element;
    element.elvector = value;
-   bool result = false;
    for (int i = 0; i < 4; i++)
        if(isnan(element.elarray[i]) || isinf(element.elarray[i]))
-          return result |= true;
-   return !result;
+          return false;
+   return true;
 }
 
 bool isFloat4AbsValid(float4 value)
@@ -382,11 +396,10 @@ bool isFloat4AbsValid(float4 value)
       float4 elvector;
    } element;
    element.elvector = value;
-   bool result = false;
    for (int i = 0; i < 4; i++)
-       if(isnan(element.elarray[i]) || isinf(element.elarray[i]) || element.elarray[i]<0.f)
-          return result |= true;
-   return !result;
+       if(isnan(element.elarray[i]) || isinf(element.elarray[i]) || getFloat4At(value, i)<0.f)
+          return false;
+   return true;
 }
 
 // is distance 't' within ray boundary
@@ -423,8 +436,21 @@ void initGlobalRay(global Ray* ray, float4 position, float4 direction)
    ray->sign.x = ray->inv_d.x < 0 ? 1 : 0;
    ray->sign.y = ray->inv_d.y < 0 ? 1 : 0;
    ray->sign.z = ray->inv_d.z < 0 ? 1 : 0;
-   ray->tMin = 0.0001f;
+   ray->tMin = 0.001f;
    ray->tMax = INFINITY;
+}
+
+// get ray initialized
+void initGlobalRayT(global Ray* ray, float4 position, float4 direction, float tMax)
+{
+   ray->o = position;
+   ray->d = direction;
+   ray->inv_d = (float4)(1.f/direction.x, 1.f/direction.y, 1.f/direction.z, 0);
+   ray->sign.x = ray->inv_d.x < 0 ? 1 : 0;
+   ray->sign.y = ray->inv_d.y < 0 ? 1 : 0;
+   ray->sign.z = ray->inv_d.z < 0 ? 1 : 0;
+   ray->tMin = 0.0001f;
+   ray->tMax = tMax;
 }
 
 // get ray initialized

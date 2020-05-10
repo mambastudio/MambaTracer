@@ -6,10 +6,10 @@
 package cl.core.device;
 
 import bitmap.display.BlendDisplay;
+import cl.core.CAccelerator;
 import cl.core.CBoundingBox;
 import cl.core.CCamera;
-import cl.core.CCamera.CameraStruct;
-import cl.core.CNormalBVH;
+import cl.core.CCameraModel;
 import static cl.core.api.MambaAPIInterface.DeviceType.RAYTRACE;
 import static cl.core.api.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
 import cl.core.api.RayDeviceInterface;
@@ -24,14 +24,12 @@ import coordinate.parser.attribute.MaterialT;
 import filesystem.core.OutputFactory;
 import java.nio.IntBuffer;
 import thread.model.LambdaThread;
-import wrapper.core.CBufferFactory;
 import wrapper.core.CKernel;
 import static wrapper.core.CMemory.READ_ONLY;
 import static wrapper.core.CMemory.READ_WRITE;
 import wrapper.core.CallBackFunction;
 import wrapper.core.buffer.CFloatBuffer;
 import wrapper.core.buffer.CIntBuffer;
-import wrapper.core.buffer.CStructBuffer;
 import static cl.core.api.MambaAPIInterface.ImageType.ALL_RAYTRACE_IMAGE;
 import static cl.core.api.RayDeviceInterface.ShadeType.NORMAL_SHADE;
 import static cl.core.api.RayDeviceInterface.ShadeType.RAYTRACE_SHADE;
@@ -48,9 +46,11 @@ import wrapper.core.buffer.CStructTypeBuffer;
 public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, BlendDisplay, MaterialT>{
     private TracerAPI api;
         
-    CCamera camera = new CCamera(new CPoint3(0, 0, 9), new CPoint3(), new CVector3(0, 1, 0), 45);
+    CCameraModel cameraModel = new CCameraModel(new CPoint3(0, 0, 9), new CPoint3(), new CVector3(0, 1, 0), 45);
     
     CIntBuffer hitCount = null;
+    
+    CIntBuffer startNode = null;
     
     //image variables
     CIntBuffer imageBuffer = null;
@@ -61,7 +61,7 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     CFloatBuffer groupBound = null;
     
     //viewport variables
-    CStructTypeBuffer<CameraStruct> cameraBuffer = null;
+    CStructTypeBuffer<CCamera> cameraBuffer = null;
     
     //Ray & intersects
     CStructTypeBuffer<CRay> raysBuffer;
@@ -79,7 +79,6 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     CKernel intersectPrimitivesKernel = null;
     CKernel fastShadeKernel = null;
     CKernel backgroundShadeKernel = null;
-    CKernel updateShadeImageKernel = null;
     CKernel updateNormalShadeImageKernel = null;
     CKernel updateGroupbufferShadeImageKernel = null;
     
@@ -88,7 +87,10 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
        
     //mesh and accelerator
     CMesh mesh;
-    CNormalBVH bvhBuild;
+    CAccelerator bvhBuild;
+    
+    //priority bound
+    CBoundingBox priorityBound;
     
     //render thread
     LambdaThread raytraceThread = new LambdaThread();
@@ -104,7 +106,7 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     
     
     @Override
-    public CCamera getCamera(){return camera;}
+    public CCameraModel getCameraModel(){return cameraModel;}
     
     @Override
     public void execute()
@@ -118,7 +120,7 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     
     private void loop()
     {
-        if(camera.isSynched(cameraBuffer.get(0)))
+        if(cameraModel.isSynched(cameraBuffer.get(0)))
             raytraceThread.chill();       
             
         updateCamera();
@@ -130,12 +132,11 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
         api.configurationCL().queue().put1DRangeKernel(initCameraRaysKernel, globalSize, localSize); 
         api.configurationCL().queue().put1DRangeKernel(intersectPrimitivesKernel, globalSize, localSize);    
         api.configurationCL().queue().put1DRangeKernel(backgroundShadeKernel, globalSize, localSize);          
-        api.configurationCL().queue().put1DRangeKernel(fastShadeKernel, globalSize, localSize);       
         
         //shade type
         switch (type) {
             case RAYTRACE_SHADE:
-                api.configurationCL().queue().put1DRangeKernel(updateShadeImageKernel, globalSize, localSize);
+                api.configurationCL().queue().put1DRangeKernel(fastShadeKernel, globalSize, localSize);      
                 break;
             case NORMAL_SHADE:
                 api.configurationCL().queue().put1DRangeKernel(updateNormalShadeImageKernel, globalSize, localSize); 
@@ -178,13 +179,13 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     public void updateCamera(){
         this.cameraBuffer.mapWriteBuffer(api.configurationCL().queue(), cameraStruct -> 
             {
-                CameraStruct cam = camera.getCameraStruct();
+                CCamera cam = cameraModel.getCameraStruct();
                 cam.setDimension(new CPoint2(api.getImageSize(RAYTRACE_IMAGE)));                
                 cameraStruct.set(cam, 0);
                 
-                OutputFactory.print("eye", camera.position().toString());
-                OutputFactory.print("dir", camera.forward().toString());
-                OutputFactory.print("fov", Float.toString(camera.fov));
+                OutputFactory.print("eye", cameraModel.position().toString());
+                OutputFactory.print("dir", cameraModel.forward().toString());
+                OutputFactory.print("fov", Float.toString(cameraModel.fov));
                 
             });
     }
@@ -201,6 +202,12 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     public CBoundingBox getBound()
     {
         return bvhBuild.getBound();
+    }
+    
+    @Override
+    public CBoundingBox getPriorityBound()
+    {
+        return priorityBound;
     }
     
     @Override
@@ -230,42 +237,45 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     public void reposition(CBoundingBox box)
     {
         OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
-        orientation.repositionLocation(camera, box);
+        orientation.repositionLocation(cameraModel, box);
     }
        
     @Override
     public void setAPI(TracerAPI api) {
         this.api = api;
         this.globalSize = api.getGlobalSizeForDevice(RAYTRACE);
-        this.localSize = 1;
+        this.localSize = 100;
         
          //Init constant global variables, except mesh that is loaded after mesh is uploaded
-        this.hitCount           = api.intValue("hitCount", 0, READ_WRITE);
+        this.startNode          = api.allocIntValue("startnode", 0, READ_WRITE);
+        this.hitCount           = api.allocIntValue("hitCount", 0, READ_WRITE);
         this.imageBuffer        = api.allocInt("image", globalSize, READ_WRITE);
         this.groupBuffer        = api.allocInt("group", globalSize, READ_WRITE);
         this.isectBuffer        = api.allocStructType("intersections",  CIntersection.class,    globalSize, READ_WRITE);
         this.raysBuffer         = api.allocStructType("rays",           CRay.class,             globalSize, READ_WRITE);
-        this.cameraBuffer       = api.allocStructType("camera",         CameraStruct.class,     1,          READ_ONLY);
-        this.count              = api.intValue("count", 0, READ_WRITE);
-        this.groupIndex         = api.intValue("groupIndex", 0, READ_ONLY);
+        this.cameraBuffer       = api.allocStructType("camera",         CCamera.class,     1,          READ_ONLY);
+        this.count              = api.allocIntValue("count", 0, READ_WRITE);
+        this.groupIndex         = api.allocIntValue("groupIndex", 0, READ_ONLY);
         this.groupBound         = api.allocFloat("groupBound", 6 , READ_WRITE);             
     }
 
     @Override
-    public void set(CMesh mesh, CNormalBVH bvhBuild) {
+    public void set(CMesh mesh, CAccelerator bvhBuild) {
         this.mesh = mesh;
         this.bvhBuild = bvhBuild;
+        this.priorityBound = bvhBuild.getBound();
+        
+        startNode.mapWriteValue(api.configurationCL().queue(), bvhBuild.getStartNodeIndex());
         
         //Set camera new position
         OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
-        orientation.reposition(camera, mesh.getBound());
+        orientation.reposition(cameraModel, mesh.getBound());
         
         initGroupBufferKernel               = api.createKernel("InitIntData_1", groupBuffer);
         initCameraRaysKernel                = api.createKernel("InitCameraRayData", cameraBuffer, raysBuffer);
-        intersectPrimitivesKernel           = api.createIntersectionKernel("intersectPrimitives", raysBuffer, isectBuffer, count, mesh, bvhBuild);
-        fastShadeKernel                     = api.createKernel("fastShade", mesh.clMaterials(), isectBuffer);
+        intersectPrimitivesKernel           = api.createIntersectionKernel("IntersectPrimitives", raysBuffer, isectBuffer, count, mesh, bvhBuild, startNode);
+        fastShadeKernel                     = api.createKernel("fastShade", mesh.clMaterials(), isectBuffer, imageBuffer);
         backgroundShadeKernel               = api.createKernel("backgroundShade", isectBuffer, cameraBuffer, imageBuffer);
-        updateShadeImageKernel              = api.createKernel("updateShadeImage", isectBuffer, cameraBuffer, imageBuffer);
         updateNormalShadeImageKernel        = api.createKernel("updateNormalShadeImage", isectBuffer, cameraBuffer, imageBuffer);
         updateGroupbufferShadeImageKernel   = api.createKernel("updateGroupbufferShadeImage", isectBuffer, cameraBuffer, groupBuffer);
         findBoundKernel                     = api.createKernel("findBound", groupIndex, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), groupBound);        
@@ -314,7 +324,7 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
 
     @Override
     public void setCamera(CCamera camera) {
-        this.camera = camera;
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
     @Override
@@ -340,5 +350,10 @@ public class RayDeviceMesh implements RayDeviceInterface<TracerAPI, IntBuffer, B
     @Override
     public ShadeType getShadeType() {
         return type;
+    }
+
+    @Override
+    public void setPriorityBound(CBoundingBox bound) {
+        this.priorityBound = bound;
     }
 }

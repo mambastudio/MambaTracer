@@ -12,7 +12,8 @@
 */
 __kernel void fastShade(
     global Material* materials,
-    global Intersection* isects
+    global Intersection* isects,
+    global int* imageBuffer
 )
 {
     //get thread id
@@ -29,9 +30,8 @@ __kernel void fastShade(
     {
         float coeff = fabs(dot(isect->d, isect->n));
         color.xyz   = getMaterialColor(materials[isect->mat], coeff).xyz;
-    }  
-    
-    isect->throughput = color;
+        imageBuffer[id] = getIntARGB(color);
+    }
 }
 
 __kernel void backgroundShade(
@@ -47,29 +47,8 @@ __kernel void backgroundShade(
     global Intersection* isect = isects + id;
     if(!isect->hit)
     {
-        //pixel index
-        int index = isect->pixel.x + camera->dimension.x * isect->pixel.y;
         //update
         imageBuffer[id] = getIntARGB((float4)(0, 0, 0, 1));
-    }
-}
-
-__kernel void updateShadeImage(
-    global Intersection* isects,
-    global CameraStruct* camera,
-    global int* imageBuffer
-)
-{
-    int id= get_global_id( 0 );
-
-    //updated the intersected areas color
-    global Intersection* isect = isects + id;
-    if(isect->hit)
-    {
-        //pixel index
-        int index = isect->pixel.x + camera->dimension.x * isect->pixel.y;
-        //update
-       imageBuffer[index] = getIntARGB(isect->throughput);
     }
 }
 
@@ -86,15 +65,12 @@ __kernel void updateNormalShadeImage(
     if(isect->hit)
     {
         //shade normal if facing camera or not
-        float ndotd = dot(isect->d, isect->n);
+        float ndotd = dot(isect->d, isect->nDefault);
         float4 shade = ndotd < 0 ? (float4)(1, 0, 0, 1) : (float4)(0, 0, 1, 1);
         shade.xyz *= fabs(ndotd);
 
-        //pixel index
-        int index = isect->pixel.x + camera->dimension.x * isect->pixel.y;
-
         //update
-       imageBuffer[index] = getIntARGB(shade);
+       imageBuffer[id] = getIntARGB(shade);
     }
 }
 
@@ -110,10 +86,6 @@ __kernel void updateGroupbufferShadeImage(
     global Intersection* isect = isects + id;
     if(isect->hit)
     {
-        int index = isect->pixel.x + camera->dimension.x * isect->pixel.y;
-        groupBuffer[index] = getMaterial(isect->mat);
-
-    }    
-
+        groupBuffer[id] = getMaterial(isect->mat);
+    }  
 }
-

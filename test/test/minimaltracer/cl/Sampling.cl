@@ -75,6 +75,11 @@ int random_int_range(int2* state, int range)
     return (int)(rf * range);
 }
 
+int select_int_range(float rf, int range)
+{
+    return (int)(rf * range);
+}
+
 float4 sample_hemisphere(
     float2 sample
 )
@@ -104,14 +109,18 @@ float2 sample_barycentric(float2 samples)
 //Sample Triangle
 float4 sample_triangle(float2 samples, float4 p1, float4 p2, float4 p3)
 {
-    float4 e1 = p2 - p1;
-    float4 e2 = p3 - p1;
+    //float4 e1 = p2 - p1;
+    //float4 e2 = p3 - p1;
     
     //uv
-    float2 uv = sample_barycentric(samples);
+    //float2 uv = sample_barycentric(samples);
     
     //return point
-    return p1 + e1 * uv.x + e2 * uv.y;
+    //return p1 + e1 * uv.x + e2 * uv.y;
+    float alpha = 1 - sqrt(samples.x);
+    float beta  = (1 - samples.y)*sqrt(samples.x);
+    float gamma = samples.y * sqrt(samples.x);
+    return p1*alpha + p2*beta + p3*gamma;
 }
 
 // Mis power (1 for balance heuristic)

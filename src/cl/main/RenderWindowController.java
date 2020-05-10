@@ -20,12 +20,16 @@ import cl.core.data.CPoint3;
 import cl.core.data.CVector3;
 import cl.core.data.struct.CRay;
 import cl.core.device.RayDeviceMesh;
+import cl.ui.mvc.dialog.MaterialEditorDialog;
+import cl.ui.mvc.dialog.ProgressDialog;
+import cl.ui.mvc.dialog.SunskyEditorDialog;
 import cl.ui.mvc.view.icons.IconAssetManager;
 import cl.ui.mvc.viewmodel.RenderViewModel;
 import cl.ui.mvc.model.CustomData;
 import cl.ui.mvc.view.MaterialVaultTreeCell;
 import cl.ui.mvc.view.TargetTreeCell;
 import com.sun.javafx.scene.control.skin.LabeledText;
+import com.sun.javafx.tk.Toolkit;
 import coordinate.model.OrientationModel;
 import coordinate.parser.attribute.MaterialT;
 import filesystem.core.OutputFactory;
@@ -39,10 +43,12 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.ResourceBundle;
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Bounds;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
@@ -62,6 +68,7 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
@@ -153,6 +160,16 @@ public class RenderWindowController implements Initializable, RenderControllerIn
     Tab brdfTab;
     @FXML
     Tab matsTab;
+    
+    @FXML
+    Slider fovSlider;
+    @FXML
+    Label   fovLabel;
+    @FXML
+    Button sceneboundButton;
+    @FXML 
+    Button fovResetButton;
+    
         
     //API and display     
     private MambaAPIInterface api;
@@ -168,13 +185,14 @@ public class RenderWindowController implements Initializable, RenderControllerIn
     OrientationModel<CPoint3, CVector3, CRay, CBoundingBox> orientation = new OrientationModel(CPoint3.class, CVector3.class);
     int currentinstance = -2;
     
+    
     @Override
     public void initialize(URL url, ResourceBundle rb) {
                 
         // TODO    
         sceneRoot = new TreeItem(new CustomData("Scene Material", null)); 
         sceneRoot.setExpanded(true);
-       
+        
         //Init material database and scene tree view   
         initMaterialTreeData(treeViewMaterial);
         initSceneTreeData(treeViewScene);
@@ -254,6 +272,7 @@ public class RenderWindowController implements Initializable, RenderControllerIn
             FileUtility.writeLines(dataFile, "scenepath = " +newValue);            
         });
         
+        /*
         //icons for buttons (file management)
         openButton.setGraphic(IconAssetManager.getOpenIcon());
         
@@ -262,6 +281,7 @@ public class RenderWindowController implements Initializable, RenderControllerIn
         pauseButton.setGraphic(IconAssetManager.getPauseIcon());
         stopButton.setGraphic(IconAssetManager.getStopIcon());
         editButton.setGraphic(IconAssetManager.getEditIcon());        
+        */
         
         //button states
         pauseButton.setDisable(true);
@@ -277,11 +297,12 @@ public class RenderWindowController implements Initializable, RenderControllerIn
             editButton.setDisable(true);
             
             api.setDevicePriority(RENDER);            
-            
             if(api.getDevice(RENDER).isStopped())           
                 api.startDevice(RENDER);                  
             else if(api.getDevice(RENDER).isPaused())           
                 api.resumeDevice(RENDER); 
+            tPane.setDisable(true);
+            openButton.setDisable(true);
         });
         pauseButton.setOnAction(e -> {            
             pauseButton.setDisable(true);
@@ -306,6 +327,9 @@ public class RenderWindowController implements Initializable, RenderControllerIn
             editButton.setDisable(true);
             
             api.setDevicePriority(RAYTRACE);
+            
+            tPane.setDisable(false);
+            openButton.setDisable(false);
         });
         
         //Editor register
@@ -335,6 +359,27 @@ public class RenderWindowController implements Initializable, RenderControllerIn
         emitterPowerSpinner.disableProperty().bind(emitterEnabled.selectedProperty().not());
         
         iorSpinner.disableProperty().bind(refractionEnabled.selectedProperty().not());
+        
+        fovLabel.textProperty().bind(
+                Bindings.format("%.1f degrees", fovSlider.valueProperty())
+        );
+        
+        fovSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+                api.getDevice(RAYTRACE).getCameraModel().fov = newValue.floatValue();
+                api.getDevice(RAYTRACE).resume();
+        });
+        
+        sceneboundButton.setOnAction(e -> {
+            RayDeviceMesh device = (RayDeviceMesh)api.getDevice(RAYTRACE);
+            CBoundingBox bound = device.getBound();
+            device.setPriorityBound(bound);
+            device.reposition(bound);
+            api.getDevice(RAYTRACE).resume();
+        });
+        
+        fovResetButton.setOnAction(e -> {
+            fovSlider.valueProperty().setValue(45);
+        });
       
     } 
     
@@ -380,14 +425,32 @@ public class RenderWindowController implements Initializable, RenderControllerIn
         
         File file = launchSceneFileChooser(null);        
         if(file == null) {api.resumeDevice(RAYTRACE); return;}
-        
-        LambdaThread.executeThread(()->{
-            ProgressIndicator progressIndicator = new ProgressIndicator();
-            Platform.runLater(() -> parentPane.getChildren().add(progressIndicator));
+       
+        ProgressDialog load = new ProgressDialog(parentPane, new ProgressIndicator());
+        load.setResultConverter(() -> {
             api.initMesh(file.toPath());
             api.resumeDevice(RAYTRACE);
-            Platform.runLater(() -> parentPane.getChildren().remove(progressIndicator));
+            return null;
         });
+        load.showAndWaitThread();
+    }
+    
+    public void unspecifiedAction(ActionEvent e)
+    {
+        MaterialEditorDialog matDialog = new MaterialEditorDialog(parentPane);
+        matDialog.setResultConverter(() -> {
+            return null;
+        });
+        matDialog.showAndWait();
+    }
+    
+    public void showSunskyEditor(ActionEvent e)
+    {
+        SunskyEditorDialog sunskyDialog = new SunskyEditorDialog(parentPane);
+        sunskyDialog.setResultConverter(() -> {
+            return null;
+        });
+        sunskyDialog.showAndWait();
     }
     
     public File launchSceneFileChooser(Window window)
@@ -418,14 +481,14 @@ public class RenderWindowController implements Initializable, RenderControllerIn
         
         api.getBlendDisplay().translationDepth.addListener((observable, old_value, new_value) -> {               
             if(!api.isDevicePriority(RAYTRACE)) return;
-            orientation.translateDistance(api.getDevice(RAYTRACE).getCamera(), new_value.floatValue() * api.getDevice(RAYTRACE).getBound().getMaximumExtent());     
+            orientation.translateDistance(api.getDevice(RAYTRACE).getCameraModel(), new_value.floatValue() * api.getDevice(RAYTRACE).getPriorityBound().getMaximumExtent());     
             api.getDevice(RAYTRACE).resume();
         });
         
         api.getBlendDisplay().translationXY.addListener((observable, old_value, new_value) -> {    
             if(!api.isDevicePriority(RAYTRACE)) return;
-            orientation.rotateX(api.getDevice(RAYTRACE).getCamera(), (float) new_value.getX());
-            orientation.rotateY(api.getDevice(RAYTRACE).getCamera(), (float) new_value.getY());
+            orientation.rotateX(api.getDevice(RAYTRACE).getCameraModel(), (float) new_value.getX());
+            orientation.rotateY(api.getDevice(RAYTRACE).getCameraModel(), (float) new_value.getY());
             api.getDevice(RAYTRACE).resume();
         });
         
@@ -473,7 +536,7 @@ public class RenderWindowController implements Initializable, RenderControllerIn
             {
                 CustomData data = (CustomData) e.getDragboard().getContent(CustomData.getFormat());
                 MaterialT mat = (MaterialT) data.getData();       
-                int cmatIndex = api.overlay.get(x, y);          
+                int cmatIndex = api.overlay.get(x, y);
                 api.getDevice(RAYTRACE).setMaterial(cmatIndex, mat);
                 api.getDevice(RAYTRACE).resume();
             }
@@ -495,6 +558,7 @@ public class RenderWindowController implements Initializable, RenderControllerIn
                     {
                         RayDeviceMesh device = (RayDeviceMesh)api.getDevice(RAYTRACE);
                         CBoundingBox bound = device.getGroupBound(instance);
+                        device.setPriorityBound(bound);
                         device.reposition(bound);
                         device.resume();
                     }
@@ -551,10 +615,9 @@ public class RenderWindowController implements Initializable, RenderControllerIn
     {       
         Platform.runLater(() -> {
             clearSceneMaterial();
-            materials.forEach((mat) -> sceneRoot.getChildren().add(new TreeItem<>(new CustomData(mat.name, mat))));
+            materials.forEach((mat) -> sceneRoot.getChildren().add(new TreeItem<>(new CustomData(mat.getNameString(), mat))));
             sceneRoot.setExpanded(true);
         });        
         
-    }             
-
+    }    
 }

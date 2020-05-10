@@ -311,15 +311,16 @@ public class SDeviceRT {
                 7 left wall            
             */
             SMaterial emitter = materials.get(6);
-            emitter.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki
-            
-            //emitter.setEmitter(1, 1, 1);
-            //emitter.setEmitterEnabled(true);
+            //emitter.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki            
+            emitter.setEmitter(1, 1, 1);
+            emitter.setEmitterEnabled(true);
                        
             SMaterial right = materials.get(3);           
             right.setDiffuse(0, 0.8f, 0);
             
-            SMaterial left = materials.get(7);           
+            SMaterial left = materials.get(7); 
+            //left.setEmitter(1, 1, 1);
+            //left.setEmitterEnabled(true);
             left.setDiffuse(0.8f, 0f, 0);
             
             SMaterial back = materials.get(2);           
@@ -332,9 +333,10 @@ public class SDeviceRT {
             floor.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki
             
             SMaterial smallbox = materials.get(4);  
-            //smallbox.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki
-            smallbox.setEmitter(1, 1, 1);
-            smallbox.setEmitterEnabled(true);
+            smallbox.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki
+            //smallbox.setEmitter(1, 1, 1);
+            //smallbox.setEmitterEnabled(true);
+            
             SMaterial tallbox = materials.get(5);           
             tallbox.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki            
         });

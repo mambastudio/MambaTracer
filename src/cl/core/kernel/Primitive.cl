@@ -71,9 +71,9 @@ float fastTriangleIntersection(Ray r, float4 p1, float4 p2, float4 p3)
 
 float2 triangleBarycentrics(float4 p, float4 p1, float4 p2, float4 p3)
 {
-    float4 e1 = p2 - p1;
-    float4 e2 = p3 - p1;
-    float4  e = p  - p1;
+    float3 e1 = p2.xyz - p1.xyz;
+    float3 e2 = p3.xyz - p1.xyz;
+    float3  e = p.xyz  - p1.xyz;
     float d00 = dot(e1, e1);
     float d01 = dot(e1, e2);
     float d11 = dot(e2, e2);
@@ -139,60 +139,12 @@ bool intersectTriangleGlobal(global Ray* r, global Intersection* isect, Triangle
    }
 }
 
-
-
-// ray box intersection test
-bool intersectBox(Ray* r, Intersection* isect, Box box)
+float triangleInverseArea(float4 p1, float4 p2, float4 p3)
 {
-    //x
-    float t1 = (box.min.x - r->o.x)*r->inv_d.x;
-    float t2 = (box.max.x - r->o.x)*r->inv_d.x;
+    float3 e1 = p2.xyz - p1.xyz;
+    float3 e2 = p3.xyz - p1.xyz;
     
-    float tmin = min(t1, t2);
-    float tmax = max(t1, t2);
-    
-    //y
-    t1 = (box.min.y - r->o.y)*r->inv_d.y;
-    t2 = (box.max.y - r->o.y)*r->inv_d.y;
-    
-    tmin = max(tmin, min(min(t1, t2), tmax));
-    tmax = min(tmax, max(max(t1, t2), tmin));
-    
-    //z
-    t1 = (box.min.z - r->o.z)*r->inv_d.z;
-    t2 = (box.max.z - r->o.z)*r->inv_d.z;
-    
-    tmin = max(tmin, min(min(t1, t2), tmax));
-    tmax = min(tmax, max(max(t1, t2), tmin));
-    
-    bool hit = tmax > max(tmin, 0.0f);
-    float t = (tmin > r->tMin) ? tmin : tmax;
-
-    // if intersection, update ray and intersection
-    if(hit && isInside(*r, t))
-    {
-        // calculate normal
-        float4 c = (box.min + box.max) * 0.5f;
-        float4 p = getPoint(*r, t) - c;
-        float4 d = (box.min - box.max) * 0.5f;
-        float bias = 1.00001f;
-
-        float4 n;
-        n.x = (int)(p.x/fabs(d.x) * bias);
-        n.y = (int)(p.y/fabs(d.y) * bias);
-        n.z = (int)(p.z/fabs(d.z) * bias); 
-        //n = normalize(n); //not working properly, I don't know why
-
-        //set values
-        r->tMax = t;
-        isect->p = getPoint(*r, t);
-        isect->n = n;
-        isect->d = r->d;
-        //isect->uv;
-        //isect->id;
-        //isect->pixel;
-        return true;
-    }
-
-    return false;
+    float3 normal = cross(e1, e2);
+    float len     = length(normal);
+    return 2.f/len;  
 }

@@ -65,7 +65,7 @@ float4 illuminateAreaLight(
     *oDirectionToLight      = lightpoint - aReceivingPosition;
     float distSqr           = dot(*oDirectionToLight, *oDirectionToLight);
     *oDistance              = sqrt(distSqr);
-    *oDirectionToLight      = (*oDirectionToLight) / (*oDistance);
+    *oDirectionToLight      = (*oDirectionToLight) / (*oDistance);   
 
     float cosNormalDir      = dot(aLight.frame.mZ, -(*oDirectionToLight));
 

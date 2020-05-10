@@ -43,7 +43,6 @@ public class TestCompact {
             for (CIntersection intersection : intersections) {
                 int rValue = r.ints(isectSize, 1, 2).limit(1).findFirst().getAsInt(); 
                 intersection.setHit(rValue);
-                intersection.setSampledBRDF(rValue);
                 System.out.println(intersection.hit);
             }
         });

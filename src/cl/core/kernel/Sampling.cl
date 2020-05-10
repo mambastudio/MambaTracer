@@ -17,6 +17,18 @@ unsigned int WangHash(int seed)
     return seed;
 }
 
+//unique seed for each thread 
+//https://github.com/jbikker/lighthouse2/blob/master/lib/RenderCore_Optix7Filter/optix/.optix.cu
+int2 generate_seed(global State* state)
+{
+    int global_id = get_global_id(0);
+
+    int2 seed;
+    seed.x = ( global_id  + (int)(state->frameCount)  * (state->seed.x));
+    seed.y = ( global_id  + (int)(state->frameCount)  * (state->seed.y));
+    return seed;
+}
+
 //https://github.com/straaljager/OpenCL-path-tracing-tutorial-3-Part-2/blob/master/opencl_kernel.cl
 float get_random(int2* state)
 {
@@ -46,7 +58,7 @@ float2 random_float2(int2* state)
 
 float2 rand2(int2 state)
 {
-  
+
 }  
 
 //Refer to https://stackoverflow.com/questions/363681/how-do-i-generate-random-integers-within-a-specific-range-in-java
@@ -103,4 +115,36 @@ float4 sample_triangle(float2 samples, float4 p1, float4 p2, float4 p3)
     
     //return point
     return p1 + e1 * uv.x + e2 * uv.y;
+}
+
+// Mis power (1 for balance heuristic)
+float mis(float aPdf)
+{
+    return aPdf;
+}
+
+// Mis weight for 2 pdfs
+float mis2(float aSamplePdf, float aOtherPdf)
+{
+    return mis(aSamplePdf) / (mis(aSamplePdf) + mis(aOtherPdf));
+}
+
+// Utilities for converting PDF between Area (A) and Solid angle (W)
+// WtoA = PdfW * cosine / distance_squared
+// AtoW = PdfA * distance_squared / cosine
+
+float pdfWtoA(
+    float aPdfW,
+    float aDist,
+    float aCosThere)
+{
+    return aPdfW * fabs(aCosThere) / (aDist*aDist);
+}
+
+float pdfAtoW(
+    float aPdfA,
+    float aDist,
+    float aCosThere)
+{
+    return aPdfA * (aDist*aDist) / fabs(aCosThere);
 }

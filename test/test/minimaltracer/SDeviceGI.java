@@ -11,7 +11,6 @@ import cl.core.data.CPoint2;
 import coordinate.struct.StructByteArray;
 import coordinate.struct.StructIntArray;
 import java.math.BigInteger;
-import java.util.Arrays;
 import java.util.Random;
 import thread.model.LambdaThread;
 import wrapper.core.CBufferFactory;
@@ -128,7 +127,7 @@ public class SDeviceGI {
         gInitIsectsKernel               = platform.createKernel("InitIntersection", gIsectBuffer);
         gInitPixelIndicesKernel         = platform.createKernel("InitIntDataToIndex", gPixelIndicesBuffer);
         gIntersectPrimitivesKernel      = platform.createKernel("IntersectPrimitives", gRaysBuffer, gIsectBuffer, gCountBuffer, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getCNodes(), bvh.getCBounds());
-        gLightHitPassKernel             = platform.createKernel("LightHitPass", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), gAccumBuffer, gPixelIndicesBuffer, gCountBuffer);
+        gLightHitPassKernel             = platform.createKernel("LightHitPass", gIsectBuffer, gRaysBuffer, gBPathBuffer,  gTotalLights, mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), gAccumBuffer, gPixelIndicesBuffer, gCountBuffer);
         gUpdateImageKernel              = platform.createKernel("UpdateImage", gAccumBuffer, gFrameCountBuffer, gImageBuffer);
         gSampleBSDFRayDirectionKernel   = platform.createKernel("SampleBSDFRayDirection", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), gPixelIndicesBuffer, gStateBuffer, gCountBuffer);
         gDirectLightKernel              = platform.createKernel("DirectLight", gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, gAccumBuffer, gPixelIndicesBuffer, gCountBuffer, gStateBuffer, mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getCNodes(), bvh.getCBounds());
@@ -166,7 +165,7 @@ public class SDeviceGI {
         platform.executeKernel1D(gInitIsectsKernel, globalWorkSize, localWorkSize);  
         platform.executeKernel1D(gInitPixelIndicesKernel, globalWorkSize, localWorkSize);
         resetCount();
-        for(int pathLength = 1; pathLength<=5; pathLength++)
+        for(int pathLength = 1; pathLength<=4; pathLength++)
         {   
             platform.executeKernel1D(gIntersectPrimitivesKernel, globalWorkSize, localWorkSize);           
             platform.executeKernel1D(gLightHitPassKernel, globalWorkSize, localWorkSize);         

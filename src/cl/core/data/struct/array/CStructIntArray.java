@@ -44,7 +44,7 @@ public class CStructIntArray<T extends IntStruct> {
         return cbuffer;
     }
     
-    public StructIntArray getStructArray()
+    public StructIntArray<T> getStructArray()
     {
         return structArray;
     }

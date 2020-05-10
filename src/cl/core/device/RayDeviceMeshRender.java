@@ -6,12 +6,13 @@
 package cl.core.device;
 
 import bitmap.display.BlendDisplay;
+import bitmap.image.BitmapARGB;
+import cl.core.CAccelerator;
 import cl.core.CBoundingBox;
 import cl.core.CCamera;
-import cl.core.CCamera.CameraStruct;
+import cl.core.CCameraModel;
 import cl.core.CCompact;
 import cl.core.CImageFrame;
-import cl.core.CNormalBVH;
 import static cl.core.api.MambaAPIInterface.DeviceType.RAYTRACE;
 import static cl.core.api.MambaAPIInterface.DeviceType.RENDER;
 import static cl.core.api.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
@@ -36,6 +37,7 @@ import java.math.BigInteger;
 import java.nio.IntBuffer;
 import java.util.Random;
 import thread.model.LambdaThread;
+import wrapper.core.CBufferFactory;
 import wrapper.core.CKernel;
 import static wrapper.core.CMemory.READ_WRITE;
 import wrapper.core.CResourceFactory;
@@ -51,128 +53,97 @@ public class RayDeviceMeshRender implements RayDeviceInterface<TracerAPI, IntBuf
     //API
     TracerAPI api;
    
-    //image, image count and seed
-    private CStructTypeBuffer<CState> gState;
-    private CImageFrame  gFrameImage;   
-       
-    //pixel indices and camera
-    private CIntBuffer   gPixelIndices;   
-    private CStructTypeBuffer<CameraStruct> gCamera;
-        
-    //kernels   
-    private CKernel rInitCameraRaysKernel;
-    private CKernel rInitIsectsKernel;
-    private CKernel rInitPathsKernel;
-    private CKernel gInitPixelIndicesKernel;    
-    private CKernel gIntersectTestKernel;
-    private CKernel gInitOcclusionHitsKernel;
-    private CKernel gSampleLightKernel;
-    private CKernel gGenerateShadowRaysKernel;
-    private CKernel gOcclusionTestKernel;
-    private CKernel gEvaluateBsdfExplicitKernel;
-    private CKernel gProcessIntersection;
-    private CKernel gLightHitPassKernel;  
-    private CKernel rEvaluateBSDFIntersectKernel;
-    private CKernel rSampleBSDFRayDirectionKernel;
-    
-    
-    //Prefix sum
-    CCompact compact;
-    
-    private CIntBuffer   gCount;   
-   
-    //Ray & intersects
-    private CStructTypeBuffer<CRay> gRays;   
-    private CStructTypeBuffer<CIntersection> gIsects;    
-    private CStructTypeBuffer<CPath> gPaths;
-    
-    //lights, light path, occlusion hits and shadow rays
-    private CStructTypeBuffer<CLight> gLights;
-    private CIntBuffer gTotalLights;
-    private CStructTypeBuffer<CPath> gLightPaths;
-    private CStructTypeBuffer<CRay> gShadowRays;
-    private CIntBuffer gOcclusionHits;
-    
-    //mesh and accelerator
-    CMesh mesh;
-    CNormalBVH bvhBuild; 
-    
-    //global and local size
-    private int globalSize, localSize;
+    BlendDisplay display;
     
     //render thread
     LambdaThread renderThread = new LambdaThread();
-    Random random = new Random();
+    
+    CCameraModel cameraModel = null;
+    CMesh mesh = null;
+    CAccelerator bvh = null;
+    
+    int width, height;
+    BitmapARGB renderBitmap;
+    
+    //global and local size
+    int globalSize, localSize;
+    
+    boolean isImageCleared = true;
+    
+    //Frame
+    CImageFrame frame = null;
+    
+    //CL
+    CStructTypeBuffer<CState> gStateBuffer;
+    CIntBuffer gCounterBuffer = null;
+    CIntBuffer gPixelIndicesBuffer = null;
+    CStructTypeBuffer<CCamera> gCameraBuffer = null;    
+    CStructTypeBuffer<CRay> gRaysBuffer = null;
+    CStructTypeBuffer<CRay> gOcclusRaysBuffer = null;
+    CStructTypeBuffer<CIntersection> gIsectBuffer = null;
+    CStructTypeBuffer<CPath> gBPathBuffer = null;
+    CCompact gCompact;
+    private CIntBuffer gStartNode = null;
+    private CIntBuffer gTotalLights;
+    private CStructTypeBuffer<CLight> gLights;
+  
+    //kernels   
+    private CKernel gInitCameraRaysJitterKernel;
+    private CKernel gInitIsectsKernel;
+    private CKernel gInitPathsKernel;
+    private CKernel gInitPixelIndicesKernel;
+    private CKernel gIntersectPrimitivesKernel;  
+    private CKernel gLightHitPassKernel;    
+    private CKernel gSampleBSDFRayDirectionKernel;
+    private CKernel gDirectLightKernel;
     
     public RayDeviceMeshRender()
     {
         
     }    
-        
+    
     public void initBuffers()
     {
-        gFrameImage.initBuffers();
+        frame.initBuffers();
     }   
     
     @Override
     public void setAPI(TracerAPI api) {
         this.api = api;
         this.globalSize = api.getGlobalSizeForDevice(RENDER);
-        this.localSize = 1;
-        
-        this.gPixelIndices          = api.allocInt("rPixels", globalSize, READ_WRITE);
-        this.gIsects                = api.allocStructType("renderIsects", CIntersection.class, globalSize, READ_WRITE);
-        this.gPaths                 = api.allocStructType("rPaths", CPath.class, globalSize, READ_WRITE);
-        this.gRays                  = api.allocStructType("renderRays", CRay.class, globalSize, READ_WRITE);
-        this.gShadowRays            = api.allocStructType("gShadowRays", CRay.class, globalSize, READ_WRITE);
-        this.gCount                 = api.intValue("renderCount", globalSize, READ_WRITE);
-        this.gCamera                = api.allocStructType("camera", CameraStruct.class, 1, READ_WRITE);
-        this.gOcclusionHits         = api.allocInt("gOcclusionHits", globalSize, READ_WRITE);
-         
-        this.gState                 = api.allocStructType("gState", CState.class, 1, READ_WRITE);
-       
-        this.gFrameImage            = new CImageFrame(api.configurationCL(), api.getImageWidth(RENDER_IMAGE), api.getImageHeight(RENDER_IMAGE));
-      
-        //scene light buffer
-        this.gLightPaths            = api.allocStructType("lightPaths", CPath.class, globalSize, READ_WRITE);
-        
-        //this are dynamic hence dummy initials
-        this.gLights                = api.allocStructType("lights", CLight.class, 1, READ_WRITE);
-        
-        //currently none        
-        this.gTotalLights           = api.intValue("totalLights", 0, READ_WRITE);
-        
-        
-        
-        //raytracing compaction
-        compact = new CCompact(api);
-        compact.initPrefixSumFrom(gIsects, gCount);
-        compact.initIsects(gIsects);
-        compact.initPixels(gPixelIndices);
-        
-        
+        this.localSize = 100;
+        this.frame = new CImageFrame(api.configurationCL(), api.getImageWidth(RENDER_IMAGE), api.getImageHeight(RENDER_IMAGE));
+        gStartNode           = api.allocIntValue("gStartNode", 0, READ_WRITE);
+        gStateBuffer         = api.allocStructType("gState", CState.class, 1, READ_WRITE);
+        gPixelIndicesBuffer  = api.allocInt("gPixelIndices",  globalSize, READ_WRITE);        
+        gCounterBuffer       = api.allocIntValue("gCount", globalSize, READ_WRITE);
+        gRaysBuffer          = api.allocStructType("gRays", CRay.class, globalSize, READ_WRITE);
+        gOcclusRaysBuffer    = api.allocStructType("gOcclusRays", CRay.class, globalSize, READ_WRITE);   
+        gCameraBuffer        = api.allocStructType("gCamera", CCamera.class, 1, READ_WRITE);
+        gBPathBuffer         = api.allocStructType("gPaths", CPath.class, globalSize, READ_WRITE);
+        gIsectBuffer         = api.allocStructType("gIsects", CIntersection.class, globalSize, READ_WRITE);
+        gTotalLights         = api.allocIntValue("totalLights",  0, READ_WRITE);
+        gLights              = api.allocStructType("lights", CLight.class, 1, READ_WRITE);
+        gCompact             = new CCompact(api.configurationCL());       
+        gCompact.init(gIsectBuffer, gPixelIndicesBuffer, gCounterBuffer);
     }
 
     @Override
-    public void set(CMesh mesh, CNormalBVH bvhBuild) {
+    public void set(CMesh mesh, CAccelerator bvhBuild) {
         this.mesh = mesh;
-        this.bvhBuild = bvhBuild;
+        this.bvh = bvhBuild;
         
-        this.rInitCameraRaysKernel          = api.createKernel("InitCameraRayData", gCamera, gRays);
-        this.rInitPathsKernel               = api.createKernel("InitPathData", gPaths);
-        this.rInitIsectsKernel              = api.createKernel("initIntersection", gIsects);
-        this.gInitPixelIndicesKernel        = api.createKernel("initPixelIndices", gPixelIndices);
-        this.gInitOcclusionHitsKernel       = api.createKernel("InitIntData", gOcclusionHits); 
-        this.gSampleLightKernel             = api.sampleLightsKernel("sampleLight", gLightPaths, gLights, gTotalLights, gCount, gState, mesh);
-        this.gGenerateShadowRaysKernel      = api.createKernel("GenerateShadowRays", gLightPaths, gIsects, gRays, gCount);
-        this.gIntersectTestKernel           = api.createIntersectionKernel("intersectPrimitives", gRays, gIsects, gCount, mesh, bvhBuild);
-        this.gOcclusionTestKernel           = api.createOcclusionKernel("intersectOcclusion", gShadowRays, gOcclusionHits, gCount, mesh, bvhBuild);
-        this.gEvaluateBsdfExplicitKernel    = api.createKernel("EvaluateBsdfExplicit", gIsects, gOcclusionHits, gPaths, mesh.clMaterials(), gPixelIndices, gCount);
-        this.gProcessIntersection           = api.createKernel("UpdateBSDFIntersect", gIsects, gRays, gPaths, gPixelIndices, gCount);
-        this.gLightHitPassKernel            = api.createKernel("LightHitPass", gIsects, gPaths, mesh.clMaterials(), gFrameImage.getFrameAccum(), gCamera, gCount);
-        this.rEvaluateBSDFIntersectKernel   = api.createKernel("EvaluateBSDFIntersect", gIsects, gPaths, mesh.clMaterials(), gCamera, gCount);
-        this.rSampleBSDFRayDirectionKernel  = api.createKernel("SampleBSDFRayDirection", gIsects, gRays, gPaths, gPixelIndices, gState, gCount);
+        gStartNode.mapWriteValue(api.configurationCL().queue(), bvhBuild.getStartNodeIndex());
         
+        gInitCameraRaysJitterKernel     = api.createKernel("InitCameraRayDataJitter", gCameraBuffer, gRaysBuffer, gStateBuffer);
+        gInitPathsKernel                = api.createKernel("InitPathData", gBPathBuffer);
+        gInitIsectsKernel               = api.createKernel("InitIntersection", gIsectBuffer);
+        gInitPixelIndicesKernel         = api.createKernel("InitIntDataToIndex", gPixelIndicesBuffer);
+        gIntersectPrimitivesKernel      = api.createKernel("IntersectPrimitives", gRaysBuffer, gIsectBuffer, gCounterBuffer, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getCNodes(), bvh.getCBounds(), gStartNode);
+        gLightHitPassKernel             = api.createKernel("LightHitPass", gIsectBuffer, gRaysBuffer, gBPathBuffer,  gTotalLights, mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), frame.getFrameAccum(), gPixelIndicesBuffer, gCounterBuffer);
+        gSampleBSDFRayDirectionKernel   = api.createKernel("SampleBSDFRayDirection", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), gPixelIndicesBuffer, gStateBuffer, gCounterBuffer);
+        gDirectLightKernel              = api.createKernel("DirectLight", gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, frame.getFrameAccum(), gPixelIndicesBuffer, gCounterBuffer, gStateBuffer, mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getCNodes(), bvh.getCBounds(), gStartNode);
+    
     }
 
     @Override
@@ -186,150 +157,113 @@ public class RayDeviceMeshRender implements RayDeviceInterface<TracerAPI, IntBuf
         StructIntArray<CFace> faces = new StructIntArray<>(CFace.class, mesh.getCount());        
         faces.setIntArray(mesh.getTriangleFacesArray());      
         int lightCount = 0;
-                
+                        
         for(int i = 0; i<faces.size(); i++)
         {
-            CFace face = faces.get(i);
+            CFace face = faces.get(i);            
             CMaterial material = mesh.clMaterials().get(face.getMaterialIndex());
+            
             if(material.emitterEnabled) 
             {
                 lights.add(new CLight(i));
                 lightCount++;
             }            
         }
-        
+        System.out.println("light count : " +lightCount);
         CResourceFactory.releaseMemory("lights");
         gTotalLights.mapWriteValue(api.configurationCL().queue(), lightCount);
-        gLights  = api.allocStructType("lights", lights, lightCount, READ_WRITE);
-        
-        gSampleLightKernel.resetPutArgs(gLightPaths, gLights, gTotalLights, gCount, gState, 
-                mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize()); 
-        
-        System.out.println("light count : " +lightCount);
+        gLights  = CBufferFactory.allocStructType("lights", api.configurationCL().context(), lights, READ_WRITE);
+        gLights.mapWriteBuffer(api.configurationCL().queue(), buffer->{});//write into device (FIXME)          
+        gDirectLightKernel.resetPutArgs(gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, frame.getFrameAccum(), gPixelIndicesBuffer, gCounterBuffer, gStateBuffer, 
+                mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getCNodes(), bvh.getCBounds()); 
     }
 
     @Override
-    public void execute() {       
-        updateCamera();        
+    public void execute() {  
+        updateCamera();
         initBuffers();
         initLight();
-        renderThread.startExecution(()->{                 
-            //path trace here            
+        renderThread.startExecution(()-> {
+            //execute pause             
             loop();
-            //add frame count
-            gFrameImage.incrementFrameCount();
-        });
+            frame.incrementFrameCount();
+           // System.out.println("kubafu");
+        });   
         
     }
     
     public void loop()
     {         
-        
-        //pause level
-        renderThread.chill();   
-        
-        //init intersections
-        api.configurationCL().queue().put1DRangeKernel(rInitIsectsKernel, globalSize, localSize);
-        //init path
-        api.configurationCL().queue().put1DRangeKernel(rInitPathsKernel, globalSize, localSize);
-        //init camera rays
-        api.configurationCL().queue().put1DRangeKernel(rInitCameraRaysKernel, globalSize, localSize);
-        //init pixel indices
+        renderThread.chill();
+         
+        allocateState();//set new seed state
+        api.execute1D(gInitCameraRaysJitterKernel, globalSize, localSize);
+        api.execute1D(gInitPathsKernel, globalSize, localSize); 
+        api.execute1D(gInitIsectsKernel, globalSize, localSize);  
         api.execute1D(gInitPixelIndicesKernel, globalSize, localSize);
-        //reset intersection count
-        gCount.mapWriteValue(api.configurationCL().queue(), globalSize);
+        resetCounter();
+        for(int pathLength = 1; pathLength<=2; pathLength++)
+        {               
+            api.execute1D(gIntersectPrimitivesKernel, globalSize, localSize);           
+            api.execute1D(gLightHitPassKernel, globalSize, localSize);       
+            gCompact.execute();           
+            directLightEvaluation();
+            allocateState();//set new seed state            
+            api.execute1D(gSampleBSDFRayDirectionKernel, globalSize, localSize);
+           
+        }
+        //process image (tonemapping, average luminance, etc)
+        frame.processImage();
+              
+        //ensure queue clears up (makes it faster)
+        api.configurationCL().queue().finish();
         
-        
+        //read image
+        api.readImageFromDevice(RENDER, RENDER_IMAGE);  
+    }
+    private void resetCounter()
+    {
+        gCounterBuffer.mapWriteValue(api.configurationCL().queue(), globalSize);
+    }
+    
+    public void directLightEvaluation()
+    {
+        allocateState();//set new seed state        
+        api.execute1D(gDirectLightKernel, globalSize, localSize);
+    }
+    
+    private void allocateState()
+    {
         //init seed, image dimension and increment frame count
-        gState.mapWriteBuffer(api.configurationCL().queue(), states->{
+        gStateBuffer.mapWriteBuffer(api.configurationCL().queue(), states->{
             CState state = states.get(0); //we use one state
             
             //seed for current frame count
             int seed0 = BigInteger.probablePrime(30, new Random()).intValue();
             int seed1 = BigInteger.probablePrime(30, new Random()).intValue();
             
-            state.setSeed(seed0, seed1);
-            state.setDimension(
-                    api.getImageWidth(RENDER_IMAGE), 
-                    api.getImageHeight(RENDER_IMAGE));            
-            state.incrementFrameCount();            
+            state.setSeed(seed0, seed1);   
+            state.setFrameCount(frame.getFrameCount().mapReadValue(api.configurationCL().queue()));
         });
-        
-        //path trace
-        for(int i = 0; i<2; i++)
-        {
-            //rCount.mapReadBuffer(api.configurationCL().queue(), buffer -> System.out.println(buffer.get())); 
-            //intersect primitives
-            api.configurationCL().queue().put1DRangeKernel(gIntersectTestKernel, globalSize, localSize);
-            
-            //transfer data to path, from intersection (such as bsdf, hitpoint)
-            api.configurationCL().queue().put1DRangeKernel(gProcessIntersection, globalSize, localSize);
-                       
-            //implicit light hit
-            api.configurationCL().queue().put1DRangeKernel(gLightHitPassKernel, globalSize, localSize);
-                  
-            //compact intersection and pixels
-            compact.executePrefixSum();
-            compact.compactIsects(globalSize);
-            compact.compactPixels(globalSize);
-            
-            //evaluate bsdf
-            api.configurationCL().queue().put1DRangeKernel(this.rEvaluateBSDFIntersectKernel, globalSize, localSize);
-            
-            //direct light evaluation
-            directLightEvaluation();
-            
-            //sample new directions
-            api.configurationCL().queue().put1DRangeKernel(this.rSampleBSDFRayDirectionKernel, globalSize, localSize);
-        }
-        
-        //process image (tonemapping, average luminance, etc)
-        gFrameImage.processImage();
-       
-        //ensure queue clears up (makes it faster)
-        api.configurationCL().queue().finish();
-        
-         //read image
-        api.readImageFromDevice(RENDER, RENDER_IMAGE);   
-        
-        
-    }
-    
-    /* 
-     * init hit buffer
-     * sample light
-     * generate shadow rays
-     * intersect shadow rays
-     * evaluate direct light bsdf
-    */
-    public void directLightEvaluation()
-    {
-        api.execute1D(gInitOcclusionHitsKernel, globalSize, localSize);
-        api.execute1D(gSampleLightKernel, globalSize, localSize);
-        api.execute1D(gGenerateShadowRaysKernel, globalSize, localSize);
-        api.execute1D(gOcclusionTestKernel, globalSize, localSize);
-        api.execute1D(gEvaluateBsdfExplicitKernel, globalSize, localSize);
     }
 
     @Override
     public void updateCamera() {
-        
-        CCamera rtCamera = api.getDevice(RAYTRACE).getCamera();
-        this.gCamera.mapWriteBuffer(api.configurationCL().queue(), cameraStruct -> 
+        CCameraModel rtCamera = api.getDevice(RAYTRACE).getCameraModel();
+        this.gCameraBuffer.mapWriteBuffer(api.configurationCL().queue(), cameraStruct -> 
             {
-                CCamera.CameraStruct cam = rtCamera.getCameraStruct();
+                CCamera cam = rtCamera.getCameraStruct();
                 cam.setDimension(new CPoint2(api.getImageSize(RAYTRACE_IMAGE)));
                 cameraStruct.set(cam, 0);
                 
                 OutputFactory.print("eye", rtCamera.position().toString());
                 OutputFactory.print("dir", rtCamera.forward().toString());
-                OutputFactory.print("fov", Float.toString(rtCamera.fov));
-                
-            });
+                OutputFactory.print("fov", Float.toString(rtCamera.fov));                
+            });        
     }
 
     @Override
-    public CCamera getCamera() {
+    public CCameraModel getCameraModel() {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -360,12 +294,13 @@ public class RayDeviceMeshRender implements RayDeviceInterface<TracerAPI, IntBuf
 
     @Override
     public boolean isPaused() {
-        return renderThread.isPaused();
+        return renderThread.isPaused();       
     }
 
     @Override
     public boolean isRunning() {
         return !renderThread.isPaused();
+      
     }
 
     @Override
@@ -386,7 +321,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface<TracerAPI, IntBuf
     @Override
     public void readBuffer(DeviceBuffer name, CallBackFunction callback) {
         if(name == RENDER_BUFFER)
-            gFrameImage.getFrameARGB().mapReadBuffer(api.configurationCL().queue(), callback);
+            frame.getFrameARGB().mapReadBuffer(api.configurationCL().queue(), callback);
     }
 
     @Override
@@ -396,7 +331,7 @@ public class RayDeviceMeshRender implements RayDeviceInterface<TracerAPI, IntBuf
 
     @Override
     public boolean isStopped() {
-        return renderThread.isTerminated();
+        return renderThread.isTerminated();        
     }
 
     @Override
@@ -406,6 +341,16 @@ public class RayDeviceMeshRender implements RayDeviceInterface<TracerAPI, IntBuf
 
     @Override
     public ShadeType getShadeType() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public CBoundingBox getPriorityBound() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public void setPriorityBound(CBoundingBox bound) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     

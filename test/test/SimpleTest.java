@@ -51,8 +51,6 @@ public class SimpleTest {
             for(CIntersection intersection : intersections)
             {
                 System.out.println(intersection.mat);
-                System.out.println(intersection.pixel);
-                System.out.println(intersection.throughput);
                 
             }
             

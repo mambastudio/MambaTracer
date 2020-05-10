@@ -29,7 +29,8 @@ float fastTriangleIntersection(Ray r, float4 p1, float4 p2, float4 p3)
 }
 
 float2 triangleBarycentrics(float4 p, float4 p1, float4 p2, float4 p3)
-{
+{ 
+    //since w is not initialized (nan) hence why we use xyz (some drivers - intel - handle uninitialized variables as nan).
     float3 e1 = p2.xyz - p1.xyz;
     float3 e2 = p3.xyz - p1.xyz;
     float3  e = p.xyz  - p1.xyz;

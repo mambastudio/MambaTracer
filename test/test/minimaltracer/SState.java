@@ -6,7 +6,6 @@
 package test.minimaltracer;
 
 import cl.core.data.CInt2;
-import cl.core.data.CPoint2;
 import coordinate.struct.ByteStruct;
 
 /**
@@ -29,13 +28,7 @@ public class SState extends ByteStruct {
         seed.y = seed1;
         this.refreshGlobalArray();
     }
-            
-    public void incrementFrameCount()
-    {
-        this.frameCount++;
-        this.refreshGlobalArray();
-    }
-    
+  
     public void setFrameCount(float frameCount)
     {
         this.frameCount = frameCount;

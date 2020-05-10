@@ -5,31 +5,43 @@
  */
 package test.build;
 
+import cl.core.kernel.CLSource;
 import cl.shapes.CMesh;
 import coordinate.parser.obj.OBJParser;
 import java.math.BigInteger;
 import java.util.Random;
+import org.jocl.CL;
+import wrapper.core.OpenCLPlatform;
+import wrapper.util.CLFileReader;
 
 /**
  *
  * @author user
  */
 public class Test {
-    int array[] = {};
+    
+    //"C:\\Users\\user\\Documents\\3D Scenes\\mori_knob\\testObj.obj"
+    //"C:\\Users\\user\\Documents\\3D Scenes\\Ajax\\Ajax_wall_emitter.obj"
+    //"C:\\Users\\user\\Documents\\3D Scenes\\charger_free\\charger_emitter.obj"
     public static void main(String... args)
     {
-        Random rnd = new Random();
-        int seed = 729394943;//BigInteger.probablePrime(30, rnd).intValue();      
-        System.out.println(seed); Math.random();
-        System.out.println(Integer.bitCount(seed));
-        System.out.println(rndFloat(seed));
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "Print.cl"));       
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "Common.cl"));
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "Primitive.cl"));
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "NormalBVH.cl"));
+        stringBuilder.append(CLFileReader.readFile(CLSource.class, "NormalBVHBuilder.cl"));
+        
+        CL.setExceptionsEnabled(true);
+        OpenCLPlatform configuration = OpenCLPlatform.getDefault(stringBuilder.toString());
+        
+        CMesh mesh = new CMesh(configuration);           
+        OBJParser parser = new OBJParser(); 
+        parser.read("C:\\Users\\user\\Documents\\3D Scenes\\plane\\Triangles.obj", mesh);
+        mesh.initCLBuffers();
+        
+        GPUBuildBVH build = new GPUBuildBVH(configuration);
+        build.build(mesh);
     }
     
-    public static float rndFloat(int seed)
-    {
-        seed ^= seed << 13;
-        seed ^= seed >> 17;
-        seed ^= seed << 5;
-        return seed * 2.3283064365387e-10f;
-    }
 }

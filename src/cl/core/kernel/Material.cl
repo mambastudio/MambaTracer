@@ -21,15 +21,10 @@ typedef struct
 BSDF setupBSDF(global Ray* ray, global Intersection* isect)
 {
    BSDF bsdf;
-   //check normals first
-   if(dot(isect->n, ray->d)>0)
-      bsdf.frame = get_frame(-isect->n);
-   else
-      bsdf.frame = get_frame(isect->n);
-   
+   bsdf.frame = get_frame(isect->n);
    //set local dir fix for ray incoming
    bsdf.localDirFix = local_coordinate(bsdf.frame, -ray->d);
-
+   bsdf.materialID  = isect->mat;
    return bsdf;
 }
 
@@ -59,4 +54,51 @@ int selectBRDF(Material mat)
 bool isEmitter(Material mat)
 {
    return mat.emitterEnabled;
+}
+
+float pdfDiffuse(float4 localDirGen)
+{
+   return (localDirGen.z *(float)(M_1_PI));
+}
+
+float4 evaluateDiffuse(Material material, float4 localDirGen, float* directPdfW)
+{
+   *directPdfW = localDirGen.z * (float)(M_1_PI);
+   return (float4)(material.diffuse.xyz * (float)(M_1_PI), 1.f);
+}
+
+float4 sampleDiffuse(Material material, float2 sample, float4* localDirGen, float* cosThetaGen, float* pdfW)
+{
+   *localDirGen = sample_hemisphere(sample);
+   *pdfW        = pdfDiffuse(*localDirGen);
+   *cosThetaGen = fabs(localDirGen->z);
+   //printFloat4(material.diffuse);
+   return (float4)(material.diffuse.xyz * (float)(M_1_PI), 1.f);
+}
+
+float4 evaluateBrdf(Material material, BSDF bsdf, float4 oWorldDirGen, float* oCosThetaGen, float* directPdfW)
+{  
+  //if not initialized with value, it has an issue (driver issues of handling unitialized variables)
+   float4 result = (float4)(0, 0, 0, 0);
+
+   float4 localDirGen = local_coordinate(bsdf.frame, oWorldDirGen);
+   if(localDirGen.z * bsdf.localDirFix.z < 0)
+       return result;
+
+   if(localDirGen.z < EPS_COSINE || bsdf.localDirFix.z < EPS_COSINE)
+       return result;
+
+   *oCosThetaGen = fabs(localDirGen.z);
+   result = evaluateDiffuse(material, localDirGen, directPdfW);
+   return result;
+}
+
+float4 sampleBrdf(Material material, BSDF bsdf, float2 sample, float4* oWorldDirGen, float* oCosThetaGen, float* pdfW)
+{
+   float4 localDirGen;
+   float4 result = sampleDiffuse(material, sample, &localDirGen, oCosThetaGen, pdfW);
+   *oWorldDirGen = world_coordinate(bsdf.frame, localDirGen);
+   if(*oCosThetaGen < EPS_COSINE)
+        return makeFloat4(0, 0, 0, 0);
+   return result;
 }

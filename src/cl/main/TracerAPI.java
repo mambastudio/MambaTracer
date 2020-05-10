@@ -7,8 +7,10 @@ package cl.main;
 
 import bitmap.display.BlendDisplay;
 import bitmap.image.BitmapARGB;
+import cl.core.CAccelerator;
 import cl.core.CMaterialInterface;
-import cl.core.CNormalBVH;
+import cl.core.accelerator.CNormalBVH;
+import cl.core.accelerator.CPlocBVH;
 import cl.core.Overlay;
 import cl.core.api.MambaAPIInterface;
 import static cl.core.api.MambaAPIInterface.DeviceType.RAYTRACE;
@@ -87,7 +89,7 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
     
     //mesh and accelerator
     private CMesh mesh;
-    private CNormalBVH bvhBuild;
+    private CAccelerator bvhBuild;
     
     //device priority
     private DeviceType devicePriority = RAYTRACE;
@@ -113,8 +115,8 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
         //instantiate devices
         deviceRaytrace = new RayDeviceMesh();
         deviceRaytrace.setAPI(this);
-        //deviceRender = new RayDeviceMeshRender();
-        //deviceRender.setAPI(this);
+        deviceRender = new RayDeviceMeshRender();
+        deviceRender.setAPI(this);
         
         //default mesh
         this.initDefaultMesh();
@@ -266,7 +268,7 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
     {
         //load mesh and init mesh variables
         mesh = new CMesh(configurationCL());
-        OBJMappedParser parser = new OBJMappedParser();    
+        OBJParser parser = new OBJParser();    
         Timer parseTime = Timer.timeThis(() -> parser.read(path.toString(), mesh)); //Time parsing
         OutputFactory.print("scene parse time", parseTime.toString());
         mesh.initCLBuffers();
@@ -276,14 +278,14 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
         
         //build accelerator
         Timer buildTime = Timer.timeThis(() -> {                                   //Time building
-            this.bvhBuild = new CNormalBVH(configuration);
+            this.bvhBuild = new CPlocBVH(configuration);
             this.bvhBuild.build(mesh);      
         });
         OutputFactory.print("bvh build time", buildTime.toString());
         
         //set to device for rendering/raytracing
         this.deviceRaytrace.set(mesh, bvhBuild);
-        //this.deviceRender.set(mesh, bvhBuild);
+        this.deviceRender.set(mesh, bvhBuild);
     }
     
     @Override
@@ -414,12 +416,12 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
         controllerImplementation.displaySceneMaterial(parser.getSceneMaterialList());
         
         //build accelerator
-        this.bvhBuild = new CNormalBVH(configurationCL());
+        this.bvhBuild = new CPlocBVH(configurationCL());
         this.bvhBuild.build(mesh);    
         
         //set to device for rendering/raytracing
         this.deviceRaytrace.set(mesh, bvhBuild);
-//        this.deviceRender.set(mesh, bvhBuild);
+        this.deviceRender.set(mesh, bvhBuild);
     }
 
     @Override
@@ -557,11 +559,12 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
             CStructTypeBuffer<CIntersection> isectsBuffer,
             CIntBuffer count,
             CMesh mesh,
-            CNormalBVH bvhBuild)
+            CAccelerator bvhBuild,
+            CIntBuffer startNode)
     {
-        return configurationCL().program().createKernel(kernelName, raysBuffer, isectsBuffer, count, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvhBuild.getCNodes(), bvhBuild.getCBounds());
+        return configurationCL().program().createKernel(kernelName, raysBuffer, isectsBuffer, count, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvhBuild.getCNodes(), bvhBuild.getCBounds(), startNode);
     }
-    
+       
     public CKernel createOcclusionKernel(
             String kernelName, 
             CStructTypeBuffer<CRay> raysBuffer,
@@ -592,9 +595,14 @@ public final class TracerAPI implements MambaAPIInterface<IntBuffer, BlendDispla
         return configurationCL().program().createKernel(kernelName, buffers);
     }
     
-    public CIntBuffer intValue(String name, int value, long flag)
+    public CIntBuffer allocIntValue(String name, int value, long flag)
     {
         return CBufferFactory.initIntValue(name, configurationCL().context(), configurationCL().queue(), value, flag);
+    }
+    
+    public CFloatBuffer allocFloatValue(String name, float value, long flag)
+    {
+        return CBufferFactory.initFloatValue(name, configurationCL().context(), configurationCL().queue(), value, flag);
     }
     
     public <B extends ByteStruct> CStructTypeBuffer<B> allocStructType(String name, Class<B> clazz, int size, long flag)
