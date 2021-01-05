@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<fx:root maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="528.0" prefWidth="622.0" type="HBox" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <VBox fx:id="leftSide" prefHeight="523.0" prefWidth="321.0" spacing="5.0" HBox.hgrow="ALWAYS">
+         <children>
+            <StackPane prefHeight="249.0" prefWidth="321.0" />
+            <Separator prefWidth="200.0" />
+         </children>
+      </VBox>
+      <Separator orientation="VERTICAL" prefHeight="200.0" />
+      <VBox fx:id="rightSide" spacing="5.0" HBox.hgrow="ALWAYS">
+         <children>
+            <ListView fx:id="surfparamListView" prefHeight="387.0" prefWidth="308.0" />
+            <Separator prefWidth="200.0" />
+            <HBox alignment="CENTER_LEFT" spacing="5.0">
+               <children>
+                  <Label text="BRDF Type" />
+                  <ComboBox fx:id="brdfTypeCombo" prefHeight="25.0" prefWidth="169.0" />
+               </children>
+            </HBox>
+            <Separator prefWidth="200.0" />
+            <StackPane fx:id="brdfEditorPane" prefHeight="523.0" prefWidth="317.0" />
+         </children>
+         <padding>
+            <Insets top="5.0" />
+         </padding>
+      </VBox>
+   </children>
+</fx:root>

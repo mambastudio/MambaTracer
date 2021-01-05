@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+
+<fx:root type="BorderPane" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1">
+   <center>
+      <HBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="456.0" prefWidth="677.0">
+         <children>
+            <TabPane prefHeight="456.0" prefWidth="239.0" side="LEFT" tabClosingPolicy="UNAVAILABLE">
+               <tabs>
+                  <Tab text="Viewport">
+                     <content>
+                        <VBox minHeight="-Infinity" minWidth="-Infinity" prefHeight="456.0" prefWidth="199.0">
+                           <children>
+                              <HBox alignment="CENTER" prefHeight="35.0" prefWidth="161.0" spacing="5.0" />
+                              <HBox alignment="CENTER" prefHeight="35.0" prefWidth="161.0" spacing="5.0" />
+                           </children>
+                           <padding>
+                              <Insets left="5.0" right="5.0" />
+                           </padding>
+                        </VBox>
+                     </content>
+                  </Tab>
+               </tabs>
+            </TabPane>
+            <Separator orientation="VERTICAL" prefHeight="456.0" prefWidth="1.0" />
+            <TabPane side="BOTTOM" HBox.hgrow="ALWAYS">
+               <tabs>
+                  <Tab closable="false" text="Render">
+                     <content>
+                        <StackPane fx:id="renderPane" prefHeight="150.0" prefWidth="200.0" />
+                     </content>
+                  </Tab>
+               </tabs>
+            </TabPane>
+         </children>
+      </HBox>
+   </center>
+   <top>
+      <HBox spacing="5.0" BorderPane.alignment="CENTER">
+         <children>
+            <Button fx:id="stopBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="60.0" text="Stop" />
+            <Button fx:id="pauseBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="60.0" text="Pause" />
+            <Button fx:id="resumeBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="60.0" text="Resume" />
+            <Button fx:id="editBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="60.0" text="Edit" />
+            <Button fx:id="renderBtn" mnemonicParsing="false" prefHeight="25.0" prefWidth="60.0" text="Render" />
+         </children>
+         <padding>
+            <Insets bottom="5.0" left="5.0" top="5.0" />
+         </padding>
+      </HBox>
+   </top>
+</fx:root>
