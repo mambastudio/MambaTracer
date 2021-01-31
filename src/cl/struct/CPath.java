@@ -7,13 +7,13 @@ package cl.struct;
 
 import cl.struct.CBSDF;
 import cl.data.CPoint3;
-import coordinate.struct.ByteStruct;
+import coordinate.struct.structbyte.Structure;
 
 /**
  *
  * @author user
  */
-public class CPath extends ByteStruct{
+public class CPath extends Structure{
     public CPoint3  throughput;
     public CPoint3  hitpoint;
     public int      pathlength;

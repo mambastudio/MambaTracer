@@ -70,6 +70,7 @@ __kernel void LightHitPass(global Intersection* isects,
                            //mesh
                            global Material*     materials,
                            global const float4* points,
+                           global const float2* uvs,
                            global const float4* normals,
                            global const Face*   faces,
                            global const int*    size,
@@ -79,7 +80,7 @@ __kernel void LightHitPass(global Intersection* isects,
                            global int*          num_isects)
 {
     int global_id = get_global_id(0);
-    TriangleMesh mesh    = {points, normals, faces, size[0]};
+    TriangleMesh mesh    = {points, uvs, normals, faces, size[0]};
 
     if(global_id < *num_isects)
     {
@@ -252,6 +253,7 @@ __kernel void DirectLight(
     //mesh and material
     global Material*     materials,
     global const float4* points,
+    global const float2* uvs,
     global const float4* normals,
     global const Face*   faces,
     global const int*    size,
@@ -263,7 +265,7 @@ __kernel void DirectLight(
 {
 
     int global_id        = get_global_id(0);
-    TriangleMesh mesh    = {points, normals, faces, size[0]};
+    TriangleMesh mesh    = {points, uvs, normals, faces, size[0]};
     
     //get intersection and path_index
     global Intersection* isect   = isects + global_id;

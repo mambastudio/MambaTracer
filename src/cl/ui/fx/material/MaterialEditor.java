@@ -5,6 +5,7 @@
  */
 package cl.ui.fx.material;
 
+import bitmap.util.ImageUtility;
 import cl.ui.fx.material.type.DiffuseFX;
 import cl.abstracts.MaterialInterface.BRDFType;
 import cl.fx.GalleryDialogFX;
@@ -28,6 +29,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Separator;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -52,6 +54,9 @@ public class MaterialEditor extends DialogAbstract<MaterialFX> {
     ComboBox<BRDFType> brdfTypeCombo;
     @FXML
     StackPane brdfEditorPane;
+    
+    @FXML
+    ImageView renderImageView;
     
     MaterialFX defMat;
     GalleryDialogFX dialog;
@@ -135,7 +140,7 @@ public class MaterialEditor extends DialogAbstract<MaterialFX> {
             }
         });
         
-        
+        renderImageView.setImage(ImageUtility.stringToImage("coming soon", 330, 230));
     }
     
     private void initOpacity()

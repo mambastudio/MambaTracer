@@ -3,10 +3,10 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package cl.core.data;
+package cl.data;
 
 import coordinate.generic.AbstractCoordinateFloat;
-import coordinate.struct.FloatStruct;
+import coordinate.struct.structfloat.FloatStruct;
 import javafx.scene.paint.Color;
 
 /**

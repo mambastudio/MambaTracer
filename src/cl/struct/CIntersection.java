@@ -8,13 +8,13 @@ package cl.struct;
 import cl.data.CPoint2;
 import cl.data.CPoint3;
 import coordinate.generic.raytrace.AbstractIntersection;
-import coordinate.struct.ByteStruct;
+import coordinate.struct.structbyte.Structure;
 
 /**
  *
  * @author user
  */
-public class CIntersection extends ByteStruct implements AbstractIntersection{
+public class CIntersection extends Structure implements AbstractIntersection{
         
     public CPoint3 p;
     public CPoint3 n;

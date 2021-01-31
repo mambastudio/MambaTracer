@@ -10,13 +10,13 @@ import cl.abstracts.MaterialInterface;
 import static cl.abstracts.MaterialInterface.BRDFType.DIFFUSE;
 import static cl.abstracts.MaterialInterface.BRDFType.EMITTER;
 import coordinate.parser.attribute.MaterialT;
-import coordinate.struct.ByteStruct;
+import coordinate.struct.structbyte.Structure;
 
 /**
  *
  * @author user
  */
-public class CMaterial extends ByteStruct implements MaterialInterface<CMaterial> {
+public class CMaterial extends Structure implements MaterialInterface<CMaterial> {
     public CSurfaceParameter param1; //surface 1
     public CSurfaceParameter param2; //surface 2
        

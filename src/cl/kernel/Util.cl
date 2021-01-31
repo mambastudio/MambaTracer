@@ -88,6 +88,7 @@ typedef struct
 typedef struct
 {
     bool      isPresent;
+    int       cameraPosition;
     
     //int values encourages better sampling
     int       intLightGrid[5000];   //100 * 50
@@ -121,6 +122,7 @@ typedef struct
 typedef struct
 {
     global float4       const*  points;
+    global float2       const*  uvs;
     global float4       const*  normals;
     global Face         const*  faces;
     int                         size;
@@ -255,6 +257,33 @@ bool hasNormals(TriangleMesh mesh, int primID)
 {
    Face face  = mesh.faces[primID];
    return face.nx > -1; 
+}
+
+// normal 1 in mesh
+float2 getUV1(TriangleMesh mesh, int primID)
+{
+   Face face  = mesh.faces[primID];
+   return mesh.uvs[face.uvx];
+}
+
+// normal 2 in mesh
+float2 getUV2(TriangleMesh mesh, int primID)
+{
+   Face face  = mesh.faces[primID];
+   return mesh.uvs[face.uvy];
+}
+
+// normal 3 in mesh
+float2 getUV3(TriangleMesh mesh, int primID)
+{
+   Face face  = mesh.faces[primID];
+   return mesh.uvs[face.uvz];
+}
+
+bool hasUV(TriangleMesh mesh, int primID)
+{
+   Face face  = mesh.faces[primID];
+   return face.uvx > -1;
 }
 
 bool is_equal_float4(float4 c1, float4 c2)

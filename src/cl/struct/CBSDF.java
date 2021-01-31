@@ -5,16 +5,14 @@
  */
 package cl.struct;
 
-import cl.struct.CSurfaceParameter;
-import cl.struct.CFrame;
 import cl.data.CPoint3;
-import coordinate.struct.ByteStruct;
+import coordinate.struct.structbyte.Structure;
 
 /**
  *
  * @author user
  */
-public class CBSDF extends ByteStruct {
+public class CBSDF extends Structure {
     public int materialID;              //material id
     
     public boolean isPortal;

@@ -5,7 +5,7 @@
  */
 package cl.algorithms;
 
-import cl.core.data.CColor4;
+import cl.data.CColor4;
 import wrapper.core.CMemory;
 import static wrapper.core.CMemory.READ_ONLY;
 import wrapper.core.OpenCLConfiguration;

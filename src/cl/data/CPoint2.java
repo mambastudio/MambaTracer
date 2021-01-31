@@ -6,13 +6,14 @@
 package cl.data;
 
 import coordinate.generic.AbstractCoordinateFloat;
+import coordinate.struct.structfloat.FloatStruct;
 import coordinate.utility.Value2Di;
 
 /**
  *
  * @author user
  */
-public class CPoint2 implements AbstractCoordinateFloat
+public class CPoint2 extends FloatStruct implements AbstractCoordinateFloat
 {
     public float x, y;
     
@@ -53,6 +54,7 @@ public class CPoint2 implements AbstractCoordinateFloat
         }
     }
 
+    @Override
     public void set(char axis, float value) {
         switch (axis) {
             case 'x':

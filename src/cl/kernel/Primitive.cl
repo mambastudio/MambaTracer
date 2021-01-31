@@ -52,6 +52,24 @@ float2 triangleBarycentrics(float4 p, float4 p1, float4 p2, float4 p3)
     return (float2)(b1, b2);
 }
 
+//https://answers.unity.com/questions/383804/calculate-uv-coordinates-of-3d-point-on-plane-of-m.html
+float2 triangleBarycentricsFromUVMesh(float4 p, float4 p1, float4 p2, float4 p3, float2 uv1, float2 uv2, float2 uv3)
+{
+    // calculate vectors from point p to vertices p1, p2 and p3:
+    float3 f1 = p1.xyz - p.xyz;
+    float3 f2 = p2.xyz - p.xyz;
+    float3 f3 = p3.xyz - p.xyz;
+    
+    // calculate the areas and factors (order of parameters doesn't matter):
+    float a      = length(cross(p1.xyz - p2.xyz, p1.xyz - p3.xyz)); // main triangle area a
+    float a1     = length(cross(f2, f3)) / a; // p1's triangle area / a
+    float a2     = length(cross(f3, f1)) / a; // p2's triangle area / a
+    float a3     = length(cross(f1, f2)) / a; // p3's triangle area / a
+    
+    float2 uv    = uv1 * a1 + uv2 * a2 + uv3 * a3;
+    return uv;
+}
+
 float triangleInverseArea(float4 p1, float4 p2, float4 p3)
 {
     float3 e1 = p2.xyz - p1.xyz;

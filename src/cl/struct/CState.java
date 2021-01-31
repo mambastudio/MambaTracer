@@ -6,13 +6,13 @@
 package cl.struct;
 
 import cl.data.CInt2;
-import coordinate.struct.ByteStruct;
+import coordinate.struct.structbyte.Structure;
 
 /**
  *
  * @author user
  */
-public class CState extends ByteStruct {
+public class CState extends Structure {
     public CInt2 seed;    
     public float frameCount;
     

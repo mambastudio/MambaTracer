@@ -6,7 +6,7 @@
 package cl.data;
 
 import coordinate.generic.VCoord;
-import coordinate.struct.FloatStruct;
+import coordinate.struct.structfloat.FloatStruct;
 
 /**
  *

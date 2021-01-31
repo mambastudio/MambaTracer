@@ -6,7 +6,7 @@
 package cl.struct;
 
 import cl.data.CInt4;
-import coordinate.struct.IntStruct;
+import coordinate.struct.structint.IntStruct;
 
 /**
  *

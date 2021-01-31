@@ -5,14 +5,14 @@
  */
 package cl.struct;
 
-import cl.core.data.CColor4;
-import coordinate.struct.ByteStruct;
+import cl.data.CColor4;
+import coordinate.struct.structbyte.Structure;
 
 /**
  *
  * @author user
  */
-public class CSurfaceParameter extends ByteStruct {
+public class CSurfaceParameter extends Structure {
     //this surface is done by texture
     public boolean          isTexture;
     public int              numTexture;

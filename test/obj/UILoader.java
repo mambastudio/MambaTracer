@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package test.obj;
+package obj;
 
 import cl.ui.fx.OBJSettingDialogFX;
 import coordinate.parser.obj.OBJInfo;

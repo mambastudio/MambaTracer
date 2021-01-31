@@ -6,7 +6,6 @@
 package cl.ui.fx.main;
 
 import cl.ui.fx.material.MaterialFX;
-import cl.ui.fx.main.UserInterfaceFXMLController;
 import cl.device.CDeviceRT;
 import cl.device.CDeviceGI;
 import cl.scene.CNormalBVH;
@@ -21,16 +20,17 @@ import static cl.abstracts.MambaAPIInterface.DeviceType.RENDER;
 import static cl.abstracts.MambaAPIInterface.ImageType.ALL_RAYTRACE_IMAGE;
 import cl.abstracts.RayDeviceInterface;
 import cl.algorithms.CEnvMap;
+import cl.data.CPoint2;
+import cl.data.CPoint3;
+import cl.data.CVector3;
 import coordinate.parser.obj.OBJParser;
 import coordinate.utility.Value2Di;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import org.jocl.CL;
 import cl.kernel.CSource;
 import coordinate.parser.obj.OBJInfo;
 import coordinate.parser.obj.OBJMappedParser;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import coordinate.utility.Timer;
 import wrapper.core.CMemory;
 import wrapper.core.OpenCLConfiguration;
 
@@ -400,22 +400,44 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX,
         //updateCamera();
     }
 
+    //TODO: Make sure the output is displayed in the most adequate console
     @Override
     public void initMesh(Path path) {
         //load mesh and init mesh variables
-       // mesh = new CMesh(getConfigurationCL());
+        mesh = new CMesh(getConfigurationCL());
         OBJMappedParser parser = new OBJMappedParser();        
         parser.readAttributes(path.toUri());
         
         //init size (estimate) of coordinate list/array
         OBJInfo info = parser.getInfo();
         controllerImplementation.showOBJStatistics(info);
-        try {
-            Thread.sleep(1000);
-            //mesh.initCoordList(info.v(), info.vn(), info.vt(), info.f());
-        } catch (InterruptedException ex) {
-            Logger.getLogger(TracerAPI.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        
+        //init array sizes (eventually they will grow if bounds reach)
+        mesh.initCoordList(CPoint3.class, CVector3.class, CPoint2.class, 0, 0, 0, 0);
+        
+        Timer parseTime = Timer.timeThis(() -> parser.read(path.toString(), mesh)); //Time parsing
+        //UI.print("parse-time", parseTime.toString()); 
+        mesh.initCLBuffers();
+        setupMaterial();
+        
+        //display material in ui
+//        controllerImplementation.displaySceneMaterial(parser.getSceneMaterialList());
+        
+        //build accelerator
+        Timer buildTime = Timer.timeThis(() -> {                                   //Time building
+            this.setMessage("building accelerator");
+            this.bvhBuild = new CNormalBVH(configuration);
+            this.bvhBuild.build(mesh);      
+        });
+       // UI.print("build-time", buildTime.toString());
+        
+        //set to device for rendering/raytracing
+        this.deviceRaytrace.set(mesh, bvhBuild);
+        this.deviceRender.set(mesh, bvhBuild);
+                
+        //init various buffers and kernels to reflect on new model
+        deviceRender.setAPI(this);
+        deviceRaytrace.setAPI(this);
     }
     
     private void setupMaterial()

@@ -97,6 +97,7 @@ __kernel void IntersectPrimitives(
 
     //mesh
     global const float4* points,
+    global const float2* uvs,
     global const float4* normals,
     global const Face*   faces,
     global const int*    size,
@@ -113,7 +114,7 @@ __kernel void IntersectPrimitives(
     //get ray, create both isect and mesh
     global Ray* ray = rays + id;
     global Intersection* isect = isects + id;
-    TriangleMesh mesh = {points, normals, faces, size[0]};
+    TriangleMesh mesh = {points, uvs, normals, faces, size[0]};
     
     if(id < *count)
     {
@@ -125,8 +126,22 @@ __kernel void IntersectPrimitives(
           float4 p2 = getP2(mesh, childIndex);
           float4 p3 = getP3(mesh, childIndex);
           float4 p  = getPoint(*ray, ray->tMax);
+
+          float2 uv, texuv;
           
-          float2 uv = triangleBarycentrics(p, p1, p2, p3);
+          bool hasTexUV = hasUV(mesh, childIndex);
+          
+          if(hasUV(mesh, childIndex))
+          {
+              float2 uv1 = getUV1(mesh, childIndex);
+              float2 uv2 = getUV2(mesh, childIndex);
+              float2 uv3 = getUV3(mesh, childIndex);
+              texuv = triangleBarycentricsFromUVMesh(p, p1, p2, p3, uv1, uv2, uv3);
+          }
+
+
+          uv = triangleBarycentrics(p, p1, p2, p3);
+
           float tuv[3];
           tuv[0] = ray->tMax;
           tuv[1] = uv.x;
@@ -151,7 +166,12 @@ __kernel void IntersectPrimitives(
           isect->p = p;
           isect->n = n;
           isect->d = ray->d;
-          isect->uv = uv;
+          
+          if(hasTexUV)
+            isect->uv = texuv;
+          else
+            isect->uv = uv;
+            
           isect->id = childIndex;
           isect->mat = getMaterial(mesh.faces[childIndex].mat);  //because face - mat is encoded to include both group and material, as such, extract material index
           isect->hit = hit; //update hit status
@@ -260,6 +280,7 @@ __kernel void intersectOcclusion(
 
     //mesh
     global const float4* points,
+    global const float2* uvs,
     global const float4* normals,
     global const Face*   faces,
     global const int*    size,
@@ -276,7 +297,7 @@ __kernel void intersectOcclusion(
     //get ray, create both isect and mesh
     global Ray* ray = rays + id;
     global int* hit = hits + id;
-    TriangleMesh mesh = {points, normals, faces, size[0]};
+    TriangleMesh mesh = {points, uvs, normals, faces, size[0]};
 
     if(id < *count)
       //intersect

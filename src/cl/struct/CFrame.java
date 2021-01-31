@@ -6,13 +6,13 @@
 package cl.struct;
 
 import cl.data.CPoint3;
-import coordinate.struct.ByteStruct;
+import coordinate.struct.structbyte.Structure;
 
 /**
  *
  * @author user
  */
-public class CFrame extends ByteStruct{
+public class CFrame extends Structure{
     public CPoint3 mX;
     public CPoint3 mY;
     public CPoint3 mZ;

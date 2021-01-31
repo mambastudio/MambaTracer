@@ -5,12 +5,13 @@
  */
 package cl.abstracts;
 
-import coordinate.struct.ByteStruct;
+import coordinate.struct.structbyte.Structure;
+
 
 /**
  *
  * @author user
  */
-public abstract class CameraDataAbstract extends ByteStruct{
+public abstract class CameraDataAbstract extends Structure{
     
 }

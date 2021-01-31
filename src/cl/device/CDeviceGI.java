@@ -27,8 +27,8 @@ import cl.scene.CMesh;
 import cl.scene.CNormalBVH;
 import cl.algorithms.CTextureApplyPass;
 import cl.ui.fx.main.TracerAPI;
-import coordinate.struct.StructByteArray;
-import coordinate.struct.StructIntArray;
+import coordinate.struct.structbyte.StructureArray;
+import coordinate.struct.structint.StructIntArray;
 import java.math.BigInteger;
 import java.util.Random;
 import thread.model.LambdaThread;
@@ -146,13 +146,13 @@ public class CDeviceGI implements RayDeviceInterface<
         gInitPathsKernel                = configuration.createKernel("InitPathData", gBPathBuffer);
         gInitIsectsKernel               = configuration.createKernel("InitIntersection", gIsectBuffer);
         gInitPixelIndicesKernel         = configuration.createKernel("InitIntDataToIndex", gPixelIndicesBuffer);
-        gIntersectPrimitivesKernel      = configuration.createKernel("IntersectPrimitives", gRaysBuffer, gIsectBuffer, gCountBuffer, mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
+        gIntersectPrimitivesKernel      = configuration.createKernel("IntersectPrimitives", gRaysBuffer, gIsectBuffer, gCountBuffer, mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
         gInitAccumKernel                = configuration.createKernel("InitFloat4DataXYZ", gAccumBuffer);
         gSetupBSDFKernel                = configuration.createKernel("SetupBSDFPath", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), gPixelIndicesBuffer, gCountBuffer);
-        gLightHitPassKernel             = configuration.createKernel("LightHitPass", gIsectBuffer, gRaysBuffer, gBPathBuffer,  gTotalLights, mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), gAccumBuffer, gPixelIndicesBuffer, gCountBuffer);
+        gLightHitPassKernel             = configuration.createKernel("LightHitPass", gIsectBuffer, gRaysBuffer, gBPathBuffer,  gTotalLights, mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), gAccumBuffer, gPixelIndicesBuffer, gCountBuffer);
         gUpdateImageKernel              = configuration.createKernel("UpdateImage", gAccumBuffer, gFrameCountBuffer, gImageBuffer);
         gSampleBSDFRayDirectionKernel   = configuration.createKernel("SampleBSDFRayDirection", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), gPixelIndicesBuffer, gStateBuffer, gCountBuffer);
-        gDirectLightKernel              = configuration.createKernel("DirectLight", gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, gAccumBuffer, gPixelIndicesBuffer, gCountBuffer, gStateBuffer, mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
+        gDirectLightKernel              = configuration.createKernel("DirectLight", gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, gAccumBuffer, gPixelIndicesBuffer, gCountBuffer, gStateBuffer, mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
         gTextureInitPassKernel          = configuration.createKernel("texturePassGI", gBPathBuffer, gIsectBuffer, texBuffer, gPixelIndicesBuffer, gCountBuffer);
         gUpdateToTextureColorGIKernel   = configuration.createKernel("updateToTextureColorGI", gBPathBuffer, texBuffer, gPixelIndicesBuffer, gCountBuffer);
       }
@@ -258,7 +258,7 @@ public class CDeviceGI implements RayDeviceInterface<
     //currently mesh only
     public void initLight()
     {
-        StructByteArray<CLight> lights = new StructByteArray<>(CLight.class);
+        StructureArray<CLight> lights = new StructureArray<>(CLight.class);
         StructIntArray<CFace> faces = new StructIntArray<>(CFace.class, mesh.getCount());        
         faces.setIntArray(mesh.getTriangleFacesArray());      
         int lightCount = 0;
@@ -278,7 +278,7 @@ public class CDeviceGI implements RayDeviceInterface<
         gTotalLights.setCL(new IntValue(lightCount));
         gLights = configuration.createFromB(CLight.class, lights, READ_WRITE);
         gDirectLightKernel.resetPutArgs(gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, gAccumBuffer, gPixelIndicesBuffer, gCountBuffer, gStateBuffer, 
-                mesh.clMaterials(), mesh.clPoints(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds()); 
+                mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds()); 
        
         System.out.println("light count : " +lightCount);
     }

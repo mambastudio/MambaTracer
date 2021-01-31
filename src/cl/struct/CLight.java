@@ -7,13 +7,13 @@ package cl.struct;
 
 import cl.data.CPoint3;
 import cl.data.CVector3;
-import coordinate.struct.ByteStruct;
+import coordinate.struct.structbyte.Structure;
 
 /**
  *
  * @author user
  */
-public class CLight extends ByteStruct{
+public class CLight extends Structure{
     public int faceId;
     
     public CPoint3 p;

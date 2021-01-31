@@ -8,7 +8,7 @@ package cl.struct;
 import cl.data.CPoint3;
 import cl.data.CVector3;
 import coordinate.generic.AbstractBound;
-import coordinate.struct.FloatStruct;
+import coordinate.struct.structfloat.FloatStruct;
 
 /**
  *

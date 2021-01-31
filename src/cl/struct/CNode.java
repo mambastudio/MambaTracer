@@ -5,7 +5,7 @@
  */
 package cl.struct;
 
-import coordinate.struct.IntStruct;
+import coordinate.struct.structint.IntStruct;
 
 /**
  *

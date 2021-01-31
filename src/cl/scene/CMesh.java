@@ -42,6 +42,7 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
     
     //opencl mesh data
     private CMemory<CPoint3> pointsBuffer = null;
+    private CMemory<CPoint2> uvsBuffer = null;
     private CMemory<CVector3> normalsBuffer = null;
     private CMemory<CFace> facesBuffer = null;
     private CMemory<IntValue> sizeBuffer = null;
@@ -158,6 +159,7 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
     public void initCLBuffers()
     {
         pointsBuffer = configuration.createFromF(CPoint3.class, getPointArray(), READ_ONLY); 
+        uvsBuffer = configuration.createFromF(CPoint2.class, getTexCoordsArray(), READ_ONLY);
         normalsBuffer = configuration.createFromF(CVector3.class, getNormalArray(), READ_ONLY);
         facesBuffer = configuration.createFromI(CFace.class, getTriangleFacesArray(), READ_ONLY);
         sizeBuffer = configuration.createFromI(IntValue.class, new int[]{triangleSize()}, READ_ONLY);        
@@ -177,6 +179,11 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
     public CMemory<CPoint3> clPoints()
     {
         return pointsBuffer;
+    }
+    
+    public CMemory<CPoint2> clTexCoords()
+    {
+        return uvsBuffer;
     }
     
     public CMemory<CVector3> clNormals()

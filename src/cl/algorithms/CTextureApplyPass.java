@@ -42,11 +42,21 @@ public class CTextureApplyPass {
             if(hasBaseTexture(index))
             {
                 Image image = api.get(getMaterialIndex(index)).param1.texture.get(); //TO CORRECT/UPDATE
-                float u = getU(index);
-                float v = getV(index);
-                int ui = (int)(u * image.getWidth());
-                int vi = (int)(v * image.getHeight());
-                setArgb(image, index, ui, vi);
+                float x = getU(index);
+                float y = getV(index);
+                
+                //from sunflow Texture.java in method getPixel(float x, float y) 
+                //in short, this handles texture that has defined uv coordinates in mesh
+                x = x - (int) x; //in case it's greater than 1
+                y = y - (int) y;
+                if (x < 0)  //in case it's lesser than 1
+                    x++;
+                if (y < 0)
+                    y++;
+                float dx = (float) x * ((float)image.getWidth() - 1);
+                float dy = (float) y * ((float)image.getHeight() - 1);
+                                
+                setArgb(image, index, (int) dx, (int)dy);
             }
         }
         texBuffer.transferToDevice();

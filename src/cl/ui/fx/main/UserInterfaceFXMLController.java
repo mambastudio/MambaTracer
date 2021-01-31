@@ -298,7 +298,7 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
             ProcessDialog dialog = new ProcessDialog();
             DialogUtility.showAndWaitThread(UtilityHandler.getScene(), dialog, (type)->{
                 api.initMesh(file.toURI());
-                
+                api.getDeviceRT().resume();
                 return true;
             });
         }

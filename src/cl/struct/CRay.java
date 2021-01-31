@@ -10,13 +10,13 @@ import cl.data.CInt4;
 import cl.data.CPoint3;
 import cl.data.CVector3;
 import coordinate.generic.AbstractRay;
-import coordinate.struct.ByteStruct;
+import coordinate.struct.structbyte.Structure;
 
 /**
  *
  * @author user
  */
-public class CRay extends ByteStruct implements AbstractRay<CPoint3, CVector3>
+public class CRay extends Structure implements AbstractRay<CPoint3, CVector3>
 {
     public CPoint3  o;
     public CVector3 d;    
