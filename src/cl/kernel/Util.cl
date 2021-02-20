@@ -363,6 +363,22 @@ int getIndex(float2 pixel, int width, int height)
     return (int)(pixel.x + pixel.y * width);
 }
 
+float check(float value)
+{
+  if(isinf(value)||isnan(value)|| value<0.000001f)
+      return 0.f;
+  else
+      return value;
+}
+
+bool isError(float value)
+{
+  if(isinf(value)||isnan(value))
+      return true;
+  else
+      return false;
+}
+
 int getSphericalGridIndex(int width, int height, float4 d)
 {
     int u, v;
@@ -485,7 +501,7 @@ bool isFloat4AbsValid(float4 value)
        if(isnan(element.elarray[i]) || isinf(element.elarray[i]) || getFloat4At(value, i)<0.f)
           return false;
    return true;
-}
+}     
 
 // is distance 't' within ray boundary
 bool isInside(Ray r, float t)
@@ -821,41 +837,157 @@ __kernel void findBound(
     }
 }
 
-void InitIsect(global Intersection* isect)
+int GET_INT(__global int* array, int index, int arbitraryLength)
 {
-    isect->p             = (float4)(0, 0, 0, 0);
-    isect->n             = (float4)(0, 0, 0, 0);
-    isect->d             = (float4)(0, 0, 0, 0);
-    isect->uv            = (float2)(0, 0);
-    isect->id            = -1;
-    isect->hit           = MISS_MARKER;
-    isect->mat           = -1;
+    if(index < arbitraryLength)
+       return array[index];
+    else
+       return 0;
 }
 
-__kernel void InitIntersection(global Intersection* isects)
+int SET_INT(__global int* array, int value, int index, int arbitraryLength)
 {
-    int global_id = get_global_id(0);
-    global Intersection* isect = isects + global_id;
-    
-    InitIsect(isect);
+    if(index < arbitraryLength)
+       array[index] = value;
 }
 
-__kernel void InitIntDataToIndex(global int* intData)
+int GET_FLOAT(__global float* array, int index, int arbitraryLength)
 {
-    int id= get_global_id( 0 );   
-    intData[id] = id; 
+    if(index < arbitraryLength)
+       return array[index];
+    else
+       return 0;
 }
 
-__kernel void InitIntData(
-    global int* array)
+int SET_FLOAT(__global float* array, float value, int index, int arbitraryLength)
 {
-    uint global_id = get_global_id(0);
-    array[global_id] = 0;
+    if(index < arbitraryLength)
+       array[index] = value;
+}
+//This can be replaced by any other prefix sum that is deemed suitable (works in local size only)
+void koggeStoneInt(__global const int* in, __global int* out, __global int* groupSum, __global int* arbitraryLength, __local int* aux)
+{
+     int idl  = get_local_id(0); // index in workgroup
+     int idg  = get_global_id(0);
+     int idgr = get_group_id(0);
+     int lSize = get_local_size(0);
+
+     aux[idl] = GET_INT(in, idg, arbitraryLength);
+     barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);  //read to local first
+
+     for(int offset = 1; offset < lSize; offset *= 2)
+     {
+          private int temp;
+          if(idl >= offset) temp = aux[idl - offset];
+          barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
+          if(idl >= offset) aux[idl] = temp + aux[idl];
+          barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
+
+     }
+
+     if(idl == (lSize-1))
+       groupSum[idgr] = aux[idl];
+
+     if(aux[idl] > 0)
+       SET_INT(out, aux[idl - 1], idg, arbitraryLength);
+     else
+       SET_INT(out, aux[0], idg, arbitraryLength);
 }
 
-
-__kernel void InitFloat4DataXYZ(global float4* float4Data)
+//arbitrary length means not confined to the power of 2
+__kernel void localScanInteger(__global const int* in, __global int* out, __global int* groupSum, __global int* arbitraryLength, __local int* aux)
 {
-    int id = get_global_id(0);
-    float4Data[id] = (float4)(0, 0, 0, 1);
+     koggeStoneInt(in, out, groupSum, arbitraryLength, aux);
+}
+
+//sequential prefix sum on global scale (quite fast and trivial) global = 1, local = 1
+__kernel void groupScanInteger(__global int* groupSum,
+                             __global int* groupPrefixSum,
+                             __global int* groupSize)
+{
+      for(int i = 1; i<*groupSize; i++)
+      {
+          groupPrefixSum[i] = 0;
+          groupPrefixSum[i] = groupPrefixSum[i-1] + groupSum[i-1];
+      }
+}
+
+//do total scan (transfer local scan to global scan)
+__kernel void globalScanInteger(__global int* out, __global int* groupSum, __global int* arbitraryLength)
+{
+      int idgr = get_group_id(0);
+      int idg  = get_global_id(0);
+      
+      int value = GET_INT(out, idg, arbitraryLength);
+      int sum   = groupSum[idgr] + value;
+      SET_INT(out, sum, idg, arbitraryLength);
+}
+
+//get total, where 'in' is raw data, and 'out' is global scan (exclusive). global = 1, local = 1
+__kernel void globalTotalInteger(__global int* in, __global int* out,  __global int *total, __global int* arbitraryLength)
+{
+     *total = in[*arbitraryLength - 1] + out[*arbitraryLength - 1];
+}
+
+//This can be replaced by any other prefix sum that is deemed suitable (works in local size only)
+void koggeStoneFloat(__global const float* in, __global float* out, __global float* groupSum, __global int* arbitraryLength, __local float* aux)
+{
+     int idl  = get_local_id(0); // index in workgroup
+     int idg  = get_global_id(0);
+     int idgr = get_group_id(0);
+     int lSize = get_local_size(0);
+
+     aux[idl] = GET_FLOAT(in, idg, arbitraryLength);
+     barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);  //read to local first
+
+     for(int offset = 1; offset < lSize; offset *= 2)
+     {
+          private float temp;
+          if(idl >= offset) temp = aux[idl - offset];
+          barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
+          if(idl >= offset) aux[idl] = temp + aux[idl];
+          barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);
+     }
+
+     if(idl == (lSize-1))
+       groupSum[idgr] = aux[idl];
+
+     if(aux[idl] > 0)
+       SET_FLOAT(out, aux[idl - 1], idg, arbitraryLength);
+     else
+       SET_FLOAT(out, aux[0], idg, arbitraryLength);
+}
+
+//arbitrary length means not confined to the power of 2
+__kernel void localScanFloat(__global const float* in, __global float* out, __global float* groupSum, __global int* arbitraryLength, __local float* aux)
+{
+     koggeStoneFloat(in, out, groupSum, arbitraryLength, aux);
+}
+
+//sequential prefix sum on global scale (quite fast and trivial) global = 1, local = 1
+__kernel void groupScanFloat(__global float* groupSum,
+                             __global float* groupPrefixSum,
+                             __global int*   groupSize)
+{
+      for(int i = 1; i<*groupSize; i++)
+      {
+          groupPrefixSum[i] = 0;
+          groupPrefixSum[i] = groupPrefixSum[i-1] + groupSum[i-1];
+      }
+}
+
+//do total scan (transfer local scan to global scan)
+__kernel void globalScanFloat(__global float* out, __global float* groupSum, __global int* arbitraryLength)
+{
+      int idgr = get_group_id(0);
+      int idg  = get_global_id(0);
+      
+      int value = GET_FLOAT(out, idg, arbitraryLength);
+      int sum   = groupSum[idgr] + value;
+      SET_FLOAT(out, sum, idg, arbitraryLength);
+}
+//get total, where 'in' is raw data, and 'out' is global scan (exclusive). global = 1, local = 1
+__kernel void globalTotalFloat(__global float* in, __global float* out,  __global float *total, __global int* arbitraryLength)
+{
+     *total = in[*arbitraryLength - 1] + out[*arbitraryLength - 1];
 }

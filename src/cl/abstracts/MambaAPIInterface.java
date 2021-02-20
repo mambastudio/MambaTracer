@@ -50,6 +50,7 @@ public interface MambaAPIInterface <D extends AbstractDisplay, M extends Materia
     
     public final StringProperty message = new SimpleStringProperty();
     
+    //just the size of group size, but is depended on a local size power of 2
     public static int getNumOfGroups(int length, int LOCALSIZE)
     {
         int a = length/LOCALSIZE;
@@ -59,6 +60,7 @@ public interface MambaAPIInterface <D extends AbstractDisplay, M extends Materia
             
     }
     
+    //returns a global size of power of 2
     public static int getGlobal(int size, int LOCALSIZE)
     {
         if (size % LOCALSIZE == 0) { 

@@ -21,6 +21,7 @@ import bitmap.display.ImageDisplay;
 import bitmap.image.BitmapARGB;
 import static cl.abstracts.MambaAPIInterface.ImageType.RENDER_IMAGE;
 import cl.abstracts.RayDeviceInterface;
+import cl.algorithms.CImage;
 import cl.data.CPoint2;
 import cl.data.CPoint3;
 import cl.scene.CMesh;
@@ -71,8 +72,6 @@ public class CDeviceGI implements RayDeviceInterface<
     
     //CL
     private CMemory<CState> gStateBuffer;
-    CMemory<IntValue> gImageBuffer = null;    
-    CMemory<CPoint3> gAccumBuffer = null;
     CMemory<IntValue> gCountBuffer = null;
     CMemory<IntValue> gPixelIndicesBuffer = null;
     CMemory<CCamera> gCamera = null;    
@@ -83,20 +82,19 @@ public class CDeviceGI implements RayDeviceInterface<
     CTextureApplyPass texApplyPass = null;
     CMemory<CTextureData> texBuffer = null;
     CCompact compactHybrid;
-    private CMemory<FloatValue> gFrameCountBuffer;
     private CMemory<IntValue> gTotalLights;
     private CMemory<CLight> gLights;
+    
+    CImage image;
   
     //kernels   
     private CKernel gInitCameraRaysKernel;
     private CKernel gInitIsectsKernel;
     private CKernel gInitPathsKernel;
     private CKernel gInitPixelIndicesKernel;
-    private CKernel gInitAccumKernel;
     private CKernel gIntersectPrimitivesKernel; 
     private CKernel gSetupBSDFKernel;
-    private CKernel gLightHitPassKernel;    
-    private CKernel gUpdateImageKernel;
+    private CKernel gLightHitPassKernel;  
     private CKernel gSampleBSDFRayDirectionKernel;
     private CKernel gDirectLightKernel;
     private CKernel gTextureInitPassKernel;
@@ -122,17 +120,16 @@ public class CDeviceGI implements RayDeviceInterface<
     
     public void createBuffers()
     {
+        image = new CImage(configuration, width, height);
+        
         gStateBuffer         = configuration.createBufferB(CState.class, 1, READ_WRITE);
         gPixelIndicesBuffer  = configuration.createBufferI(IntValue.class, globalWorkSize, READ_WRITE);
-        gImageBuffer         = configuration.createBufferI(IntValue.class, globalWorkSize, READ_WRITE);
-        gAccumBuffer         = configuration.createBufferF(CPoint3.class, globalWorkSize, READ_WRITE);
         gCountBuffer         = configuration.createFromI(IntValue.class, new int[]{globalWorkSize}, READ_WRITE);
         gRaysBuffer          = configuration.createBufferB(CRay.class, globalWorkSize, READ_WRITE);
         gOcclusRaysBuffer    = configuration.createBufferB(CRay.class, globalWorkSize, READ_WRITE);   
         gCamera              = configuration.createBufferB(CCamera.class, 1, READ_WRITE);
         gBPathBuffer         = configuration.createBufferB(CPath.class, globalWorkSize, READ_WRITE);
         gIsectBuffer         = configuration.createBufferB(CIntersection.class, globalWorkSize, READ_WRITE);
-        gFrameCountBuffer    = configuration.createFromF(FloatValue.class, new float[]{1}, READ_WRITE);
         compactHybrid        = new CCompact(configuration);       
         gTotalLights         = configuration.createFromI(IntValue.class, new int[]{0}, READ_WRITE);
         gLights              = configuration.createBufferB(CLight.class, 1, READ_WRITE);
@@ -147,20 +144,17 @@ public class CDeviceGI implements RayDeviceInterface<
         gInitIsectsKernel               = configuration.createKernel("InitIntersection", gIsectBuffer);
         gInitPixelIndicesKernel         = configuration.createKernel("InitIntDataToIndex", gPixelIndicesBuffer);
         gIntersectPrimitivesKernel      = configuration.createKernel("IntersectPrimitives", gRaysBuffer, gIsectBuffer, gCountBuffer, mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
-        gInitAccumKernel                = configuration.createKernel("InitFloat4DataXYZ", gAccumBuffer);
         gSetupBSDFKernel                = configuration.createKernel("SetupBSDFPath", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), gPixelIndicesBuffer, gCountBuffer);
-        gLightHitPassKernel             = configuration.createKernel("LightHitPass", gIsectBuffer, gRaysBuffer, gBPathBuffer,  gTotalLights, mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), gAccumBuffer, gPixelIndicesBuffer, gCountBuffer);
-        gUpdateImageKernel              = configuration.createKernel("UpdateImage", gAccumBuffer, gFrameCountBuffer, gImageBuffer);
+        gLightHitPassKernel             = configuration.createKernel("LightHitPass", gIsectBuffer, gRaysBuffer, gBPathBuffer,  gTotalLights, mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), image.getFrameAccum(), gPixelIndicesBuffer, gCountBuffer);
         gSampleBSDFRayDirectionKernel   = configuration.createKernel("SampleBSDFRayDirection", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), gPixelIndicesBuffer, gStateBuffer, gCountBuffer);
-        gDirectLightKernel              = configuration.createKernel("DirectLight", gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, gAccumBuffer, gPixelIndicesBuffer, gCountBuffer, gStateBuffer, mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
+        gDirectLightKernel              = configuration.createKernel("DirectLight", gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, image.getFrameAccum(), gPixelIndicesBuffer, gCountBuffer, gStateBuffer, mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
         gTextureInitPassKernel          = configuration.createKernel("texturePassGI", gBPathBuffer, gIsectBuffer, texBuffer, gPixelIndicesBuffer, gCountBuffer);
         gUpdateToTextureColorGIKernel   = configuration.createKernel("updateToTextureColorGI", gBPathBuffer, texBuffer, gPixelIndicesBuffer, gCountBuffer);
       }
     
     public void prepareStart()
     {
-        configuration.execute1DKernel(gInitAccumKernel, globalWorkSize, localWorkSize);        
-        this.initFrameCount();
+        this.image.initBuffers();
         this.initLight();
         this.initFrameCount();
         this.updateCamera();
@@ -228,7 +222,8 @@ public class CDeviceGI implements RayDeviceInterface<
             configuration.execute1DKernel(gSampleBSDFRayDirectionKernel, globalWorkSize, localWorkSize);
            
         }
-        configuration.execute1DKernel(gUpdateImageKernel, globalWorkSize, localWorkSize);
+        //configuration.execute1DKernel(gUpdateImageKernel, globalWorkSize, localWorkSize);
+        image.processImage();
         outputImage();
         
         renderThread.chill();
@@ -277,7 +272,7 @@ public class CDeviceGI implements RayDeviceInterface<
         CResourceFactory.releaseMemory("lights");
         gTotalLights.setCL(new IntValue(lightCount));
         gLights = configuration.createFromB(CLight.class, lights, READ_WRITE);
-        gDirectLightKernel.resetPutArgs(gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, gAccumBuffer, gPixelIndicesBuffer, gCountBuffer, gStateBuffer, 
+        gDirectLightKernel.resetPutArgs(gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, image.getFrameAccum(), gPixelIndicesBuffer, gCountBuffer, gStateBuffer, 
                 mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds()); 
        
         System.out.println("light count : " +lightCount);
@@ -297,20 +292,20 @@ public class CDeviceGI implements RayDeviceInterface<
     
     private void incrementFrameCount()
     {
-        gFrameCountBuffer.setCL(new FloatValue(gFrameCountBuffer.getCL().v + 1));
+        image.incrementFrameCount();
     }
     
     private void initFrameCount()
     {
-        gFrameCountBuffer.setCL(new FloatValue(1));
+        image.getFrameCount().setCL(new FloatValue(1));
     }    
    
     @Override
     public void outputImage() {      
         //transfer data from opencl to cpu
-        gImageBuffer.transferFromDevice();
+        image.getFrameARGB().transferFromDevice();
         //write to bitmap
-        renderBitmap.writeColor((int[]) gImageBuffer.getBufferArray(), 0, 0, width, height);
+        renderBitmap.writeColor((int[]) image.getFrameARGB().getBufferArray(), 0, 0, width, height);
         //image fill
         display.imageFill(renderBitmap);
     }
@@ -325,7 +320,7 @@ public class CDeviceGI implements RayDeviceInterface<
         int seed1 = BigInteger.probablePrime(30, new Random()).intValue();
 
         state.setSeed(seed0, seed1);                       
-        state.setFrameCount(gFrameCountBuffer.getCL().v);
+        state.setFrameCount(image.getFrameCount().getCL().v);
         gStateBuffer.setCL(state);
     }
         
@@ -342,6 +337,7 @@ public class CDeviceGI implements RayDeviceInterface<
         createBuffers();
         createKernels();
         compactHybrid.init(gIsectBuffer, gPixelIndicesBuffer, gCountBuffer);
+        
     }
 
     @Override

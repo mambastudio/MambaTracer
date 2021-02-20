@@ -324,21 +324,6 @@ __kernel void DirectLight(
     }
 }
 
-__kernel void UpdateImage(global float4*       accum,
-                          global float*        frameCount,
-                          global int*          imageBuffer)
-{
-    //get thread id
-    int id                     = get_global_id( 0 );
-    
-    global float4* accumAt     = accum + id;
-    global int*    rgbAt       = imageBuffer + id;
-
-    float4 color               = (float4)((*accumAt).xyz/frameCount[0], 1);
-    color.xyz = pow(color.xyz, (float3)(1.f/2.2f));
-
-    *rgbAt                     = getIntARGB(color);
-}
 
 
 

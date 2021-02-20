@@ -5,6 +5,7 @@
  */
 package cl.ui.fx.render;
 
+import cl.abstracts.MambaAPIInterface;
 import static cl.abstracts.MambaAPIInterface.DeviceType.RAYTRACE;
 import java.io.IOException;
 import javafx.fxml.FXML;
@@ -14,7 +15,16 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import jfx.dialog.DialogAbstract;
 import cl.ui.fx.main.TracerAPI;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.StringProperty;
+import javafx.scene.control.Slider;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.util.converter.NumberStringConverter;
+import static jfx.util.BindingFX.bindBidirectionalStringAndDouble;
+import static jfx.util.ImplUtils.convertToTextFieldDouble;
 
 /**
  *
@@ -35,21 +45,35 @@ public class RenderDialog extends DialogAbstract{
     @FXML
     StackPane renderPane;
     
+    @FXML
+    Slider gammaSlider;
+    @FXML
+    TextField gammaTextField;
+    @FXML
+    Slider exposureSlider;
+    @FXML
+    TextField exposureTextField;
+    
+    DoubleProperty gammaProperty = new SimpleDoubleProperty(2.2);
+    DoubleProperty exposureProperty = new SimpleDoubleProperty(0.18);
+    
+    DoubleProperty widthProperty = new SimpleDoubleProperty(0);
+    DoubleProperty heightProperty = new SimpleDoubleProperty(0);
+    
     private final TracerAPI api;
     
     public RenderDialog(TracerAPI api)
     {
-        BorderPane box = initFXMLComponent();
-        
         this.api = api;
         
+        BorderPane box = initFXMLComponent();        
         this.renderPane.getChildren().add(api.getBlendDisplayGI());
         
         this.setContent(box);
         this.setSupplier((buttonType)-> null);
-        this.removeBorder();
-        
+        this.removeBorder();        
     }
+    
     
     private BorderPane initFXMLComponent()
     {
@@ -101,6 +125,21 @@ public class RenderDialog extends DialogAbstract{
             resume();
             api.setDevicePriority(RAYTRACE);
         });
+        
+        gammaSlider.setValue(gammaProperty.doubleValue());
+        gammaProperty.bind(gammaSlider.valueProperty());
+        exposureSlider.setValue(exposureProperty.doubleValue());
+        exposureProperty.bind(exposureSlider.valueProperty());
+        
+        
+        convertToTextFieldDouble(gammaTextField);
+        convertToTextFieldDouble(exposureTextField);
+
+        bindBidirectionalStringAndDouble(gammaTextField.textProperty(), gammaSlider.valueProperty());  
+        bindBidirectionalStringAndDouble(exposureTextField.textProperty(), exposureSlider.valueProperty());
+        
+        widthProperty.setValue(api.getImageWidth(MambaAPIInterface.ImageType.RENDER_IMAGE));
+        heightProperty.setValue(api.getImageWidth(MambaAPIInterface.ImageType.RENDER_IMAGE));
         
         return box;
     }

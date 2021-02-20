@@ -41,16 +41,12 @@ import static cl.ui.fx.FactoryUtility.isEnclosingClassEqual;
 import cl.ui.fx.OBJSettingDialogFX;
 import static cl.ui.fx.TreeCellMaterialSourceFX.MATERIAL_FORMAT;
 import coordinate.parser.obj.OBJInfo;
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
 import filesystem.core.OutputInterface;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.event.ActionEvent;
 import javafx.scene.control.CheckBox;
@@ -58,8 +54,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
-import jfx.dialog.DialogFXMain;
+import jfx.dialog.types.MessageDialog;
 import jfx.dialog.types.ProcessDialog;
 
 /**
@@ -302,6 +299,21 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
                 return true;
             });
         }
+    }
+    
+    public void showInformation(ActionEvent e)
+    {
+        FontAwesomeIconView icon = new FontAwesomeIconView(FontAwesomeIcon.INFO_CIRCLE);
+        icon.setSize("48");
+        icon.setFill(Color.BLUE);
+        MessageDialog dialog = new MessageDialog(""
+                + "This is a simple java opencl ray tracer with monte-carlo path tracing"
+                + " which is designed to be intuitive as much as possible and user friendly."
+                + " Aim is to provide access of state of the art ray tracing with current GPU hardware in your computer."
+                + "\n\n"
+                + "Currently targeting OpenCL 1.2!");
+        dialog.setTop(icon, "Information");        
+        DialogUtility.showAndWait(UtilityHandler.getScene(), dialog);
     }
     
 }

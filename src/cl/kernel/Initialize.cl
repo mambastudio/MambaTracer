@@ -1,3 +1,50 @@
+__kernel void InitIntDataRGB(global int* intData)
+{
+
+    int id= get_global_id( 0 );
+    float4 f = (float4)(0, 0, 0, 1);
+    intData[id] = getIntARGB(f);
+}   
+
+void InitIsect(global Intersection* isect)
+{
+    isect->p             = (float4)(0, 0, 0, 0);
+    isect->n             = (float4)(0, 0, 0, 0);
+    isect->d             = (float4)(0, 0, 0, 0);
+    isect->uv            = (float2)(0, 0);
+    isect->id            = -1;
+    isect->hit           = MISS_MARKER;
+    isect->mat           = -1;
+}
+
+__kernel void InitIntersection(global Intersection* isects)
+{
+    int global_id = get_global_id(0);
+    global Intersection* isect = isects + global_id;
+    
+    InitIsect(isect);
+}
+
+__kernel void InitIntDataToIndex(global int* intData)
+{
+    int id= get_global_id( 0 );   
+    intData[id] = id; 
+}
+
+__kernel void InitIntData(
+    global int* array)
+{
+    uint global_id = get_global_id(0);
+    array[global_id] = 0;
+}
+
+
+__kernel void InitFloat4DataXYZ(global float4* float4Data)
+{
+    int id = get_global_id(0);
+    float4Data[id] = (float4)(0, 0, 0, 1);
+}
+
 __kernel void InitCameraRayDataJitter(
     global CameraStruct* camera,
     global Ray* rays,
@@ -36,5 +83,5 @@ __kernel void InitCameraRayDataJitter(
     r->d = transform_vector4(camera_matrix.mInv, r->d);
 
     //init ray
-    initGlobalRay(r, r->o, r->d);    
+    initGlobalRay(r, r->o, r->d);
 }
