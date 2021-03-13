@@ -6,6 +6,7 @@
 package sampling;
 
 import static java.lang.Math.max;
+import java.util.Arrays;
 
 /**
  *
@@ -93,5 +94,10 @@ public class Distribution1D {
             }
         }
         return i;
+    }
+    
+    public void printlnCDF()
+    {
+        System.out.println(Arrays.toString(cdf));
     }
 }

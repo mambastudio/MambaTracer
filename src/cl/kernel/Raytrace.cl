@@ -129,16 +129,13 @@ __kernel void fastShade(
 }
 
 __kernel void backgroundShade(
-    global Intersection* isects,
-    global CameraStruct* camera,
-    global int*          imageBuffer,
-    global Ray*          rays,
+    global Intersection*      isects,
+    global CameraStruct*      camera,
+    global int*               imageBuffer,
+    global Ray*               rays,
 
-    global float4*       envmap,
-    global int*          envWidth,
-    global int*          envHeight,
-    global bool*         envPresent
-)
+    global float4*            envmap,
+    global EnvironmentGrid*   envgrid)
 {
     //get thread id
     int id = get_global_id( 0 );
@@ -150,9 +147,9 @@ __kernel void backgroundShade(
     if(!isect->hit)
     {
        //update
-       if(*envPresent)
+       if(envgrid->isPresent)
        {
-            int envIndex = getSphericalGridIndex(*envWidth, *envHeight, ray->d);
+            int envIndex = getSphericalGridIndex(envgrid->width, envgrid->height, ray->d);
             float4 envColor = envmap[envIndex];
             gammaFloat4(&envColor, 2.2f);
             imageBuffer[id] = getIntARGB(envColor);

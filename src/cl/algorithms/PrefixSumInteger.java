@@ -91,6 +91,16 @@ public class PrefixSumInteger {
         return ctotal;
     }
     
+    public int getCount()
+    {
+        return ctotal.getCL().v;
+    }
+    
+    public CMemory<IntValue> getPrefixSum()
+    {
+        return cprefixsum;
+    }
+    
     public void printlnResults()
     {
         cprefixsum.transferFromDevice();        

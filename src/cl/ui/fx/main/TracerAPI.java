@@ -19,7 +19,7 @@ import static cl.abstracts.MambaAPIInterface.DeviceType.RAYTRACE;
 import static cl.abstracts.MambaAPIInterface.DeviceType.RENDER;
 import static cl.abstracts.MambaAPIInterface.ImageType.ALL_RAYTRACE_IMAGE;
 import cl.abstracts.RayDeviceInterface;
-import cl.algorithms.CEnvMap;
+import cl.algorithms.CEnvironment;
 import cl.data.CPoint2;
 import cl.data.CPoint3;
 import cl.data.CVector3;
@@ -69,7 +69,7 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX,
     private MaterialFX[] matFXArray;
     
     //environment map
-    private CEnvMap envmap;
+    private CEnvironment envmap;
     
     public TracerAPI()
     {
@@ -114,7 +114,7 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX,
         this.initDefaultMesh();
         
          //envmap
-        envmap = new CEnvMap(configuration);
+        envmap = new CEnvironment(configuration);
         
         //set api
         deviceRender.setAPI(this);
@@ -584,7 +584,10 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX,
     @Override
     public void setEnvironmentMap(float[] rgb4, int width, int height) {
         envmap.setEnvironmentMap(rgb4, width, height);
+        
         deviceRaytrace.setEnvMapInKernel();
+        deviceRender.setEnvMapInKernel();
+        
         deviceRaytrace.resume();
     }
 
@@ -594,7 +597,7 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX,
     }
     
     
-    public CEnvMap getEnvironmentalMapCL()
+    public CEnvironment getEnvironmentalMapCL()
     {
         return envmap;
     }

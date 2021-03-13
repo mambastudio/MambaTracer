@@ -16,7 +16,10 @@ import coordinate.struct.structbyte.Structure;
  */
 public class CEnvironmentGrid extends Structure{
     public boolean      isPresent;    
+    public int          width;
+    public int          height;
     public CPoint3      cameraPosition;
+    
     
     //int values encourages better sampling
     @arraysize(5000)
@@ -29,4 +32,28 @@ public class CEnvironmentGrid extends Structure{
     public float[]      floatLightGrid;   //100 * 50
     @arraysize(2560000)
     public float[]      floatTileGrid; //16 * 32 * lightGrid
+    
+    public void setWidth(int width)
+    {
+        this.width = width;
+        this.refreshGlobalArray();
+    }
+    
+    public void setHeight(int height)
+    {
+        this.height = height;
+        this.refreshGlobalArray();
+    }
+    
+    public void setCameraPosition(CPoint3 cameraPosition)
+    {
+        this.cameraPosition = cameraPosition;
+        this.refreshGlobalArray();
+    }
+    
+    public void setIsPresent(boolean isPresent)
+    {
+        this.isPresent = isPresent;
+        this.refreshGlobalArray();
+    }
 }

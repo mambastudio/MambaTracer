@@ -11,7 +11,6 @@ import cl.struct.CState;
 import cl.struct.CPath;
 import cl.struct.CCameraModel;
 import cl.struct.CMaterial;
-import cl.struct.CFace;
 import cl.struct.CLight;
 import cl.struct.CCamera;
 import cl.struct.CIntersection;
@@ -21,22 +20,20 @@ import bitmap.display.ImageDisplay;
 import bitmap.image.BitmapARGB;
 import static cl.abstracts.MambaAPIInterface.ImageType.RENDER_IMAGE;
 import cl.abstracts.RayDeviceInterface;
+import cl.algorithms.CEnvironment;
 import cl.algorithms.CImage;
+import cl.algorithms.CLightConfiguration;
 import cl.data.CPoint2;
-import cl.data.CPoint3;
 import cl.scene.CMesh;
 import cl.scene.CNormalBVH;
 import cl.algorithms.CTextureApplyPass;
 import cl.ui.fx.main.TracerAPI;
-import coordinate.struct.structbyte.StructureArray;
-import coordinate.struct.structint.StructIntArray;
 import java.math.BigInteger;
 import java.util.Random;
 import thread.model.LambdaThread;
 import wrapper.core.CKernel;
 import wrapper.core.CMemory;
 import static wrapper.core.CMemory.READ_WRITE;
-import wrapper.core.CResourceFactory;
 import wrapper.core.OpenCLConfiguration;
 import wrapper.core.memory.values.FloatValue;
 import wrapper.core.memory.values.IntValue;
@@ -82,10 +79,9 @@ public class CDeviceGI implements RayDeviceInterface<
     CTextureApplyPass texApplyPass = null;
     CMemory<CTextureData> texBuffer = null;
     CCompact compactHybrid;
-    private CMemory<IntValue> gTotalLights;
-    private CMemory<CLight> gLights;
     
-    CImage image;
+    private CEnvironment envmap = null;
+    private CImage image = null;
   
     //kernels   
     private CKernel gInitCameraRaysKernel;
@@ -106,6 +102,8 @@ public class CDeviceGI implements RayDeviceInterface<
     
     OpenCLConfiguration configuration;
     ImageDisplay display;
+    
+    CLightConfiguration lightConfiguration;
     
     
     public CDeviceGI(int w, int h)
@@ -131,8 +129,6 @@ public class CDeviceGI implements RayDeviceInterface<
         gBPathBuffer         = configuration.createBufferB(CPath.class, globalWorkSize, READ_WRITE);
         gIsectBuffer         = configuration.createBufferB(CIntersection.class, globalWorkSize, READ_WRITE);
         compactHybrid        = new CCompact(configuration);       
-        gTotalLights         = configuration.createFromI(IntValue.class, new int[]{0}, READ_WRITE);
-        gLights              = configuration.createBufferB(CLight.class, 1, READ_WRITE);
         texBuffer            = configuration.createBufferI(CTextureData.class, globalWorkSize, READ_WRITE);
         texApplyPass         = new CTextureApplyPass(api, texBuffer, gCountBuffer);
     }
@@ -145,9 +141,9 @@ public class CDeviceGI implements RayDeviceInterface<
         gInitPixelIndicesKernel         = configuration.createKernel("InitIntDataToIndex", gPixelIndicesBuffer);
         gIntersectPrimitivesKernel      = configuration.createKernel("IntersectPrimitives", gRaysBuffer, gIsectBuffer, gCountBuffer, mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
         gSetupBSDFKernel                = configuration.createKernel("SetupBSDFPath", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), gPixelIndicesBuffer, gCountBuffer);
-        gLightHitPassKernel             = configuration.createKernel("LightHitPass", gIsectBuffer, gRaysBuffer, gBPathBuffer,  gTotalLights, mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), image.getFrameAccum(), gPixelIndicesBuffer, gCountBuffer);
+        gLightHitPassKernel             = configuration.createKernel("LightHitPass", gIsectBuffer, gRaysBuffer, gBPathBuffer,  lightConfiguration.getCLightCount(), mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), image.getFrameAccum(), gPixelIndicesBuffer, gCountBuffer, envmap.getRgbCL(), envmap.getEnvLumCL(), envmap.getEnvLumSATCL(), envmap.getCEnvGrid());
         gSampleBSDFRayDirectionKernel   = configuration.createKernel("SampleBSDFRayDirection", gIsectBuffer, gRaysBuffer, gBPathBuffer, mesh.clMaterials(), gPixelIndicesBuffer, gStateBuffer, gCountBuffer);
-        gDirectLightKernel              = configuration.createKernel("DirectLight", gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, image.getFrameAccum(), gPixelIndicesBuffer, gCountBuffer, gStateBuffer, mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
+        gDirectLightKernel              = configuration.createKernel("DirectLight", gBPathBuffer, gIsectBuffer, lightConfiguration.getCLightInfoList(), lightConfiguration.getCLightCount(), gOcclusRaysBuffer, image.getFrameAccum(), gPixelIndicesBuffer, gCountBuffer, gStateBuffer, mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds(), envmap.getRgbCL(), envmap.getEnvLumCL(), envmap.getEnvLumSATCL(), envmap.getCEnvGrid());
         gTextureInitPassKernel          = configuration.createKernel("texturePassGI", gBPathBuffer, gIsectBuffer, texBuffer, gPixelIndicesBuffer, gCountBuffer);
         gUpdateToTextureColorGIKernel   = configuration.createKernel("updateToTextureColorGI", gBPathBuffer, texBuffer, gPixelIndicesBuffer, gCountBuffer);
       }
@@ -253,29 +249,13 @@ public class CDeviceGI implements RayDeviceInterface<
     //currently mesh only
     public void initLight()
     {
-        StructureArray<CLight> lights = new StructureArray<>(CLight.class);
-        StructIntArray<CFace> faces = new StructIntArray<>(CFace.class, mesh.getCount());        
-        faces.setIntArray(mesh.getTriangleFacesArray());      
-        int lightCount = 0;
+        lightConfiguration.initLights(mesh, envmap);
         
-        for(int i = 0; i<faces.size(); i++)
-        {
-            CFace face = faces.get(i);
-            CMaterial material = mesh.clMaterials().get(face.getMaterialIndex());
-            if(material.isEmitterEnabled()) 
-            {
-                lights.add(new CLight(i));
-                lightCount++;
-            }            
-        }
-                
-        CResourceFactory.releaseMemory("lights");
-        gTotalLights.setCL(new IntValue(lightCount));
-        gLights = configuration.createFromB(CLight.class, lights, READ_WRITE);
-        gDirectLightKernel.resetPutArgs(gBPathBuffer, gIsectBuffer, gLights, gTotalLights, gOcclusRaysBuffer, image.getFrameAccum(), gPixelIndicesBuffer, gCountBuffer, gStateBuffer, 
+        gLightHitPassKernel.putArg(3, lightConfiguration.getCLightCount());
+        gDirectLightKernel.resetPutArgs(gBPathBuffer, gIsectBuffer, lightConfiguration.getCLightInfoList(), lightConfiguration.getCLightCount(), gOcclusRaysBuffer, image.getFrameAccum(), gPixelIndicesBuffer, gCountBuffer, gStateBuffer, 
                 mesh.clMaterials(), mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds()); 
        
-        System.out.println("light count : " +lightCount);
+        System.out.println("light area count : " +lightConfiguration.getAreaLightCount());
     }
     
     @Override
@@ -298,7 +278,31 @@ public class CDeviceGI implements RayDeviceInterface<
     private void initFrameCount()
     {
         image.getFrameCount().setCL(new FloatValue(1));
-    }    
+    }  
+    
+    public void setGamma(float value)
+    {
+        image.setGamma(value);
+        image.processImage();
+        outputImage();
+    }
+    
+    public float getGamma()
+    {
+        return image.getGamma();        
+    }
+    
+    public void setExposure(float value)
+    {
+        image.setExposure(value);
+        image.processImage();
+        outputImage();
+    }
+    
+    public float getExposure()
+    {
+        return image.getExposure();        
+    }
    
     @Override
     public void outputImage() {      
@@ -334,10 +338,23 @@ public class CDeviceGI implements RayDeviceInterface<
     {
         this.configuration = platform;
         this.display = display;
+        this.envmap = api.getEnvironmentalMapCL();
+        this.lightConfiguration = new CLightConfiguration(configuration);
         createBuffers();
         createKernels();
         compactHybrid.init(gIsectBuffer, gPixelIndicesBuffer, gCountBuffer);
         
+    }
+    
+    public void setEnvMapInKernel()
+    {
+        gLightHitPassKernel.putArg(13, envmap.getRgbCL());
+        gLightHitPassKernel.putArg(14, envmap.getEnvLumCL());
+        gLightHitPassKernel.putArg(15, envmap.getEnvLumSATCL());
+        
+        gDirectLightKernel.putArg(17, envmap.getRgbCL());
+        gDirectLightKernel.putArg(18, envmap.getEnvLumCL());
+        gDirectLightKernel.putArg(19, envmap.getEnvLumSATCL());
     }
 
     @Override

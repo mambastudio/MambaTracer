@@ -1,3 +1,6 @@
+/**
+* LIGHT TYPES
+*/
 // triangle face indices
 typedef struct
 {
@@ -9,6 +12,36 @@ typedef struct
    float      invArea;
 }AreaLight;
 
+// environment map
+typedef struct
+{
+   global float4* envmap;
+   global float* lum;
+   global float* sat;
+   //is it the whole env map or section
+   SATRegion region;
+   //env map details (in future it will be the sampling distribution too)
+   global EnvironmentGrid* envgrid;
+   
+   //for sampling
+   float pdf[1];
+   float uv[2];
+   float indexU;
+   float indexV;
+}EnvironmentLight;
+
+typedef struct
+{
+   int type;
+
+   AreaLight areaLight;
+   EnvironmentLight envLight;
+  
+}Light;
+
+/**
+* LIGHT FUNCTIONS
+*/
 AreaLight getAreaLight(BSDF bsdf, TriangleMesh mesh, int triangleIndex)
 {
    AreaLight light;
@@ -93,4 +126,72 @@ float4 getRadianceAreaLight(
             *oDirectPdfA = aLight.invArea;
             
        return aLight.intensity;
+}
+
+EnvironmentLight getEnvironmentLight(global EnvironmentGrid* envgrid, global float4* envmap, global float* lum, global float* sat)
+{
+     SATRegion region;
+     setRegion(&region, 0, 0, envgrid->width, envgrid->height);
+     region.nu = envgrid->width;
+     region.nv = envgrid->height;
+     EnvironmentLight envlight = {envmap, lum, sat, region, envgrid};
+     return envlight;
+}
+
+int sampleEnvironmentLight(float2 samples, EnvironmentLight* aLight)
+{
+    sampleContinuous(aLight->region, samples.x, samples.y, &aLight->uv, &aLight->pdf, aLight->sat, aLight->envmap);
+    int uIndex     = (int)(aLight->uv[0] * aLight->envgrid->width);
+    int vIndex     = (int)(aLight->uv[1] * aLight->envgrid->height);
+    aLight->indexU = uIndex;
+    aLight->indexV = vIndex;
+    int index      = (int)(uIndex + vIndex * aLight->envgrid->width);
+    //printFloat(index);
+    return index;
+}
+
+float4 illuminateEnvironmentLight(
+       EnvironmentLight aLight,
+       float4           aReceivingPosition,
+       float2           aSample,
+       float4           *oDirectionToLight,
+       float            *oDistance,
+       float            *oDirectPdfW
+)
+{
+  float uv[2];
+  float pdf[1];
+  sampleContinuous(aLight.region, aSample.x, aSample.y, &uv, &pdf, aLight.sat, aLight.lum);
+
+  *oDirectionToLight  = getSphericalDirection(uv[0], uv[1]);
+  int index           = getSphericalGridIndex(aLight.envgrid->width, aLight.envgrid->height, *oDirectionToLight);
+  float4 contrib      = aLight.envmap[index];
+  contrib.xyz         = contrib.xyz;
+
+  float sinTheta = sin(uv[1] * M_PI);
+
+  *oDirectPdfW = pdf[0] /(2 * M_PI * M_PI * sin(uv[1] * M_PI));
+  *oDistance = FLOATMAX;
+  
+  if(sinTheta == 0)
+     *oDirectPdfW = 0;
+
+  return contrib;
+}
+
+float4 getRadianceEnvironmentLight(
+       EnvironmentLight aLight,
+       float4           aRayDirection,
+       float4           aHitPoint,
+       float            *oDirectPdfA
+)
+{
+    int2 xy             = getSphericalGridXY(aLight.envgrid->width, aLight.envgrid->height, aRayDirection);
+    int index           = getSphericalGridIndex(aLight.envgrid->width, aLight.envgrid->height, aRayDirection);
+    float4 contrib      = aLight.envmap[index];
+    float pdfXY         = getPdfSAT(aLight.region, xy.x, xy.y, aLight.sat, aLight.lum);
+    float v             = xy.y/(float)(lengthY(aLight.region));
+    *oDirectPdfA        = pdfXY /(2 * M_PI * M_PI * sin(v * M_PI));
+
+    return contrib;
 }

@@ -82,25 +82,7 @@ typedef struct
     float2 dimension;
     float fov;
 }CameraStruct;
-
-//environment sampling
-//Adaptive Environment Sampling on CPU and GPU by Asen Atanasov et al, 2018
-typedef struct
-{
-    bool      isPresent;
-    int       cameraPosition;
-    
-    //int values encourages better sampling
-    int       intLightGrid[5000];   //100 * 50
-    int       intTileGrid[2560000]; //16 * 32 * lightGrid
-
-    //for temporary values
-    float     floatLightGrid[5000];   //100 * 50
-    float     floatTileGrid[2560000]; //16 * 32 * lightGrid
-  
-}EnvironmentGrid;
-
-
+   
 // box
 typedef struct
 {
@@ -166,15 +148,38 @@ typedef struct
    int hit;  
 }Intersection;
 
-//soon to implement unions
+enum LightType
+{
+    NO_LIGHT,
+    AREA_LIGHT,
+    INFINITE_LIGHT
+};
+
 typedef struct
 {
    int faceId;
-   
-   float4 p;
-   float4 d;
+   int type;
+
+}LightInfo;
+
+//environment sampling
+//Adaptive Environment Sampling on CPU and GPU by Asen Atanasov et al, 2018
+typedef struct
+{
+    bool      isPresent;
+    int       width;
+    int       height;
+    int       cameraPosition;
+    
+    //int values encourages better sampling
+    int       intLightGrid[5000];   //100 * 50
+    int       intTileGrid[2560000]; //16 * 32 * lightGrid
+
+    //for temporary values
+    float     floatLightGrid[5000];   //100 * 50
+    float     floatTileGrid[2560000]; //16 * 32 * lightGrid
   
-}Light;
+}EnvironmentGrid; 
 
 typedef struct
 {
@@ -379,18 +384,48 @@ bool isError(float value)
       return false;
 }
 
-int getSphericalGridIndex(int width, int height, float4 d)
+int2 getSphericalGridXY(int width, int height, float4 d)
 {
-    int u, v;
+    int x, y;
     float phi = 0, theta = 0;
-    
+
     //do conversion of vector direction to u v - [0 to env map size] coordinates
     phi = acos(d.y);
     theta = atan2(d.z, d.x);
-    u = (0.5f - 0.5f * theta / M_PI) * width;
-    v = (phi / M_PI) * height;
+    x = (0.5f - 0.5f * theta / M_PI) * width;
+    y = (phi / M_PI) * height;
     
-    return getIndex((float2)(u, v), width, height);
+    return (int2)(x, y);
+
+}
+
+//sunflow renderer
+int getSphericalGridIndex(int width, int height, float4 d)
+{
+    int2 xy = getSphericalGridXY(width, height, d);     
+    return getIndex((float2)(xy.x, xy.y), width, height);
+}
+
+//u = [0, 1] v = [0, 1]
+//phi is z axis which up
+//theta is plane x,y
+//sunflow renderer
+float4 getSphericalDirection(float u, float v)
+{
+    float phi = M_PI * v;
+    float theta = u * 2 * M_PI;
+    
+    float x     = -sin(phi) * cos(theta);
+    float y     = cos(phi);
+    float z     = sin(phi) * sin(theta);
+
+    float4 d;
+    d.x = x;
+    d.y = y;
+    d.z = z;
+    d.w = 0;
+    return d;
+
 }
 
 void gammaFloat4(float4* color, float gamma)

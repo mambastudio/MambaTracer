@@ -27,7 +27,7 @@
                <tabs>
                   <Tab text="Viewport">
                      <content>
-                        <VBox prefHeight="456.0" prefWidth="223.0" spacing="5.0">
+                        <VBox prefHeight="456.0" prefWidth="223.0" spacing="5.0" style="-fx-border-color: LIGHTGRAY;">
                            <children>
                               <HBox alignment="CENTER_LEFT" prefHeight="21.0" prefWidth="207.0" spacing="5.0">
                                  <children>
@@ -54,9 +54,19 @@
                                     <Label text="Gamma" />
                                     <Label text="Exposure" GridPane.rowIndex="2" />
                                     <Slider fx:id="gammaSlider" majorTickUnit="0.5" max="3.0" min="0.5" showTickLabels="true" showTickMarks="true" value="1.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" />
-                                    <Slider fx:id="exposureSlider" majorTickUnit="0.5" max="1.5" min="0.18" minorTickCount="2" showTickLabels="true" showTickMarks="true" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="2" />
+                                    <Slider fx:id="exposureSlider" majorTickUnit="0.54" max="1.8" min="0.18" minorTickCount="1" showTickLabels="true" showTickMarks="true" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" GridPane.rowIndex="2" />
                                     <TextField fx:id="gammaTextField" prefHeight="17.0" prefWidth="136.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                                     <TextField fx:id="exposureTextField" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                                    <Button mnemonicParsing="false" onAction="#resetFilmGamma" GridPane.rowIndex="1">
+                                       <graphic>
+                                          <MaterialDesignIconView glyphName="BACKUP_RESTORE" size="16.0" />
+                                       </graphic>
+                                    </Button>
+                                    <Button mnemonicParsing="false" onAction="#resetFilmExposure" GridPane.rowIndex="3">
+                                       <graphic>
+                                          <MaterialDesignIconView glyphName="BACKUP_RESTORE" size="16" />
+                                       </graphic>
+                                    </Button>
                                  </children>
                                  <padding>
                                     <Insets left="10.0" />
@@ -84,8 +94,8 @@
                                  <children>
                                     <Label text="Width" />
                                     <Label text="Height" GridPane.rowIndex="1" />
-                                    <Label text="--" GridPane.columnIndex="1" />
-                                    <Label text="--" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                    <Label fx:id="widthLabel" text="--" GridPane.columnIndex="1" />
+                                    <Label fx:id="heightLabel" text="--" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                                  </children>
                                  <VBox.margin>
                                     <Insets left="10.0" />
@@ -93,14 +103,13 @@
                               </GridPane>
                            </children>
                            <padding>
-                              <Insets left="3.0" />
+                              <Insets left="3.0" right="3.0" />
                            </padding>
                         </VBox>
                      </content>
                   </Tab>
                </tabs>
             </TabPane>
-            <Separator orientation="VERTICAL" prefHeight="456.0" prefWidth="0.0" />
             <TabPane prefHeight="456.0" prefWidth="396.0" side="BOTTOM" HBox.hgrow="ALWAYS">
                <tabs>
                   <Tab closable="false" text="Render">

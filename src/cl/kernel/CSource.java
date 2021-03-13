@@ -17,14 +17,17 @@ public class CSource {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Print.cl"));
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Util.cl"));
+        stringBuilder.append(CLFileReader.readFile(CSource.class, "SAT.cl"));
         stringBuilder.append(CLFileReader.readFile(CSource.class, "RGBSpace.cl"));        
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Sampling.cl"));           
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Matrix.cl"));
+        
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Initialize.cl"));
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Primitive.cl"));
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Material.cl"));
         stringBuilder.append(CLFileReader.readFile(CSource.class, "NormalBVH.cl"));        
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Light.cl"));
+        stringBuilder.append(CLFileReader.readFile(CSource.class, "LightConfiguration.cl"));
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Raytrace.cl"));
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Render.cl"));        
         stringBuilder.append(CLFileReader.readFile(CSource.class, "Compact.cl"));

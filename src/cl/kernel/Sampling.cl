@@ -52,8 +52,7 @@ float2 random_float2(int2* state)
 {
     float2 r;
     r.x = get_random(state);
-    r.y = get_random(state);
-    ;
+    r.y = get_random(state);  
     return r;
 }
 

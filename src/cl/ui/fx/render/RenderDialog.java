@@ -19,6 +19,8 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.StringProperty;
+import javafx.event.ActionEvent;
+import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
@@ -54,12 +56,14 @@ public class RenderDialog extends DialogAbstract{
     @FXML
     TextField exposureTextField;
     
-    DoubleProperty gammaProperty = new SimpleDoubleProperty(2.2);
+    @FXML
+    Label widthLabel;
+    @FXML
+    Label heightLabel;
+    
+    DoubleProperty gammaProperty;
     DoubleProperty exposureProperty = new SimpleDoubleProperty(0.18);
-    
-    DoubleProperty widthProperty = new SimpleDoubleProperty(0);
-    DoubleProperty heightProperty = new SimpleDoubleProperty(0);
-    
+        
     private final TracerAPI api;
     
     public RenderDialog(TracerAPI api)
@@ -126,6 +130,9 @@ public class RenderDialog extends DialogAbstract{
             api.setDevicePriority(RAYTRACE);
         });
         
+        gammaProperty = new SimpleDoubleProperty(api.getDeviceGI().getGamma());
+        exposureProperty = new SimpleDoubleProperty(api.getDeviceGI().getExposure());
+        
         gammaSlider.setValue(gammaProperty.doubleValue());
         gammaProperty.bind(gammaSlider.valueProperty());
         exposureSlider.setValue(exposureProperty.doubleValue());
@@ -138,10 +145,29 @@ public class RenderDialog extends DialogAbstract{
         bindBidirectionalStringAndDouble(gammaTextField.textProperty(), gammaSlider.valueProperty());  
         bindBidirectionalStringAndDouble(exposureTextField.textProperty(), exposureSlider.valueProperty());
         
-        widthProperty.setValue(api.getImageWidth(MambaAPIInterface.ImageType.RENDER_IMAGE));
-        heightProperty.setValue(api.getImageWidth(MambaAPIInterface.ImageType.RENDER_IMAGE));
+        widthLabel.setText(Integer.toString(api.getImageWidth(MambaAPIInterface.ImageType.RENDER_IMAGE)));
+        heightLabel.setText(Integer.toString(api.getImageWidth(MambaAPIInterface.ImageType.RENDER_IMAGE)));
+        
+        gammaProperty.addListener((obs, oV, nV)->{
+            api.getDeviceGI().setGamma(nV.floatValue());
+        });
+        
+        exposureProperty.addListener((obs, oV, nV)->{
+            api.getDeviceGI().setExposure(nV.floatValue());
+        });
+        
         
         return box;
+    }
+    
+    public void resetFilmExposure(ActionEvent e)
+    {        
+        exposureSlider.setValue(0.18);
+    }
+    
+    public void resetFilmGamma(ActionEvent e)
+    {        
+        gammaSlider.setValue(2.2);
     }
     
 }

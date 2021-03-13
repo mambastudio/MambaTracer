@@ -6,14 +6,11 @@
 package cl.algorithms;
 
 import static cl.abstracts.MambaAPIInterface.getGlobal;
-import static cl.abstracts.MambaAPIInterface.getNumOfGroups;
 import cl.data.CColor4;
 import wrapper.core.CKernel;
 import wrapper.core.CMemory;
 import static wrapper.core.CMemory.READ_WRITE;
 import wrapper.core.OpenCLConfiguration;
-import static wrapper.core.memory.LocalMemory.LOCALFLOAT;
-import static wrapper.core.memory.LocalMemory.LOCALINT;
 import wrapper.core.memory.values.FloatValue;
 import wrapper.core.memory.values.IntValue;
 
@@ -40,6 +37,8 @@ public class CImage {
     private CMemory<FloatValue> cloglw;                   //log luminance of every pixel  
     private CMemory<IntValue>   cloglwcount;              //predicate (0, 1) of log luminance i.e. loglw > 0 ? 1:0
     
+    private CMemory<FloatValue> cgamma;
+    private CMemory<FloatValue> cexposure;
     
     //kernels    
     private CKernel initFrameAccumKernel;
@@ -98,6 +97,9 @@ public class CImage {
         this.cTotalLogLuminance     = prefixSumLoglw.getCTotal();
         this.cTotalNumber           = prefixSumloglwCount.getCTotal();
         
+        this.cgamma                 = configuration.createValueF(FloatValue.class, new FloatValue(2.2f), READ_WRITE);
+        this.cexposure              = configuration.createValueF(FloatValue.class, new FloatValue(0.18f), READ_WRITE);
+        
     }
     
     public final void createKernels()
@@ -106,7 +108,7 @@ public class CImage {
         this.initFrameARGBKernel        = configuration.createKernel("InitIntDataRGB", cFrameARGB);   //introduce this kernel     
         
         this.averageAccum1Kernel        = configuration.createKernel("averageAccum", cFrameAccum, cFrameCount, cFrameBuffer, cloglw, cloglwcount, cFrameSize );
-        this.updateImageFrameKernel     = configuration.createKernel("updateFrameImage", cFrameBuffer, cFrameARGB, cTotalLogLuminance, cTotalNumber, cFrameSize);
+        this.updateImageFrameKernel     = configuration.createKernel("updateFrameImage", cFrameBuffer, cFrameARGB, cTotalLogLuminance, cTotalNumber, cFrameSize, cexposure, cgamma);
     }
     
     
@@ -129,6 +131,31 @@ public class CImage {
         }
         configuration.execute1DKernel(updateImageFrameKernel, globalSize, localSize);
         
+    }
+            
+    public void updateImageFrameKernel()
+    {
+        configuration.execute1DKernel(updateImageFrameKernel, globalSize, localSize);
+    }
+    
+    public void setGamma(float value)
+    {
+        cgamma.setCL(new FloatValue(value));
+    }
+    
+    public float getGamma()
+    {
+        return cgamma.getCL().v;
+    }
+    
+    public void setExposure(float value)
+    {
+        cexposure.setCL(new FloatValue(value));
+    }
+    
+    public float getExposure()
+    {
+        return cexposure.getCL().v;
     }
     
     public void initFrameCount()

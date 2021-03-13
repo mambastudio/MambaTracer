@@ -45,6 +45,29 @@ __kernel void InitFloat4DataXYZ(global float4* float4Data)
     float4Data[id] = (float4)(0, 0, 0, 1);
 }
 
+__kernel void InitEnvironmentLum(global float4* envmap, global float* lum, global float* lumsat, global EnvironmentGrid* envgrid)
+{
+    //global id and pixel making
+    int id= get_global_id( 0 );
+    int size = envgrid->width * envgrid->height;
+
+    if(id < size)
+    {
+        lum[id] = Luminance(envmap[id].xyz);
+        lumsat[id] = lum[id];
+    }
+}
+
+//globalsize = 1, localsize = 1
+__kernel void InitEnvironmentSAT(global EnvironmentGrid* envgrid, global float* sat)
+{
+    SATRegion region;
+    setRegion(&region, 0, 0, envgrid->width, envgrid->height);    
+    region.nu = envgrid->width;
+    region.nv = envgrid->height;
+    calculateSAT(region, sat);
+}
+
 __kernel void InitCameraRayDataJitter(
     global CameraStruct* camera,
     global Ray* rays,

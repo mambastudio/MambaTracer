@@ -17,7 +17,7 @@ import bitmap.display.BlendDisplay;
 import bitmap.image.BitmapARGB;
 import static cl.abstracts.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
 import cl.abstracts.RayDeviceInterface;
-import cl.algorithms.CEnvMap;
+import cl.algorithms.CEnvironment;
 import cl.data.CPoint2;
 import cl.data.CPoint3;
 import cl.data.CVector3;
@@ -92,7 +92,7 @@ public class CDeviceRT implements RayDeviceInterface<
     
     CTextureApplyPass texApplyPass = null;
     
-    CEnvMap envmap = null;
+    CEnvironment envmap = null;
        
     public CDeviceRT(int w, int h)
     {
@@ -124,7 +124,7 @@ public class CDeviceRT implements RayDeviceInterface<
         initCameraRaysKernel                = configuration.createKernel("InitCameraRayData", cameraBuffer, raysBuffer);
         intersectPrimitivesKernel           = configuration.createKernel("IntersectPrimitives", raysBuffer, isectBuffer, count, mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
         fastShadeKernel                     = configuration.createKernel("fastShade", isectBuffer, bsdfBuffer, imageBuffer);
-        backgroundShadeKernel               = configuration.createKernel("backgroundShade", isectBuffer, cameraBuffer, imageBuffer, raysBuffer, envmap.getRgbCL(), envmap.getWidthCL(), envmap.getHeightCL(), envmap.getIsPresentCL());
+        backgroundShadeKernel               = configuration.createKernel("backgroundShade", isectBuffer, cameraBuffer, imageBuffer, raysBuffer, envmap.getRgbCL(), envmap.getCEnvGrid());
         updateGroupbufferShadeImageKernel   = api.getConfigurationCL().createKernel("updateGroupbufferShadeImage", isectBuffer, cameraBuffer, groupBuffer);
         textureInitPassKernel               = configuration.createKernel("textureInitPassRT", bsdfBuffer, isectBuffer, texBuffer);
         setupBSDFRaytraceKernel             = configuration.createKernel("SetupBSDFRaytrace", isectBuffer, raysBuffer, bsdfBuffer, mesh.clMaterials());

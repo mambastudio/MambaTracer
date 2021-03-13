@@ -62,7 +62,9 @@ __kernel void updateFrameImage(global float4* frameBuffer,
                                global int*    imageBuffer,
                                global float*  totalLogLuminance,
                                global int*    totalNumber,
-                               global int*    imageSize)
+                               global int*    imageSize,
+                               global float*  exposure,
+                               global float*  gamma)
 {
     //get thread id
     int id = get_global_id( 0 );
@@ -80,7 +82,7 @@ __kernel void updateFrameImage(global float4* frameBuffer,
         if(colorLuminance > 0)
         {
           //scaled luminance -> should be 0.5f but log(delta + Lw) is giving negative values
-          float scaledLuminance     = 0.18f * colorLuminance/logAverageLuminance;
+          float scaledLuminance     = (*exposure) * colorLuminance/logAverageLuminance;
 
           //tonemap - default Reinhard (experiment with other interesting types... http://filmicworlds.com/blog/filmic-tonemapping-operators/)
           float Y             = toneSimpleReinhard(scaledLuminance);
@@ -94,7 +96,7 @@ __kernel void updateFrameImage(global float4* frameBuffer,
           *color              = convertXYZtoRGB(colorXYZ);
     
           //gamma
-          frameBuffer[id].xyz = pow(frameBuffer[id].xyz, (float3)(1.f/2.2f));
+          frameBuffer[id].xyz = pow(frameBuffer[id].xyz, (float3)(1.f/(*gamma)));
     
     
           //update frame render

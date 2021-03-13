@@ -62,22 +62,27 @@ __kernel void SetupBSDFPath(global Intersection* isects,
     }
 }
 
-__kernel void LightHitPass(global Intersection* isects,
-                           global Ray*          rays,
-                           global Path*         paths,
-                           global int*          totalLights,
+__kernel void LightHitPass(global Intersection*     isects,
+                           global Ray*              rays,
+                           global Path*             paths,
+                           global int*              totalLights,
 
                            //mesh
-                           global Material*     materials,
-                           global const float4* points,
-                           global const float2* uvs,
-                           global const float4* normals,
-                           global const Face*   faces,
-                           global const int*    size,
+                           global Material*         materials,
+                           global const float4*     points,
+                           global const float2*     uvs,
+                           global const float4*     normals,
+                           global const Face*       faces,
+                           global const int*        size,
 
-                           global float4*       accum,
-                           global int*          pixel_indices,
-                           global int*          num_isects)
+                           global float4*           accum,
+                           global int*              pixel_indices,
+                           global int*              num_isects,
+
+                           global float4*           envmap,
+                           global float*            lum,
+                           global float*            lumsat,
+                           global EnvironmentGrid*  envgrid)
 {
     int global_id = get_global_id(0);
     TriangleMesh mesh    = {points, uvs, normals, faces, size[0]};
@@ -117,6 +122,24 @@ __kernel void LightHitPass(global Intersection* isects,
               //we are done with this intersect and path
               isect->hit = false;
            }
+       }
+       else if(envgrid->isPresent)
+       {
+            EnvironmentLight aLight = getEnvironmentLight(envgrid, envmap,  lum, lumsat);
+            float directPdfW;
+            
+            float4 contrib = getRadianceEnvironmentLight(aLight, ray->d, isect->p, &directPdfW);
+            if(isFloat3Zero(contrib.xyz))
+                 return;
+        
+            //weight path
+            float misWeight = 1.f;
+            if(!path->lastSpecular)
+            {
+                 misWeight = mis2(path->lastPdfW, directPdfW);
+            }
+            //accumulate radiance to screenspace buffer
+            addAccum(&accum[*index], path->throughput * contrib * misWeight);
        }
     }
 }
@@ -235,10 +258,96 @@ __kernel void SampleBSDFRayDirection(global Intersection* isects,
     }
 }
 
+float4 directAreaLight(global Intersection* isect,
+                       //mesh light
+                       TriangleMesh         mesh,
+                       global Material*     materials,
+                       global LightInfo*    lightInfo,
+                       global int*          totalLights,
+                       //other parameters for transport calculation
+                       float2               sample,
+                       float*               lightPickProb,
+                       int2*                seed,
+                       float4*              directionToLight,
+                       float*               distance,
+                       float*               directPdfW)
+{
+     //sample light index uniformly
+     int lightIndex = random_int_range(seed, *totalLights);
+     //light and index of mesh
+     global LightInfo* light = lightInfo + lightIndex;
+     int triangleIndex   = lightInfo->faceId;
+     //light pick probability
+     *lightPickProb *= 1.f / *totalLights;
+     //light bsdf
+     BSDF lightBSDF = setupBSDFAreaLight(materials, mesh, triangleIndex);
+     //get area light
+     AreaLight aLight = getAreaLight(lightBSDF, mesh, triangleIndex);
+     //radiance from direct light
+     float4 radiance = illuminateAreaLight(aLight, isect->p, sample, directionToLight, distance, directPdfW);
+     return radiance;
+  }
+
+float4 illuminateLight( global Intersection* isect,
+                        //environment
+                        EnvironmentLight     eLight,
+                        //mesh light
+                        TriangleMesh         mesh,
+                        global Material*     materials,
+                        global LightInfo*    lightInfo,
+                        global int*          totalLights,
+                        //other parameters for transport calculation
+                        float*               lightPickProb,
+                        int2*                seed,
+                        float4*              directionToLight,
+                        float*               distance,
+                        float*               directPdfW)
+{
+    *lightPickProb    =         1.f;
+    //for light surface sample
+    float2 sample                = random_float2(seed);
+
+    //sample either environment light or mesh light
+    if(eLight.envgrid->isPresent && (*totalLights > 0))
+    {
+         float rnd         = get_random(seed);
+         bool sampleALight = (rnd < 0.5f);
+         
+         //light mesh or infinite light
+         *lightPickProb    *= 0.5f;
+
+         if(sampleALight)
+         {
+              float4 radiance = directAreaLight(isect, mesh, materials, lightInfo, totalLights, 
+                                                       sample, lightPickProb, seed, directionToLight, distance, directPdfW);
+              return radiance;
+         }
+         else
+         {
+              float4 radiance = illuminateEnvironmentLight(eLight, isect->p, sample, directionToLight, distance, directPdfW);
+              return radiance;
+         }
+    }
+    //sample environment map if present
+    if(eLight.envgrid->isPresent)
+    {
+        float4 radiance = illuminateEnvironmentLight(eLight, isect->p, sample, directionToLight, distance, directPdfW);
+        return radiance;
+    }
+    //sample mesh light if present
+    else if(*totalLights > 0)
+    {
+        //radiance from direct light
+        float4 radiance = directAreaLight(isect, mesh, materials, lightInfo, totalLights,
+                                                 sample, lightPickProb, seed, directionToLight, distance, directPdfW);
+        return radiance;
+    }
+}
+
 __kernel void DirectLight(
     global Path*         paths,
     global Intersection* isects,
-    global Light*        lights,  //for sampling deterministically for shadow test
+    global LightInfo*    lights,  //for sampling deterministically for shadow test
     global int*          totalLights,
     global Ray*          occlusRays,
 
@@ -260,12 +369,18 @@ __kernel void DirectLight(
     
     //bvh
     global const BVHNode* nodes,
-    global const BoundingBox* bounds
+    global const BoundingBox* bounds,
+    
+    global float4*           envmap,
+    global float*            lum,
+    global float*            lumsat,
+    global EnvironmentGrid*  envgrid
 )
 {
 
-    int global_id        = get_global_id(0);
-    TriangleMesh mesh    = {points, uvs, normals, faces, size[0]};
+    int global_id            = get_global_id(0);
+    TriangleMesh mesh        = {points, uvs, normals, faces, size[0]};
+    EnvironmentLight eLight  = getEnvironmentLight(envgrid, envmap,  lum, lumsat);
     
     //get intersection and path_index
     global Intersection* isect   = isects + global_id;
@@ -278,24 +393,13 @@ __kernel void DirectLight(
     {        
         //seeds for each thread
         int2 seed = generate_seed(state);
+        
+        float4 directionToLight = (float4)(0, 0, 0, 0);
+        float distance, directPdfW, lightPickProb;
 
-        //for light surface sample
-        float2 sample                = random_float2(&seed);
-         //sample light index uniformly
-        int lightIndex = random_int_range(&seed, *totalLights);
-        //light and index of mesh
-        global Light* light = lights + lightIndex;
-        int triangleIndex   = light->faceId;
-        //light pick probability
-        float lightPickProb = 1.f / *totalLights;
-        //light bsdf
-        BSDF lightBSDF = setupBSDFAreaLight(materials, mesh, triangleIndex);
-        //get area light
-        AreaLight aLight = getAreaLight(lightBSDF, mesh, triangleIndex);
-        //radiance from direct light
-        float4 directionToLight = makeFloat4(0, 0, 0, 0);
-        float distance, directPdfW;
-        float4 radiance = illuminateAreaLight(aLight, isect->p, sample, &directionToLight, &distance, &directPdfW);
+        //get radiance from direct light sampling
+        float4 radiance = illuminateLight(isect, eLight, mesh, materials, lights, totalLights,
+                                                 &lightPickProb, &seed, &directionToLight, &distance, &directPdfW);
 
         if(!isFloat3Zero(radiance.xyz))
         {
@@ -321,6 +425,7 @@ __kernel void DirectLight(
                 }
             }
         }
+
     }
 }
 
