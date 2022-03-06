@@ -84,6 +84,7 @@ public class PrefixSumInteger {
         configuration.execute1DKernel(groupScanIntegerKernel, 1, 1); //Do group level scan. Quite fast. Don't underestimate opencl loops
         configuration.execute1DKernel(globalScanIntegerKernel, GLOBALSIZE, LOCALSIZE); //add the group level scan to the local size scan
         configuration.execute1DKernel(globalTotalIntegerKernel, 1, 1);
+        configuration.finish();
     }
     
     public CMemory<IntValue> getCTotal()

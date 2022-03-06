@@ -7,6 +7,7 @@ package cl.data;
 
 import coordinate.generic.SCoord;
 import coordinate.struct.structfloat.FloatStruct;
+import java.util.Arrays;
 
 
 /**
@@ -52,7 +53,7 @@ public float x, y, z, w;
         return dest;
     }
     
-    @Override
+   
     public CPoint3 setValue(float x, float y, float z) {
         CPoint3 p = SCoord.super.setValue(x, y, z);
         this.refreshGlobalArray();
@@ -71,7 +72,7 @@ public float x, y, z, w;
     }
 
     @Override
-    public void set(float... values) {
+    public void set(float... values) {        
         x = values[0];
         y = values[1];
         z = values[2];

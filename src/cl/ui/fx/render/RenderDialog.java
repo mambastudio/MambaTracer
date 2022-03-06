@@ -11,20 +11,17 @@ import java.io.IOException;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import jfx.dialog.DialogAbstract;
 import cl.ui.fx.main.TracerAPI;
-import javafx.beans.binding.Bindings;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
-import javafx.beans.property.StringProperty;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
-import javafx.util.converter.NumberStringConverter;
 import static jfx.util.BindingFX.bindBidirectionalStringAndDouble;
 import static jfx.util.ImplUtils.convertToTextFieldDouble;
 
@@ -61,6 +58,16 @@ public class RenderDialog extends DialogAbstract{
     @FXML
     Label heightLabel;
     
+    @FXML
+    ProgressIndicator colormapIndicator;
+    @FXML
+    ProgressIndicator normalmapIndicator;
+    @FXML
+    ProgressIndicator opacitymapIndicator;
+    
+    @FXML
+    ProgressIndicator denoiseIndicator;
+    
     DoubleProperty gammaProperty;
     DoubleProperty exposureProperty = new SimpleDoubleProperty(0.18);
         
@@ -70,7 +77,7 @@ public class RenderDialog extends DialogAbstract{
     {
         this.api = api;
         
-        BorderPane box = initFXMLComponent();        
+        BorderPane box = initFXMLComponent(); 
         this.renderPane.getChildren().add(api.getBlendDisplayGI());
         
         this.setContent(box);
@@ -146,7 +153,7 @@ public class RenderDialog extends DialogAbstract{
         bindBidirectionalStringAndDouble(exposureTextField.textProperty(), exposureSlider.valueProperty());
         
         widthLabel.setText(Integer.toString(api.getImageWidth(MambaAPIInterface.ImageType.RENDER_IMAGE)));
-        heightLabel.setText(Integer.toString(api.getImageWidth(MambaAPIInterface.ImageType.RENDER_IMAGE)));
+        heightLabel.setText(Integer.toString(api.getImageHeight(MambaAPIInterface.ImageType.RENDER_IMAGE)));
         
         gammaProperty.addListener((obs, oV, nV)->{
             api.getDeviceGI().setGamma(nV.floatValue());
@@ -156,6 +163,10 @@ public class RenderDialog extends DialogAbstract{
             api.getDeviceGI().setExposure(nV.floatValue());
         });
         
+        colormapIndicator.setOpacity(0);
+        normalmapIndicator.setOpacity(0);
+        opacitymapIndicator.setOpacity(0);
+        denoiseIndicator.setOpacity(0);
         
         return box;
     }
@@ -168,6 +179,11 @@ public class RenderDialog extends DialogAbstract{
     public void resetFilmGamma(ActionEvent e)
     {        
         gammaSlider.setValue(2.2);
+    }
+    
+    public void resetRenderFrame(ActionEvent e)
+    {
+        api.getBlendDisplayGI().reset();
     }
     
 }

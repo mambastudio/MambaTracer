@@ -6,6 +6,7 @@
 #define EPS_RAY    1e-3f
 #define M_PI 3.14159265359f
 #define M_1_PI 1.f/M_PI
+#define NULL 0
 
 int getMaterial(int data)
 {
@@ -141,6 +142,7 @@ typedef struct
 {        
    float4 p;
    float4 n;
+   float4 ng;
    float4 d;
    float2 uv;
    int mat;
@@ -188,16 +190,23 @@ typedef struct
    float4 mZ;
 }Frame;
 
+
 //http://jcgt.org/published/0006/01/01/
+//Frisvad’s orthonormal basis code
 Frame get_frame(float4 n)
 {
    Frame frame;
-   float sign  = copysign(1.0f, n.z);
-   float a     = -1.0f / (sign + n.z);
-   float b     = n.x * n.y * a;
-   frame.mX    = (float4)(1.0f + sign * n.x * n.x * a, sign * b, -sign * n.x, 0);
-   frame.mY    = (float4)(b, sign + n.y * n.y * a, -n.y, 0);
-   frame.mZ    = n;
+   frame.mZ = n;
+
+   float a = 1.0f / (1.0f + n.z);
+   float b = -n.x*n.y*a;
+   frame.mX = (float4)(1.0f - n.x*n.x*a, b, -n.x, 0.0f);
+   frame.mY = (float4)(b, 1.0f - n.y*n.y*a, -n.y, 0.0f);
+
+   int isbelow  = n.z < -0.9999999f;
+   frame.mX     = select(frame.mX, (float4)( 0.0f, -1.0f, 0.0f, 0.0f),(int4)(isbelow <<31));
+   frame.mY     = select(frame.mY, (float4)(-1.0f,  0.0f, 0.0f, 0.0f),(int4)(isbelow <<31));
+
    return frame;
 }
 
@@ -333,6 +342,7 @@ BoundingBox getBoundingBox(TriangleMesh mesh, int primID)
     addToBoundingBox(&bound, getP1(mesh, primID));
     addToBoundingBox(&bound, getP2(mesh, primID));
     addToBoundingBox(&bound, getP3(mesh, primID));
+
     return bound;
 }
 
@@ -400,7 +410,7 @@ int2 getSphericalGridXY(int width, int height, float4 d)
 }
 
 //sunflow renderer
-int getSphericalGridIndex(int width, int height, float4 d)
+int getSphericalGridIndex(int width, int height, float4 d)   
 {
     int2 xy = getSphericalGridXY(width, height, d);     
     return getIndex((float2)(xy.x, xy.y), width, height);
@@ -688,6 +698,7 @@ bool intersectBound(Ray r, BoundingBox bound)
         tmin = tzmin;
     if (tzmax < tmax)
         tmax = tzmax;
+    tmax *= 1.00000024f;
     return ((tmin < r.tMax) && (tmax > r.tMin));
    //float tmax
 }
@@ -713,6 +724,7 @@ bool intersectBoundT(Ray r, BoundingBox bound, float* t)
         tmin = tzmin;
     if (tzmax < tmax)
         tmax = tzmax;
+    tmax *= 1.00000024f;
     t[0] = tmin;
     t[1] = tmax;
     return ((tmin < r.tMax) && (tmax > r.tMin));
@@ -821,11 +833,12 @@ __kernel void findBound(
 
      //mesh
     global const float4* points,
+    global const float2* uvs,
     global const float4* normals,
     global const Face*   faces,
     global const int*    size,
 
-    //global bound of size 6 -> xmin, ymin, zmin, xmax, ymax, zmax
+    //global bound of size 6 -> xmin, ymin, zmin, xmax, ymax, zmax    CHANGE THIS TO USE BOUND
     global const float* groupBound
 )
 {
@@ -833,42 +846,44 @@ __kernel void findBound(
     int id= get_global_id( 0 );
 
     //Scene mesh
-    TriangleMesh mesh = {points, normals, faces, size[0]};
-
-    //Get face at id
-    global Face * face = faces + id;
+    TriangleMesh mesh = {points, uvs, normals, faces, size[0]};
     
-    //Get bound coordinates
-    global float* xmin = groupBound + 0;
-    global float* ymin = groupBound + 1;
-    global float* zmin = groupBound + 2;
-    global float* xmax = groupBound + 3;
-    global float* ymax = groupBound + 4;
-    global float* zmax = groupBound + 5;
-
-
-    //update bounds
-    int groupID = getMaterial(face-> mat);
-    //printlnInt(groupID);
-    if(groupIndex[0] == groupID)
+    if(id < *size)
     {
-        //printlnInt(*groupIndex);
         BoundingBox bounds = getBoundingBox(mesh, id);
 
-        //bound->minimum = min(bound->minimum, point);
-        atomicMin(xmin, bounds.minimum.x);
-        atomicMin(ymin, bounds.minimum.y);
-        atomicMin(zmin, bounds.minimum.z);
+        //Get face at id
+        global Face * face = faces + id;
 
-        //bound->maximum = max(bound->maximum, point);
-        atomicMax(xmax, bounds.maximum.x);
-        atomicMax(ymax, bounds.maximum.y);
-        atomicMax(zmax, bounds.maximum.z);
-        
-        BoundingBox box;
-        box.minimum = (float4)(*xmin, *ymin, *zmin, 0);
-        box.maximum = (float4)(*xmax, *ymax, *zmax, 0);
-        //printBound(box);
+        //Get bound coordinates
+        global float* xmin = groupBound + 0;
+        global float* ymin = groupBound + 1;
+        global float* zmin = groupBound + 2;
+        global float* xmax = groupBound + 3;
+        global float* ymax = groupBound + 4;
+        global float* zmax = groupBound + 5;
+    
+    
+        //update bounds
+        int groupID = getMaterial(face-> mat);
+        //printlnInt(groupID);
+        if(groupIndex[0] == groupID)
+        {
+            //bound->minimum = min(bound->minimum, point);
+            atomicMin(xmin, bounds.minimum.x);
+            atomicMin(ymin, bounds.minimum.y);
+            atomicMin(zmin, bounds.minimum.z);
+    
+            //bound->maximum = max(bound->maximum, point);
+            atomicMax(xmax, bounds.maximum.x);
+            atomicMax(ymax, bounds.maximum.y);
+            atomicMax(zmax, bounds.maximum.z);
+            
+            BoundingBox box;
+            box.minimum = (float4)(*xmin, *ymin, *zmin, 0);
+            box.maximum = (float4)(*xmax, *ymax, *zmax, 0);
+            //printBound(box);
+        }
     }
 }
 

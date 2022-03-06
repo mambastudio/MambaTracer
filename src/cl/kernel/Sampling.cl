@@ -56,6 +56,25 @@ float2 random_float2(int2* state)
     return r;
 }
 
+float3 random_float3(int2* state)
+{
+    float3 r;
+    r.x = get_random(state);
+    r.y = get_random(state);  
+    r.z = get_random(state);
+    return r;
+}
+
+float4 random_float4(int2* state)
+{
+    float4 r;
+    r.x = get_random(state);
+    r.y = get_random(state);  
+    r.z = get_random(state);
+    r.w = get_random(state);
+    return r;
+}
+
 //Refer to https://stackoverflow.com/questions/363681/how-do-i-generate-random-integers-within-a-specific-range-in-java
 //between 0 (inclusive) to range (exclusive)
 int2 random_int2_range(int2* state, int rangeX, int rangeY)
@@ -95,6 +114,57 @@ float4 sample_hemisphere(
     float z = sqrt(r2);
     
     return (float4)(x, y, z, 0);
+}
+
+float4 SampleCosHemisphereW(
+    float2                  sample,
+    float                   *pdfW)
+{
+    float term1 = 2.f * M_PI * sample.x;
+    float term2 = sqrt(1.f - sample.y);
+
+    float4 ret  = (float4)(
+                           cos(term1) * term2,
+                           sin(term1) * term2,
+                           sqrt(sample.y), 
+                           0);
+
+    if(pdfW)
+    {
+        *pdfW = ret.z * M_1_PI;
+    }
+
+    return ret;
+}
+
+float4 SamplePowerCosHemisphereW(
+    float2  sample,
+    float   power,
+    float   *pdfW)
+{
+    float term1 = 2.f * M_PI * sample.x;
+    float term2 = pow(sample.y, 1.f / (power + 1.f));
+    float term3 = sqrt(1.f - term2 * term2);
+
+    if(pdfW)
+    {
+        *pdfW = (power + 1.f) * pow(term2, power) * (0.5f * M_1_PI);
+    }
+
+    return (float4)(
+        cos(term1) * term3,
+        sin(term1) * term3,
+        term2, 0);
+}
+
+float PowerCosHemispherePdfW(
+    float4  n,
+    float4  v,
+    float   power)
+{
+    float cosTheta = fmax(0.f, dot(n, v));
+
+    return (power + 1.f) * pow(cosTheta, power) * (M_1_PI * 0.5f);
 }
 
 

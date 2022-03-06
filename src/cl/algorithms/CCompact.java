@@ -37,6 +37,7 @@ public final class CCompact {
     CMemory<CIntersection> tempIsectBuffer;    
     CMemory<IntValue> origPixels;
     CMemory<IntValue> tempPixels;
+    CMemory<IntValue> length;
     
     CMemory<IntValue> totalCount;
     
@@ -63,15 +64,16 @@ public final class CCompact {
         this.origPixels         = pixels;
         this.tempPixels         = platform.createBufferI(IntValue.class, GLOBALSIZE, READ_WRITE);
         this.totalCount         = totalCount;
+        this.length             = platform.createFromI(IntValue.class, new int[]{GLOBALSIZE}, READ_WRITE);
                
         //init kernels
-        initTempIsectsKernel        = platform.createKernel("InitIntersection", tempIsectBuffer);
-        initTempPixelsKernel        = platform.createKernel("InitIntData", tempPixels);
-        tempToOriginalIsectsKernel  = platform.createKernel("TransferIntersection",origIsectBuffer, tempIsectBuffer);
-        tempToOriginalPixelsKernel  = platform.createKernel("TransferPixels", origPixels, tempPixels);                
-        initOrigIsectsKernel        = platform.createKernel("InitIntersection", origIsectBuffer);
-        initOrigPixelsKernel        = platform.createKernel("InitIntData", origPixels);
-        compactAtomicKernel         = platform.createKernel("CompactAtomic", origIsectBuffer, tempIsectBuffer, origPixels, tempPixels, totalCount);
+        initTempIsectsKernel        = platform.createKernel("InitIntersection", tempIsectBuffer, length);
+        initTempPixelsKernel        = platform.createKernel("InitIntData", tempPixels, length);
+        tempToOriginalIsectsKernel  = platform.createKernel("TransferIntersection",origIsectBuffer, tempIsectBuffer, length);
+        tempToOriginalPixelsKernel  = platform.createKernel("TransferPixels", origPixels, tempPixels, length);                
+        initOrigIsectsKernel        = platform.createKernel("InitIntersection", origIsectBuffer, length);
+        initOrigPixelsKernel        = platform.createKernel("InitIntData", origPixels, length);
+        compactAtomicKernel         = platform.createKernel("CompactAtomic", origIsectBuffer, tempIsectBuffer, origPixels, tempPixels, totalCount, length);
     }
     
     public void execute()

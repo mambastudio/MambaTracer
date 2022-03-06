@@ -22,6 +22,7 @@ public class CTextureApplyPass {
     private int[] countIntBuffer = null;
     private TracerAPI api = null;
     
+    private final TextureData textureData;
     
     
     public CTextureApplyPass(TracerAPI api, CMemory<CTextureData> texBuffer, CMemory<IntValue> count) {
@@ -30,70 +31,63 @@ public class CTextureApplyPass {
         this.texIntBuffer = (int[]) texBuffer.getBufferArray();
         this.countIntBuffer = (int[]) count.getBufferArray();
         this.api = api;
+        this.textureData = new TextureData(texIntBuffer);
     }
    
     public void process()
     {
         texBuffer.transferFromDevice();
         count.transferFromDevice();
-       
+               
         for(int index = 0; index < countIntBuffer[0]; index++)
-        {
-            if(hasBaseTexture(index))
+        {            
+            textureData.setIndex(index);
+            if(textureData.hasDiffuseTexture())
             {
-                Image image = api.get(getMaterialIndex(index)).param1.texture.get(); //TO CORRECT/UPDATE
-                float x = getU(index);
-                float y = getV(index);
-                
-                //from sunflow Texture.java in method getPixel(float x, float y) 
-                //in short, this handles texture that has defined uv coordinates in mesh
-                x = x - (int) x; //in case it's greater than 1
-                y = y - (int) y;
-                if (x < 0)  //in case it's lesser than 1
-                    x++;
-                if (y < 0)
-                    y++;
-                float dx = (float) x * ((float)image.getWidth() - 1);
-                float dy = (float) y * ((float)image.getHeight() - 1);
-                                
-                setArgb(image, index, (int) dx, (int)dy);
+                Image image = api.get(textureData.getMaterialIndex()).param.diffuseTexture.get().getImage(); //TO CORRECT/UPDATE
+                float x = textureData.getDiffuseTextureU();
+                float y = textureData.getDiffuseTextureV();
+                             
+                if(image != null)
+                {
+                    float dx = (float) x * ((float)image.getWidth() - 1);
+                    float dy = (float) y * ((float)image.getHeight() - 1);
+
+                    textureData.setDiffuseArgb(image, (int) dx, (int)dy);
+                }
             }
+            
+            if(textureData.hasGlossyTexture())
+            {   
+                Image image = api.get(textureData.getMaterialIndex()).param.glossyTexture.get().getImage(); //TO CORRECT/UPDATE
+                float x = textureData.getGlossyTextureU();
+                float y = textureData.getGlossyTextureV();
+                
+                if(image != null)
+                {
+                    float dx = (float) x * ((float)image.getWidth() - 1);
+                    float dy = (float) y * ((float)image.getHeight() - 1);
+
+                    textureData.setGlossyArgb(image, (int) dx, (int)dy);
+                }
+            }
+            
+            if(textureData.hasRoughnessTexture())
+            {   
+                Image image = api.get(textureData.getMaterialIndex()).param.roughnessTexture.get().getImage(); //TO CORRECT/UPDATE
+                float x = textureData.getRoughnessTextureU();
+                float y = textureData.getRoughnessTextureV();
+                
+                if(image != null)
+                {
+                    float dx = (float) x * ((float)image.getWidth() - 1);
+                    float dy = (float) y * ((float)image.getHeight() - 1);
+
+                    textureData.setRoughnessArgb(image, (int) dx, (int)dy);
+                }
+            }
+           
         }
         texBuffer.transferToDevice();
-    }
-    
-    public int getMaterialIndex(int index)
-    {
-        int i = getArrayIndex(index);
-        return texIntBuffer[i + 10]; //index of mat >= 0
-    }
-    
-    public boolean hasBaseTexture(int index)
-    {
-        int i = getArrayIndex(index);
-        return texIntBuffer[i + 9] > 0;
-    }
-    
-    public void setArgb(Image image, int index, int ui, int vi)
-    {
-        int i = getArrayIndex(index);
-        texIntBuffer[i + 2] = image.getPixelReader().getArgb(ui, vi); //argb value
-    }
-    
-    public float getU(int index)
-    {
-        int i = getArrayIndex(index);
-        return Float.intBitsToFloat(texIntBuffer[i + 0]); //u
-    }
-    
-    public float getV(int index)
-    {
-        int i = getArrayIndex(index);
-        return Float.intBitsToFloat(texIntBuffer[i + 1]); //v
-    }
-    
-    private int getArrayIndex(int index)
-    {
-        return index * 12;
     }
 }

@@ -19,8 +19,8 @@ __kernel void identifyMeshLights(
         int matID = getMaterial(face-> mat);
         global Material* material = materials + matID;
         
-        SurfaceParameter param = material->param1;
-        if(param.brdfType == EMITTER)
+        SurfaceParameter param = material->param;
+        if(isSurfaceEmitter(param))
            predicate[id] = 1;
         else
            predicate[id] = 0;

@@ -5,7 +5,6 @@
  */
 package cl.struct;
 
-import cl.struct.CBSDF;
 import cl.data.CPoint3;
 import coordinate.struct.structbyte.Structure;
 
@@ -20,7 +19,7 @@ public class CPath extends Structure{
     public boolean  lastSpecular;
     public float    lastPdfW;
     public boolean  active;
-    public CBSDF    bsdf;
+    public CBsdf    bsdf;
     
     public CPath()
     {
@@ -30,6 +29,6 @@ public class CPath extends Structure{
         lastSpecular = true;
         lastPdfW     = 1;
         active       = false;
-        bsdf         = new CBSDF();
+        bsdf         = new CBsdf();
     }
 }

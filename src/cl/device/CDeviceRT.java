@@ -7,8 +7,8 @@ package cl.device;
 
 import cl.struct.CTextureData;
 import cl.struct.CCameraModel;
-import cl.struct.CMaterial;
-import cl.struct.CBSDF;
+import cl.struct.CMaterial2;
+import cl.struct.CBsdf;
 import cl.struct.CCamera;
 import cl.struct.CIntersection;
 import cl.struct.CRay;
@@ -16,6 +16,7 @@ import cl.struct.CBound;
 import bitmap.display.BlendDisplay;
 import bitmap.image.BitmapARGB;
 import static cl.abstracts.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
+import static cl.abstracts.MambaAPIInterface.getGlobal;
 import cl.abstracts.RayDeviceInterface;
 import cl.algorithms.CEnvironment;
 import cl.data.CPoint2;
@@ -33,6 +34,7 @@ import wrapper.core.CKernel;
 import wrapper.core.CMemory;
 import static wrapper.core.CMemory.READ_WRITE;
 import wrapper.core.OpenCLConfiguration;
+import wrapper.core.memory.values.FloatValue;
 import wrapper.core.memory.values.IntValue;
 
 /**
@@ -42,7 +44,7 @@ import wrapper.core.memory.values.IntValue;
 public class CDeviceRT implements RayDeviceInterface<
         TracerAPI, 
         BlendDisplay, 
-        CMaterial, 
+        CMaterial2, 
         CMesh,
         CNormalBVH,
         CBound,
@@ -79,7 +81,7 @@ public class CDeviceRT implements RayDeviceInterface<
     CMemory<IntValue> count = null;
     CMemory<IntValue> groupBuffer = null;
     CMemory<CTextureData> texBuffer = null;
-    CMemory<CBSDF> bsdfBuffer = null;
+    CMemory<CBsdf> bsdfBuffer = null;
     
     CKernel initCameraRaysKernel = null;
     CKernel intersectPrimitivesKernel = null;
@@ -93,6 +95,12 @@ public class CDeviceRT implements RayDeviceInterface<
     CTextureApplyPass texApplyPass = null;
     
     CEnvironment envmap = null;
+    
+    //on screen intersection mouse click
+    CMemory<IntValue> groupIndex = null;  
+    CMemory<FloatValue> groupBound = null;
+    CKernel findBoundKernel = null;
+    
        
     public CDeviceRT(int w, int h)
     {
@@ -115,8 +123,11 @@ public class CDeviceRT implements RayDeviceInterface<
         imageBuffer         = configuration.createBufferI(IntValue.class, globalWorkSize, READ_WRITE);        
         groupBuffer         = configuration.createBufferI(IntValue.class, globalWorkSize, READ_WRITE);
         texBuffer           = configuration.createBufferI(CTextureData.class, globalWorkSize, READ_WRITE);
-        bsdfBuffer          = configuration.createBufferB(CBSDF.class, globalWorkSize, READ_WRITE);
-        texApplyPass = new CTextureApplyPass(api, texBuffer, count);
+        bsdfBuffer          = configuration.createBufferB(CBsdf.class, globalWorkSize, READ_WRITE);
+        texApplyPass        = new CTextureApplyPass(api, texBuffer, count);
+        
+        groupIndex          = configuration.createBufferI(IntValue.class, 1, READ_WRITE);
+        groupBound          = configuration.createBufferF(FloatValue.class, 6, READ_WRITE);
     }
     
     public void initKernels()
@@ -124,11 +135,12 @@ public class CDeviceRT implements RayDeviceInterface<
         initCameraRaysKernel                = configuration.createKernel("InitCameraRayData", cameraBuffer, raysBuffer);
         intersectPrimitivesKernel           = configuration.createKernel("IntersectPrimitives", raysBuffer, isectBuffer, count, mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
         fastShadeKernel                     = configuration.createKernel("fastShade", isectBuffer, bsdfBuffer, imageBuffer);
-        backgroundShadeKernel               = configuration.createKernel("backgroundShade", isectBuffer, cameraBuffer, imageBuffer, raysBuffer, envmap.getRgbCL(), envmap.getCEnvGrid());
+        backgroundShadeKernel               = configuration.createKernel("backgroundShade", isectBuffer, cameraBuffer, imageBuffer, raysBuffer, envmap.getRgbCL(), envmap.getLightGrid());
         updateGroupbufferShadeImageKernel   = api.getConfigurationCL().createKernel("updateGroupbufferShadeImage", isectBuffer, cameraBuffer, groupBuffer);
         textureInitPassKernel               = configuration.createKernel("textureInitPassRT", bsdfBuffer, isectBuffer, texBuffer);
         setupBSDFRaytraceKernel             = configuration.createKernel("SetupBSDFRaytrace", isectBuffer, raysBuffer, bsdfBuffer, mesh.clMaterials());
         updateToTextureColorRTKernel        = configuration.createKernel("updateToTextureColorRT", bsdfBuffer, texBuffer);
+        findBoundKernel                     = configuration.createKernel("findBound", groupIndex, mesh.clPoints(),  mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), groupBound);
     }
     
     public void setEnvMapInKernel()
@@ -190,6 +202,35 @@ public class CDeviceRT implements RayDeviceInterface<
         overlay.copyToArray((int[])groupBuffer.getBufferArray());
         //image fill
         Platform.runLater(()-> display.imageFill(RAYTRACE_IMAGE.name(), raytraceBitmap));
+        
+    }
+    
+    public void findBound(int instance, CBound bound)
+    {
+        groupBound.mapWriteMemory(buffer->{
+            buffer.set(0, new FloatValue(Float.POSITIVE_INFINITY));
+            buffer.set(1, new FloatValue(Float.POSITIVE_INFINITY));
+            buffer.set(2, new FloatValue(Float.POSITIVE_INFINITY));
+            buffer.set(3, new FloatValue(Float.NEGATIVE_INFINITY));
+            buffer.set(4, new FloatValue(Float.NEGATIVE_INFINITY));
+            buffer.set(5, new FloatValue(Float.NEGATIVE_INFINITY));
+        });
+        groupIndex.setCL(new IntValue(instance));
+        
+        int local = 128;
+        int global = getGlobal(mesh.clSize().getCL().v, local);
+        
+        configuration.execute1DKernel(findBoundKernel, global, local);
+        
+        //return bound and mark changes
+        groupBound.mapReadMemory((buffer)->{
+            bound.minimum.x = buffer.get(0).v;
+            bound.minimum.y = buffer.get(1).v;
+            bound.minimum.z = buffer.get(2).v;
+            bound.maximum.x = buffer.get(3).v;
+            bound.maximum.y = buffer.get(4).v;
+            bound.maximum.z = buffer.get(5).v;
+        });
         
     }
     

@@ -10,6 +10,7 @@ typedef struct
 
 }BVHNode;
 
+
 bool intersectMesh(global Ray* ray, int* childIndex, TriangleMesh mesh, global BVHNode* nodes, global BoundingBox* bounds, bool bailout)
 {
      //BVH Accelerator
@@ -41,7 +42,7 @@ bool intersectMesh(global Ray* ray, int* childIndex, TriangleMesh mesh, global B
             bitstack <<= 1; //push 0 bit into bitstack to skip the sibling later
                   
             if(leftHit && rightHit)
-            {                    
+            {
                 nodeId = (rightT[0] < leftT[0]) ? node.right : node.left;
                 bitstack |= 1; //change skip code to 1 to traverse the sibling later
             }
@@ -137,9 +138,9 @@ __kernel void IntersectPrimitives(
               float2 uv2 = getUV2(mesh, childIndex);
               float2 uv3 = getUV3(mesh, childIndex);
               texuv = triangleBarycentricsFromUVMesh(p, p1, p2, p3, uv1, uv2, uv3);
+
           }
-
-
+         
           uv = triangleBarycentrics(p, p1, p2, p3);
 
           float tuv[3];
@@ -155,17 +156,59 @@ __kernel void IntersectPrimitives(
               float4 n2 = getN2(mesh, childIndex);
               float4 n3 = getN3(mesh, childIndex);
 
+              //the order of uvw matters
               n = n1 * (1 - tuv[1] - tuv[2]) + n2 * tuv[1] + n3 * tuv[2];
+              if(dot(n, ray->d)> 0.00001f)
+              {
+                  n  = -n;
+                  
+                  //reverse normal if necessary for use below in the shadow terminator
+                  n1 = -n1;
+                  n2 = -n2;
+                  n3 = -n3;
+              }
+
+              //if you don't normalize, bsdf, specifically anisotropic, will have issues
+              n  = normalize(n);
+              
+
+              //Hacking the shadow terminator by Johannes Hanika
+              float4 tmpu = makeFloat4(0, 0, 0, 0);
+              float4 tmpv = makeFloat4(0, 0, 0, 0);
+              float4 tmpw = makeFloat4(0, 0, 0, 0);
+
+              tmpu.xyz = p.xyz - p1.xyz;
+              tmpv.xyz = p.xyz - p2.xyz;
+              tmpw.xyz = p.xyz - p3.xyz;
+              
+              float dotu = min(0.0f, dot(tmpu.xyz, normalize(n1.xyz)));
+              float dotv = min(0.0f, dot(tmpv.xyz, normalize(n2.xyz)));
+              float dotw = min(0.0f, dot(tmpw.xyz, normalize(n3.xyz)));
+              
+              tmpu.xyz -= dotu*normalize(n1.xyz);
+              tmpv.xyz -= dotv*normalize(n2.xyz);
+              tmpw.xyz -= dotw*normalize(n3.xyz);
+
+              //why the order of uvw matters (has to match with above)
+              p = p + (1 - tuv[1] - tuv[2])*tmpu + tuv[1]*tmpv + tuv[2]*tmpw;
+
           }
           else
+          {
               n  = getNormal(p1, p2, p3);
-          if(dot(n, ray->d)>0)
-              n  = -n;
+              if(dot(n, ray->d)>0.00001f)
+                  n  = -n;
+          }
+              
+          float4 ng = getNormal(p1, p2, p3);
+          if(dot(ng, ray->d)>0.00001f)
+              ng  = -ng;
               
           //set values
-          isect->p = p;
-          isect->n = n;
-          isect->d = ray->d;
+          isect->p  = p;
+          isect->n  = n;
+          isect->ng = ng;
+          isect->d  = ray->d;
           
           if(hasTexUV)
             isect->uv = texuv;

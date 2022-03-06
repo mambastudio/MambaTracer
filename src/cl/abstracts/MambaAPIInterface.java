@@ -8,12 +8,10 @@ package cl.abstracts;
 
 
 import bitmap.core.AbstractDisplay;
-import bitmap.display.BlendDisplay;
 import bitmap.image.BitmapARGB;
-import coordinate.parser.attribute.MaterialT;
+import bitmap.image.BitmapRGBE;
 import coordinate.utility.Value2Di;
 import java.net.URI;
-import java.nio.Buffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.function.Supplier;
@@ -120,10 +118,15 @@ public interface MambaAPIInterface <D extends AbstractDisplay, M extends Materia
     public void set(int index, M material);
     public M get(int index);
     
-    public void setEnvironmentMap(float[] rgb4, int width, int height);
+    public void setEnvironmentMap(BitmapRGBE bitmap);
     
     public default <T> T getObject(Supplier<T> supplier)
     {
         return supplier.get();
+    }
+    
+    default LightManager getLightManager()
+    {
+        return null;
     }
 }

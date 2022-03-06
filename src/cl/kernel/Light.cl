@@ -15,34 +15,32 @@ typedef struct
 // environment map
 typedef struct
 {
+   //data for whole environment map
    global float4* envmap;
    global float* lum;
    global float* sat;
-   //is it the whole env map or section
+
+   //environment map size (whole environment map)
    SATRegion region;
-   //env map details (in future it will be the sampling distribution too)
-   global EnvironmentGrid* envgrid;
    
-   //for sampling
-   float pdf[1];
-   float uv[2];
-   float indexU;
-   float indexV;
+   //directional sampling to find tile to sample light path
+   global LightGrid* lightGrid;
+   
+   //from sampling and temporary kept here to insert in the light grid
+   float luminance;
+   int lightGridIndex;
+
 }EnvironmentLight;
 
-typedef struct
+void accumLightGrid(EnvironmentLight aLight, float luminance, int lightGridIndex)
 {
-   int type;
-
-   AreaLight areaLight;
-   EnvironmentLight envLight;
-  
-}Light;
+   atomicAdd(&aLight.lightGrid->accum[lightGridIndex], luminance);
+}
 
 /**
 * LIGHT FUNCTIONS
 */
-AreaLight getAreaLight(BSDF bsdf, TriangleMesh mesh, int triangleIndex)
+AreaLight getAreaLight(Bsdf bsdf, TriangleMesh mesh, int triangleIndex)
 {
    AreaLight light;
 
@@ -73,8 +71,8 @@ AreaLight getAreaLight(BSDF bsdf, TriangleMesh mesh, int triangleIndex)
    light.p1           = p1;
    light.e1           = (float4)(e1, 0);
    light.e2           = (float4)(e2, 0);
-   light.intensity    = bsdf.param.emission_color * bsdf.param.emission;
-      
+   light.intensity    = bsdf.param.emission_color * bsdf.param.emission_param.y;
+
    return light;
 }
 
@@ -99,7 +97,7 @@ float4 illuminateAreaLight(
     *oDirectionToLight      = (*oDirectionToLight) / (*oDistance);
 
     float cosNormalDir      = dot(aLight.frame.mZ, -(*oDirectionToLight));
-
+    
     // too close to, or under, tangent
     if(cosNormalDir < EPS_COSINE)
     {
@@ -128,55 +126,104 @@ float4 getRadianceAreaLight(
        return aLight.intensity;
 }
 
-EnvironmentLight getEnvironmentLight(global EnvironmentGrid* envgrid, global float4* envmap, global float* lum, global float* sat)
+EnvironmentLight getEnvironmentLight(global LightGrid* lightGrid, global float4* envmap, global float* lum, global float* sat)
 {
      SATRegion region;
-     setRegion(&region, 0, 0, envgrid->width, envgrid->height);
-     region.nu = envgrid->width;
-     region.nv = envgrid->height;
-     EnvironmentLight envlight = {envmap, lum, sat, region, envgrid};
+     setRegion(&region, 0, 0, lightGrid->width, lightGrid->height);
+     region.nu = lightGrid->width;
+     region.nv = lightGrid->height;
+     EnvironmentLight envlight = {envmap, lum, sat, region, lightGrid};
      return envlight;
 }
 
-int sampleEnvironmentLight(float2 samples, EnvironmentLight* aLight)
-{
-    sampleContinuous(aLight->region, samples.x, samples.y, &aLight->uv, &aLight->pdf, aLight->sat, aLight->envmap);
-    int uIndex     = (int)(aLight->uv[0] * aLight->envgrid->width);
-    int vIndex     = (int)(aLight->uv[1] * aLight->envgrid->height);
-    aLight->indexU = uIndex;
-    aLight->indexV = vIndex;
-    int index      = (int)(uIndex + vIndex * aLight->envgrid->width);
-    //printFloat(index);
-    return index;
-}
 
 float4 illuminateEnvironmentLight(
        EnvironmentLight aLight,
        float4           aReceivingPosition,
-       float2           aSample,
+       float4           aSample,
        float4           *oDirectionToLight,
        float            *oDistance,
-       float            *oDirectPdfW
+       float            *oDirectPdfW,
+       float            *luminance,
+       int              *lightGridIndex
 )
 {
-  float uv[2];
-  float pdf[1];
-  sampleContinuous(aLight.region, aSample.x, aSample.y, &uv, &pdf, aLight.sat, aLight.lum);
+  int offsetLL[2];
+  float pdfLL[1];
+  float uvLL[2];
+  
+  int offsetSS[2];
+  float pdfSS[1];
+  float uvSS[2];
+  
 
-  *oDirectionToLight  = getSphericalDirection(uv[0], uv[1]);
-  int index           = getSphericalGridIndex(aLight.envgrid->width, aLight.envgrid->height, *oDirectionToLight);
+
+  //sample tile
+  int subgridIndex = subgridIndexFromCamera(aLight.lightGrid, aReceivingPosition);
+  sampleSubgridContinuous(aLight.lightGrid, subgridIndex, aSample.x, aSample.y, uvLL, offsetLL, pdfLL);
+
+  //get unit bound of tile withing cell
+  float4 unitBound    = getSubgridUnitBound(aLight.lightGrid, offsetLL);
+
+  //sat region based on tile bound
+  SATRegion tileSAT   = getSubRegionFromUnitBound(aLight.region, unitBound);
+
+  //sample within sat region   
+  sampleContinuous(tileSAT, aSample.z, aSample.w, uvSS, offsetSS, pdfSS, aLight.sat, aLight.lum);
+
+  *oDirectionToLight  = getSphericalDirection(uvSS[0], uvSS[1]);
+
+  int index           = getSphericalGridIndex(aLight.lightGrid->width, aLight.lightGrid->height, *oDirectionToLight);
   float4 contrib      = aLight.envmap[index];
   contrib.xyz         = contrib.xyz;
-
-  float sinTheta = sin(uv[1] * M_PI);
-
-  *oDirectPdfW = pdf[0] /(2 * M_PI * M_PI * sin(uv[1] * M_PI));
-  *oDistance = FLOATMAX;
   
+  float sinTheta = sin(uvSS[1] * M_PI);
+
+  *oDirectPdfW = 1;//pdfLL[0]*pdfSS[0] /(2 * M_PI * M_PI * sin(uvSS[1] * M_PI));
+  *oDistance = FLOATMAX;
+ 
   if(sinTheta == 0)
      *oDirectPdfW = 0;
 
+  //calculate light grid accumulations
+  *luminance       = Luminance(contrib.xyz);
+  *lightGridIndex  = globalIndexInSubgrid(aLight.lightGrid, subgridIndex, offsetLL[0], offsetLL[1]);
+
   return contrib;
+}
+
+float4 illuminateEnvironmentLight1(
+       EnvironmentLight aLight,
+       float4           aReceivingPosition,
+       float4           aSample,
+       float4           *oDirectionToLight,
+       float            *oDistance,
+       float            *oDirectPdfW,
+       float            *luminance,
+       int              *lightGridIndex
+)
+{
+    int offset[2];
+    float pdf[1];
+    float uv[2];
+    
+    sampleContinuous(aLight.region, aSample.x, aSample.y, uv, offset, pdf, aLight.sat, aLight.lum);
+    
+    *oDirectionToLight  = getSphericalDirection(uv[0], uv[1]);
+  
+    int index           = getSphericalGridIndex(aLight.lightGrid->width, aLight.lightGrid->height, *oDirectionToLight);
+    float4 contrib      = aLight.envmap[index];
+    contrib.xyz         = contrib.xyz;
+    
+    float sinTheta = sin(uv[1] * M_PI);
+  
+    *oDirectPdfW = pdf[0] /(2 * M_PI * M_PI * sin(uv[1] * M_PI));
+    *oDistance = FLOATMAX;
+   
+    if(sinTheta == 0)
+       *oDirectPdfW = 0;
+  
+    return contrib;
 }
 
 float4 getRadianceEnvironmentLight(
@@ -186,12 +233,57 @@ float4 getRadianceEnvironmentLight(
        float            *oDirectPdfA
 )
 {
-    int2 xy             = getSphericalGridXY(aLight.envgrid->width, aLight.envgrid->height, aRayDirection);
-    int index           = getSphericalGridIndex(aLight.envgrid->width, aLight.envgrid->height, aRayDirection);
+    //light grid index based on hit point if any
+    int subgridIndex    = subgridIndexFromCamera(aLight.lightGrid, aHitPoint);
+    
+    //index in tiles of subgrid
+    int2 tileXY         = tileIndexXYFromCamera(aLight.lightGrid, aRayDirection);
+    int offsetLL[2]     = {tileXY.x, tileXY.y};
+
+    //pdf in light grid
+    float pdfLL         = getSubgridPdfContinuous(aLight.lightGrid, subgridIndex, tileXY.x, tileXY.y);
+    
+    //get unit bound of tile withing cell
+    float4 unitBound    = getSubgridUnitBound(aLight.lightGrid, offsetLL);
+
+    //sat region based on tile bound
+    SATRegion tileSAT   = getSubRegionFromUnitBound(aLight.region, unitBound);
+    
+    //calculate pdf in sat region
+    int2 satXY          = getSphericalGridXY(aLight.lightGrid->width, aLight.lightGrid->height, aRayDirection);
+    float pdfSS         = getPdfSAT(tileSAT, satXY.x, satXY.y, aLight.sat, aLight.lum);
+    int offsetSS[2]     = {satXY.x, satXY.y};
+    
+    //overall pdf
+    float s             = offsetSS[1]/(float)(lengthY(aLight.region));
+    *oDirectPdfA        = 1;//pdfSS * pdfLL /(2 * M_PI * M_PI * sin(s * M_PI));
+
+    //get contribution and return
+    int index           = getSphericalGridIndex(aLight.lightGrid->width, aLight.lightGrid->height, aRayDirection);
+    float4 contrib      = aLight.envmap[index];
+    
+    //calculate light grid accumulations
+    float luminance       = 1; //Luminance(contrib.xyz);
+    int   lightGridIndex  = globalIndexInSubgrid(aLight.lightGrid, subgridIndex, offsetLL[0], offsetLL[1]);
+    accumLightGrid(aLight, luminance, lightGridIndex);
+
+    return contrib;
+}
+
+float4 getRadianceEnvironmentLight1(
+       EnvironmentLight aLight,
+       float4           aRayDirection,
+       float4           aHitPoint,
+       float            *oDirectPdfA
+)
+{
+    int2 xy             = getSphericalGridXY(aLight.lightGrid->width, aLight.lightGrid->height, aRayDirection);
+    int index           = getSphericalGridIndex(aLight.lightGrid->width, aLight.lightGrid->height, aRayDirection);
     float4 contrib      = aLight.envmap[index];
     float pdfXY         = getPdfSAT(aLight.region, xy.x, xy.y, aLight.sat, aLight.lum);
     float v             = xy.y/(float)(lengthY(aLight.region));
     *oDirectPdfA        = pdfXY /(2 * M_PI * M_PI * sin(v * M_PI));
 
     return contrib;
+  
 }

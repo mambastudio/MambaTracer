@@ -10,11 +10,18 @@ __kernel void UpdateImage(global float4*       frameAccum,
     {
         global float4* accumAt     = frameAccum + id;
         global int*    rgbAt       = imageBuffer + id;
-    
-        float4 color               = (float4)((*accumAt).xyz/frameCount[0], 1);
-        color.xyz = pow(color.xyz, (float3)(1.f/2.2f));
 
-        *rgbAt                     = getIntARGB(color);
+        float4 color               = (float4)((*accumAt).xyz/frameCount[0], 1);
+        
+        float Lw                   = Luminance(color.xyz);
+        
+        if(Lw>0.f)
+        {
+          color.xyz = pow(color.xyz, (float3)(1.f/2.2f));
+         // printFloat4(color);
+  
+          *rgbAt                     = getIntARGB(color);
+        }
     }
 }
 
@@ -39,8 +46,10 @@ __kernel void averageAccum(global float4*  frameAccum,
     {
         //get log luminance
         frameBuffer[id]        = (float4)(frameAccum[id].xyz/frameCount[0], 1.f);
+
         float Lw               = Luminance(frameBuffer[id].xyz);
-        
+
+
         //is there luminance? do something 
         int logpredicate       = 0;
         float logLwValue       = 0;
@@ -78,6 +87,8 @@ __kernel void updateFrameImage(global float4* frameBuffer,
         //current color and luminance
         global float4* color      = frameBuffer + id;
         float colorLuminance      = Luminance((*color).xyz);
+        
+
     
         if(colorLuminance > 0)
         {
@@ -98,6 +109,7 @@ __kernel void updateFrameImage(global float4* frameBuffer,
           //gamma
           frameBuffer[id].xyz = pow(frameBuffer[id].xyz, (float3)(1.f/(*gamma)));
     
+
     
           //update frame render
           imageBuffer[id] = getIntARGB(frameBuffer[id]);

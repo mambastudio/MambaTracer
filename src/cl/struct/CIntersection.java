@@ -18,6 +18,7 @@ public class CIntersection extends Structure implements AbstractIntersection{
         
     public CPoint3 p;
     public CPoint3 n;
+    public CPoint3 ng;
     public CPoint3 d;    
     public CPoint2 uv;
     public int mat;
@@ -28,6 +29,7 @@ public class CIntersection extends Structure implements AbstractIntersection{
     {        
         this.p = new CPoint3();
         this.n = new CPoint3();
+        this.ng = new CPoint3();
         this.d = new CPoint3();        
         this.uv = new CPoint2();
         this.mat = 0;

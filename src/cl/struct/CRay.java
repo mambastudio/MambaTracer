@@ -139,4 +139,9 @@ public class CRay extends Structure implements AbstractRay<CPoint3, CVector3>
         builder.append("d ").append(d.get(0)).append(" ").append(d.get(1)).append(" ").append(d.get(2));
         return builder.toString();
     }
+
+    @Override
+    public AbstractRay<CPoint3, CVector3> copy() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
 }

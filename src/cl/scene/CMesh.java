@@ -5,7 +5,6 @@
  */
 package cl.scene;
 
-import cl.struct.CMaterial;
 import cl.struct.CFace;
 import cl.struct.CIntersection;
 import cl.struct.CRay;
@@ -13,6 +12,7 @@ import cl.struct.CBound;
 import cl.data.CPoint2;
 import cl.data.CPoint3;
 import cl.data.CVector3;
+import cl.struct.CMaterial2;
 import coordinate.generic.AbstractMesh;
 import coordinate.generic.raytrace.AbstractPrimitive;
 import coordinate.list.CoordinateFloatList;
@@ -48,7 +48,7 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
     private CMemory<IntValue> sizeBuffer = null;
     
     //materials
-    private CMemory<CMaterial> cmaterialsc = null;
+    private CMemory<CMaterial2> cmaterialsc = null;
         
     public CMesh(OpenCLConfiguration configuration)
     {
@@ -62,7 +62,7 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
     }
 
     @Override
-    public int getCount() {
+    public int getSize() {
         return triangleSize();
     }
 
@@ -163,14 +163,14 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
         normalsBuffer = configuration.createFromF(CVector3.class, getNormalArray(), READ_ONLY);
         facesBuffer = configuration.createFromI(CFace.class, getTriangleFacesArray(), READ_ONLY);
         sizeBuffer = configuration.createFromI(IntValue.class, new int[]{triangleSize()}, READ_ONLY);        
-        cmaterialsc = configuration.createBufferB(CMaterial.class, this.getMaterialList().size(), READ_WRITE); 
+        cmaterialsc = configuration.createBufferB(CMaterial2.class, this.getMaterialList().size(), READ_WRITE); 
         cmaterialsc.mapWriteIterator(materialArray -> {
             int i = 0;
-            for(CMaterial cmat : materialArray)
+            for(CMaterial2 cmat : materialArray)
             {
-                cmat.setMaterial(new CMaterial()); //init array like any other opencl array
+                cmat.setMaterial(new CMaterial2()); //init array like any other opencl array
                 MaterialT mat = this.getMaterialList().get(i);   
-                cmat.setMaterial(mat);                
+                cmat.setMaterialT(mat);                
                 i++;
             }
         });        
@@ -201,19 +201,19 @@ public class CMesh extends AbstractMesh<CPoint3, CVector3, CPoint2> implements A
         return sizeBuffer;
     }
         
-    public CMemory<CMaterial> clMaterials()
+    public CMemory<CMaterial2> clMaterials()
     {
         cmaterialsc.transferFromDevice();
         return cmaterialsc;
     }
         
-    public void setMaterial(int index, CMaterial material)    
+    public void setMaterial(int index, CMaterial2 material)    
     {
         cmaterialsc.set(index, material);
         cmaterialsc.transferToDevice();
     }
     
-    public CMaterial getMaterial(int index)
+    public CMaterial2 getMaterial(int index)
     {
         return cmaterialsc.get(index);
     }

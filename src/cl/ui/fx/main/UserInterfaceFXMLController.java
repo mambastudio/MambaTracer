@@ -14,15 +14,13 @@ import static cl.abstracts.MambaAPIInterface.DeviceType.RAYTRACE;
 import static cl.abstracts.MambaAPIInterface.DeviceType.RENDER;
 import cl.abstracts.MambaAPIInterface.ImageType;
 import static cl.abstracts.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
+import static cl.abstracts.MambaAPIInterface.ImageType.RENDER_IMAGE;
 import cl.abstracts.RenderControllerInterface;
 import cl.data.CPoint3;
 import cl.data.CVector3;
-import cl.device.CDeviceRT;
 import cl.fx.UtilityHandler;
-import cl.ui.fx.material.MaterialFX;
+import cl.ui.fx.FactoryUtility;
 import cl.ui.fx.render.RenderDialog;
-import cl.ui.fx.TreeCellMaterialDestinationFX;
-import cl.ui.fx.TreeCellMaterialSourceFX;
 import coordinate.model.OrientationModel;
 import coordinate.parser.attribute.MaterialT;
 import java.net.URL;
@@ -37,25 +35,32 @@ import javafx.scene.control.TreeView;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.StackPane;
 import jfx.dialog.DialogUtility;
-import static cl.ui.fx.FactoryUtility.isEnclosingClassEqual;
 import cl.ui.fx.OBJSettingDialogFX;
-import static cl.ui.fx.TreeCellMaterialSourceFX.MATERIAL_FORMAT;
+import cl.ui.fx.SingleTaskFX;
+import cl.ui.fx.TreeCellMaterialDestinationFX2;
+import static cl.ui.fx.TreeCellMaterialDestinationFX2.MATERIAL_DEST;
+import cl.ui.fx.TreeCellMaterialSourceFX2;
+import cl.ui.fx.material.MaterialFX2;
 import coordinate.parser.obj.OBJInfo;
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
 import de.jensd.fx.glyphs.fontawesome.FontAwesomeIconView;
 import filesystem.core.OutputInterface;
-import java.io.File;
+import filesystem.core.file.FileObject;
 import java.nio.file.Path;
 import java.util.Optional;
 import javafx.beans.binding.Bindings;
 import javafx.event.ActionEvent;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Slider;
+import javafx.scene.control.Spinner;
+import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.image.ImageView;
+import static javafx.scene.input.MouseButton.PRIMARY;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
-import javafx.stage.FileChooser;
+import jfx.IntegerStringConverter;
 import jfx.dialog.types.MessageDialog;
 import jfx.dialog.types.ProcessDialog;
 
@@ -64,7 +69,7 @@ import jfx.dialog.types.ProcessDialog;
  *
  * @author user
  */
-public class UserInterfaceFXMLController implements Initializable, OutputInterface, RenderControllerInterface<TracerAPI, MaterialFX> {
+public class UserInterfaceFXMLController implements Initializable, OutputInterface, RenderControllerInterface<TracerAPI, MaterialFX2> {
     @FXML
     StackPane viewportPane;
     @FXML
@@ -74,9 +79,9 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
     @FXML
     Button render;
     @FXML
-    TreeView<MaterialFX> source;
+    TreeView<MaterialFX2> source;
     @FXML
-    TreeView<MaterialFX> destination;
+    TreeView<MaterialFX2> destination;
     
     @FXML
     Slider fovSlider;
@@ -86,6 +91,12 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
     Button fovResetButton;
     @FXML
     Button sceneboundButton;
+    @FXML
+    ProgressIndicator renderPortApplyIndicator;
+    @FXML
+    Spinner<Integer> renderPortWidth;
+    @FXML
+    Spinner<Integer> renderPortHeight;
     
     //Environment
     @FXML
@@ -104,28 +115,32 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
     private int currentInstance = -2;
     private BitmapRGBE bitmapRGBE = null;
     
+    SingleTaskFX taskFX = new SingleTaskFX();
+    
     @Override
     public void initialize(URL url, ResourceBundle rb) {  
         
-        TreeItem<MaterialFX> rootsource = new TreeItem<>(new MaterialFX("Root Source"));
-        rootsource.getChildren().add(new TreeItem(new MaterialFX("Diffuse 1")));
-        rootsource.getChildren().add(new TreeItem(new MaterialFX("Diffuse 2")));
-        rootsource.getChildren().add(new TreeItem(new MaterialFX("Diffuse 3")));
-        rootsource.getChildren().add(new TreeItem(new MaterialFX("Diffuse 4")));
+        TreeItem<MaterialFX2> rootsource = new TreeItem<>(new MaterialFX2("Material"));      
+        rootsource.getChildren().addAll(getMaterials().getChildren());
+        
+       
         source.setRoot(rootsource);        
         rootsource.setExpanded(true);
         
-        TreeItem rootdestination = new TreeItem<>(new MaterialFX("Root Destination"));
+        
+        
+        TreeItem rootdestination = new TreeItem<>(new MaterialFX2("Root Destination"));
         destination.setRoot(rootdestination);
         
         //set tree call back interface for custom render and events
-        source.setCellFactory(new TreeCellMaterialSourceFX());
-        destination.setCellFactory(new TreeCellMaterialDestinationFX());
+        source.setCellFactory(new TreeCellMaterialSourceFX2());
+        destination.setCellFactory(new TreeCellMaterialDestinationFX2());
         
         //render, pause, stop and back to rt      
         render.setOnAction(e -> {
             api.setDevicePriority(RENDER);
             api.getDeviceGI().start();   
+            api.getBlendDisplayGI().reset();
             DialogUtility.showAndWait(mainPane, new RenderDialog(api));            
         });
         
@@ -141,23 +156,19 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
             fovSlider.valueProperty().setValue(45);
         });
         sceneboundButton.setOnAction(e -> {
-            CDeviceRT device = api.getDeviceRT();
-            CBound bound = device.getBound();
-            device.setPriorityBound(bound);
-            
-            device.reposition(bound);
-            device.resume();
+            api.repositionCameraToSceneRT();
+            api.getDeviceRT().resume();
         });
         
         loadenvButton.setOnAction(e->{
-            Optional<Path> path = DialogUtility.showAndWait(UtilityHandler.getScene(), UtilityHandler.getGallery("environment"));
+            Optional<Path> path = DialogUtility.showAndWait(UtilityHandler.getScene(), FactoryUtility.getHDRGallery());
             HDRBitmapReader reader = new HDRBitmapReader();
             
             if(path.isPresent())
             {
                 bitmapRGBE = reader.load(path.get());
                 envmapImageView.setImage(bitmapRGBE.getScaledImage(500, 500, 2.2));
-                api.setEnvironmentMap(bitmapRGBE.getFloat4Data(), bitmapRGBE.getWidth(), bitmapRGBE.getHeight());
+                api.setEnvironmentMap(bitmapRGBE);
             }
         });
         
@@ -170,7 +181,61 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
             api.getDeviceRT().resume();
         });
         
+        renderPortApplyIndicator.setOpacity(0);   
+        //renderPortWidth
+        SpinnerValueFactory factoryRW = new SpinnerValueFactory.IntegerSpinnerValueFactory(200, 2500, 500);        
+        renderPortWidth.setValueFactory(factoryRW);  
+        IntegerStringConverter.createFor(renderPortWidth);
+        
+        
+        //renderPortHeight     
+        SpinnerValueFactory factoryRH = new SpinnerValueFactory.IntegerSpinnerValueFactory(200, 2500, 500);
+        renderPortHeight.setValueFactory(factoryRH);  
+        IntegerStringConverter.createFor(renderPortHeight);
+        
+        
     }    
+    
+    private TreeItem<MaterialFX2> getMaterials()
+    {
+        TreeItem<MaterialFX2> materials = new TreeItem(new MaterialFX2("Glossy"));
+        
+        MaterialFX2 diffuseWhite = new MaterialFX2("diffuse_white");        
+        diffuseWhite.setDiffuseColor(0.9f, 0.9f, 0.9f);   
+        diffuseWhite.setDiffuseAmount(1);
+        materials.getChildren().add(new TreeItem<>(diffuseWhite));
+        
+        MaterialFX2 diffuseKhaki = new MaterialFX2("diffuse_khaki");   
+        diffuseKhaki.setDiffuseAmount(1);
+        diffuseKhaki.setDiffuseColor(0.7647f, 0.6902f, 0.5686f);        
+        materials.getChildren().add(new TreeItem<>(diffuseKhaki));
+        
+        MaterialFX2 diffuseRed = new MaterialFX2("diffuse_red");    
+        diffuseRed.setDiffuseAmount(1);
+        diffuseRed.setDiffuseColor(0.9f, 0.125f, 0.125f);        
+        materials.getChildren().add(new TreeItem<>(diffuseRed));
+        
+        MaterialFX2 diffuseGreen = new MaterialFX2("diffuse_green");     
+        diffuseGreen.setDiffuseAmount(1);
+        diffuseGreen.setDiffuseColor(0.125f, 0.9f, 0.125f);        
+        materials.getChildren().add(new TreeItem<>(diffuseGreen));
+        
+        MaterialFX2 steel = new MaterialFX2("glossy_steel");
+        steel.setDiffuseAmount(0);
+        steel.setGlossyAmount(1);
+        steel.setGlossRoughness(0.124f);
+        steel.setGlossyColor(0.6f, 0.6f, 0.6f);        
+        materials.getChildren().add(new TreeItem<>(steel));
+        
+        MaterialFX2 gold = new MaterialFX2("glossy_gold");
+        gold.setDiffuseAmount(0);
+        gold.setGlossyAmount(1);
+        gold.setGlossRoughness(0.124f);
+        gold.setGlossyColor(0.9f, 0.6f, 0.3f);        
+        materials.getChildren().add(new TreeItem<>(gold));
+        
+        return materials;
+    }
     
     
     
@@ -216,14 +281,19 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
             Point2D xy = api.getBlendDisplayRT().getDragOverXY(e, RAYTRACE_IMAGE.name());
             
             //precisely for material 
-            if(isEnclosingClassEqual(e.getGestureSource(), "TreeCellMaterialDestinationFX"))            
+            if(e.getDragboard().hasContent(MATERIAL_DEST))            
             {
+                
                 if(api.getDeviceRT().isCoordinateAnInstance(xy.getX(), xy.getY()))
-                    e.acceptTransferModes(TransferMode.COPY_OR_MOVE);                 
+                {
+                    e.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+                    
+                }                 
             }
             
             if(!e.isAccepted()) 
             {
+                
                 if(true)
                 {
                     BitmapARGB selectionBitmap = api.getDeviceRT().getOverlay().getNull();
@@ -262,12 +332,30 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
             
             if(!api.isDevicePriority(RAYTRACE)) return;
            
-            if(isEnclosingClassEqual(e.getGestureSource(), "TreeCellMaterialDestinationFX"))
+            if(e.getDragboard().hasContent(MATERIAL_DEST))
             {                               
-                MaterialFX matFX = (MaterialFX) e.getDragboard().getContent(MATERIAL_FORMAT);
-                matFX.param1.texture.set(UtilityHandler.getAndRemoveImageDnD());      
+                MaterialFX2 matFX = (MaterialFX2) e.getDragboard().getContent(MATERIAL_DEST);
+            
                 api.setMaterial(currentInstance, matFX);
                 api.getDeviceRT().resume();
+            }
+        });
+        
+        api.getBlendDisplayRT().setOnMouseClicked(e->{
+            if(e.getClickCount() == 2 && e.getButton() == PRIMARY)
+            {
+                Point2D xy = api.getBlendDisplayRT().getMouseOverXY(e, RAYTRACE_IMAGE.name());
+                
+                //get instance in current pixel
+                int instance = api.getDeviceRT().getInstanceValue(xy.getX(), xy.getY());
+                
+                if(instance > -1)
+                {
+                    CBound bound = new CBound();
+                    api.getDeviceRT().findBound(instance, bound);
+                    api.repositionCameraToBoundRT(bound);
+                    api.getDeviceRT().resume();
+                }
             }
         });
         
@@ -281,20 +369,23 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
     }
     
     
-    public void showOBJStatistics(OBJInfo info)
+    public boolean showOBJStatistics(OBJInfo info)
     {
-        DialogUtility.showAndWaitFX(UtilityHandler.getScene(), new OBJSettingDialogFX(info));        
+        Optional<Boolean> optional = DialogUtility.showAndWaitFX(Boolean.class, UtilityHandler.getScene(), new OBJSettingDialogFX(info)); 
+        return optional.get();
     }
     
     public void openOBJFile(ActionEvent e)
     {
-        FileChooser chooser = new FileChooser();      
-        File file = chooser.showOpenDialog(UtilityHandler.getScene().getWindow());
-        if(file != null)
+        
+        Optional<FileObject> fileOption = DialogUtility.showAndWait(
+                UtilityHandler.getScene().getWindow(), 
+                FactoryUtility.getOBJFileChooser());
+        if(fileOption.isPresent())
         {
             ProcessDialog dialog = new ProcessDialog();
             DialogUtility.showAndWaitThread(UtilityHandler.getScene(), dialog, (type)->{
-                api.initMesh(file.toURI());
+                api.initMesh(fileOption.get().getFile().toURI());
                 api.getDeviceRT().resume();
                 return true;
             });
@@ -314,6 +405,15 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
                 + "Currently targeting OpenCL 1.2!");
         dialog.setTop(icon, "Information");        
         DialogUtility.showAndWait(UtilityHandler.getScene(), dialog);
+    }
+    
+    public void applyRenderPortSize(ActionEvent e)
+    {
+        taskFX.execute(renderPortApplyIndicator, ()->{
+            api.setImageSize(RENDER_IMAGE, renderPortWidth.getValue(), renderPortHeight.getValue());
+            api.getDeviceGI().setup(renderPortWidth.getValue(), renderPortHeight.getValue());
+            System.out.println(renderPortWidth.getValue()+ " " +renderPortHeight.getValue());
+        });
     }
     
 }

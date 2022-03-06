@@ -7,6 +7,7 @@ package cl.fx;
 
 import bitmap.display.gallery.GalleryCanvas.ImageType;
 import bitmap.display.gallery.GalleryLoader;
+import bitmap.display.gallery.util.TaskInterface;
 import java.nio.file.Path;
 import static javafx.scene.control.ButtonType.CANCEL;
 import static javafx.scene.control.ButtonType.OK;
@@ -42,5 +43,15 @@ public class GalleryDialogFX extends DialogAbstract<Path> {
     {
         this(message);
         loader.setImageTypes(types);
+    }
+    
+    public void setLaunchDialog(TaskInterface task)
+    {
+        loader.setLaunchDialog(task);
+    }
+    
+    public void addFolderImages(Path pathFolder)
+    {
+        loader.addFolderImages(pathFolder);
     }
 }

@@ -34,23 +34,23 @@ __kernel void InitCameraRayData(
 // this is where you select the required bsdf, portal for filtering later
 __kernel void SetupBSDFRaytrace(global Intersection* isects,
                                 global Ray*          rays,
-                                global BSDF*         bsdfs,
+                                global Bsdf*         bsdfs,
                                 global Material*     materials)
 {
     int global_id = get_global_id(0);
 
     global Intersection* isect = isects + global_id;
     global Ray* ray            = rays + global_id;
-    global BSDF* bsdf          = bsdfs + global_id;
+    global Bsdf* bsdf          = bsdfs + global_id;
   
     if(isect->hit)
     {
-          *bsdf                = setupBSDF(ray, isect, materials);
+          *bsdf                = setupBsdf(ray, isect, materials);
     }
 }
 
 __kernel void textureInitPassRT(
-    global BSDF*         bsdfs,
+    global Bsdf*         bsdfs,
     global Intersection* isects,
     global TextureData*  texData
 )
@@ -60,27 +60,56 @@ __kernel void textureInitPassRT(
     
     //get intersection and material
     global Intersection* isect = isects + id;
-    global BSDF* bsdf          = bsdfs + id;
+    global Bsdf* bsdf          = bsdfs + id;
     global TextureData* tex    = texData + id;
+    
+    if(isBsdfEmitter(*bsdf))
+        return;
+        
+    tex->parameters.x = bsdf->materialID;                //to find image in CPU during texture lookup search in host code
 
-    if(bsdf->param.brdfType != EMITTER && bsdf->param.isTexture)
+    //diffuse
+    if(bsdf->param.isDiffuseTexture)
     {
-          tex->hasBaseTex        = true;
-          tex->materialID        = bsdf->materialID;            //to find image in CPU during texture lookup search in host code
-
-          tex->baseTexture.x     = castFloatToInt(isect->uv.x);
-          tex->baseTexture.y     = castFloatToInt(isect->uv.y);
-        //tex->baseTexture.z is argb
+      
+          tex->diffuseTexture.w = true;
+          tex->diffuseTexture.x = castFloatToInt(isect->uv.x);
+          tex->diffuseTexture.y = castFloatToInt(isect->uv.y);
     }
     else
     {
-          tex->hasBaseTex        = false;
-          tex->hasOpacity        = false;
+          tex->diffuseTexture.w = false;   //no texture
+    }
+
+    //glossy
+    if(bsdf->param.isGlossyTexture)
+    {
+
+          tex->glossyTexture.w = true;
+          tex->glossyTexture.x = castFloatToInt(isect->uv.x);
+          tex->glossyTexture.y = castFloatToInt(isect->uv.y);
+    }
+    else
+    {
+          tex->glossyTexture.w = false;   //no texture
+    }
+    
+    //roughness
+    if(bsdf->param.isRoughnessTexture)
+    {
+
+          tex->roughnessTexture.w = true;
+          tex->roughnessTexture.x = castFloatToInt(isect->uv.x);
+          tex->roughnessTexture.y = castFloatToInt(isect->uv.y);
+    }
+    else
+    {
+          tex->roughnessTexture.w = false;   //no texture
     }
 }
 
 __kernel void updateToTextureColorRT(
-    global BSDF*         bsdfs,
+    global Bsdf*         bsdfs,
     global TextureData*  texData
 )
 {
@@ -89,20 +118,35 @@ __kernel void updateToTextureColorRT(
 
     //texture for pixel
     global TextureData* tex = texData + id;
-    float4 texColor = getFloat4ARGB(tex->baseTexture.z);
-
     //get bsdf and parameter
-    global BSDF* bsdf          = bsdfs + id;
+    global Bsdf* bsdf          = bsdfs + id;
     
-    if(tex->hasBaseTex)
-         bsdf->param.base_color     = texColor;
+    //diffuse
+    if(tex->diffuseTexture.w)
+    {
+       float4 texColor = getFloat4ARGB(tex->diffuseTexture.z);
+       bsdf->param.diffuse_color     = texColor;
+    }
     
-
+    //glossy
+    if(tex->glossyTexture.w)
+    {
+       float4 texColor = getFloat4ARGB(tex->glossyTexture.z);
+       bsdf->param.glossy_color     = texColor;
+    }
+    
+    //roughness
+    if(tex->roughnessTexture.w)
+    {
+       float4 texColor = getFloat4ARGB(tex->roughnessTexture.z);
+       bsdf->param.glossy_param.y  = texColor.x;
+       bsdf->param.glossy_param.z  = texColor.y;
+    }
 }
 
 __kernel void fastShade(
     global Intersection* isects,
-    global BSDF*         bsdfs,
+    global Bsdf*         bsdfs,
     global int*          imageBuffer
 )
 {
@@ -117,7 +161,7 @@ __kernel void fastShade(
     global Intersection* isect = isects + id;
     
     //get bsdf and parameter
-    global BSDF* bsdf          = bsdfs + id;
+    global Bsdf* bsdf          = bsdfs + id;
     SurfaceParameter param     = bsdf->param;
 
     if(isect->hit)
@@ -135,7 +179,7 @@ __kernel void backgroundShade(
     global Ray*               rays,
 
     global float4*            envmap,
-    global EnvironmentGrid*   envgrid)
+    global LightGrid*         lightGrid)
 {
     //get thread id
     int id = get_global_id( 0 );
@@ -147,9 +191,9 @@ __kernel void backgroundShade(
     if(!isect->hit)
     {
        //update
-       if(envgrid->isPresent)
-       {
-            int envIndex = getSphericalGridIndex(envgrid->width, envgrid->height, ray->d);
+       if(lightGrid->isPresent)
+       {             
+            int envIndex = getSphericalGridIndex(lightGrid->width, lightGrid->height, ray->d);
             float4 envColor = envmap[envIndex];
             gammaFloat4(&envColor, 2.2f);
             imageBuffer[id] = getIntARGB(envColor);

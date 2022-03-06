@@ -5,15 +5,14 @@
  */
 package cl.ui.fx.main;
 
-import cl.ui.fx.material.MaterialFX;
 import cl.device.CDeviceRT;
 import cl.device.CDeviceGI;
 import cl.scene.CNormalBVH;
 import cl.scene.CMesh;
-import cl.struct.CMaterial;
 import bitmap.core.AbstractDisplay;
 import bitmap.display.BlendDisplay;
 import bitmap.display.ImageDisplay;
+import bitmap.image.BitmapRGBE;
 import cl.abstracts.MambaAPIInterface;
 import static cl.abstracts.MambaAPIInterface.DeviceType.RAYTRACE;
 import static cl.abstracts.MambaAPIInterface.DeviceType.RENDER;
@@ -28,6 +27,9 @@ import coordinate.utility.Value2Di;
 import java.nio.file.Path;
 import org.jocl.CL;
 import cl.kernel.CSource;
+import cl.struct.CBound;
+import cl.struct.CMaterial2;
+import cl.ui.fx.material.MaterialFX2;
 import coordinate.parser.obj.OBJInfo;
 import coordinate.parser.obj.OBJMappedParser;
 import coordinate.utility.Timer;
@@ -38,7 +40,7 @@ import wrapper.core.OpenCLConfiguration;
  *
  * @author user
  */
-public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX, UserInterfaceFXMLController>  {
+public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX2, UserInterfaceFXMLController>  {
 
     //Opencl configuration for running single ray tracing program (might add one for future material editor)
     private OpenCLConfiguration configuration = null;
@@ -66,7 +68,7 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX,
     private CNormalBVH bvhBuild;
     
     //material for editing
-    private MaterialFX[] matFXArray;
+    private MaterialFX2[] matFXArray;
     
     //environment map
     private CEnvironment envmap;
@@ -188,6 +190,11 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX,
             default:
                 break;
         }
+    }
+    
+    public void updateImageSizeDeviceGI()
+    {
+        getDeviceGI().setup(renderImageDimension.x, renderImageDimension.y);
     }
 
 
@@ -349,35 +356,35 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX,
         
         
         //NEW MATERIAL
-        CMemory<CMaterial> materialsc =  mesh.clMaterials();
+        CMemory<CMaterial2> materialsc =  mesh.clMaterials();
         
-        CMaterial emitterc = materialsc.get(6);
+        CMaterial2 emitterc = materialsc.get(6);
         //emitter.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki            
         emitterc.setEmitter(1f, 1f, 1f);
-        emitterc.setEmitterPower(20);
-        emitterc.setEmitterEnabled(true);
-
-        CMaterial rightc = materialsc.get(3);           
+        
+        
+       
+        CMaterial2 rightc = materialsc.get(3);           
         rightc.setDiffuse(0, 0.8f, 0);
 
-        CMaterial leftc = materialsc.get(7);         
+        CMaterial2 leftc = materialsc.get(7);         
         leftc.setDiffuse(0.8f, 0f, 0);
 
-        CMaterial backc = materialsc.get(2);           
+        CMaterial2 backc = materialsc.get(2);           
         backc.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki
 
-        CMaterial ceilingc = materialsc.get(1);           
+        CMaterial2 ceilingc = materialsc.get(1);           
         ceilingc.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki
 
-        CMaterial floorc = materialsc.get(0);           
+        CMaterial2 floorc = materialsc.get(0);           
         floorc.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki
 
-        CMaterial smallboxc = materialsc.get(4);  
+        CMaterial2 smallboxc = materialsc.get(4);  
         smallboxc.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki
         //smallbox.setEmitter(1, 1, 1);
         //smallbox.setEmitterEnabled(true);
 
-        CMaterial tallboxc = materialsc.get(5);           
+        CMaterial2 tallboxc = materialsc.get(5);           
         tallboxc.setDiffuse(0.7647f, 0.6902f, 0.5686f);  //khaki  
         
         //transfer material to device
@@ -398,67 +405,96 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX,
         //Set cameraModel new position
         //reposition(mesh.getBound());
         //updateCamera();
+        
     }
 
     //TODO: Make sure the output is displayed in the most adequate console
     @Override
     public void initMesh(Path path) {
         //load mesh and init mesh variables
-        mesh = new CMesh(getConfigurationCL());
+        
         OBJMappedParser parser = new OBJMappedParser();        
         parser.readAttributes(path.toUri());
         
         //init size (estimate) of coordinate list/array
         OBJInfo info = parser.getInfo();
-        controllerImplementation.showOBJStatistics(info);
+        boolean succeed = controllerImplementation.showOBJStatistics(info);
         
-        //init array sizes (eventually they will grow if bounds reach)
-        mesh.initCoordList(CPoint3.class, CVector3.class, CPoint2.class, 0, 0, 0, 0);
-        
-        Timer parseTime = Timer.timeThis(() -> parser.read(path.toString(), mesh)); //Time parsing
-        //UI.print("parse-time", parseTime.toString()); 
-        mesh.initCLBuffers();
-        setupMaterial();
-        
-        //display material in ui
-//        controllerImplementation.displaySceneMaterial(parser.getSceneMaterialList());
-        
-        //build accelerator
-        Timer buildTime = Timer.timeThis(() -> {                                   //Time building
-            this.setMessage("building accelerator");
-            this.bvhBuild = new CNormalBVH(configuration);
-            this.bvhBuild.build(mesh);      
-        });
-       // UI.print("build-time", buildTime.toString());
-        
-        //set to device for rendering/raytracing
-        this.deviceRaytrace.set(mesh, bvhBuild);
-        this.deviceRender.set(mesh, bvhBuild);
-                
-        //init various buffers and kernels to reflect on new model
-        deviceRender.setAPI(this);
-        deviceRaytrace.setAPI(this);
+        if(succeed)
+        {
+            mesh = null;
+            mesh = new CMesh(getConfigurationCL());
+            
+            //init array sizes (eventually they will grow if bounds reach)
+            mesh.initCoordList(CPoint3.class, CVector3.class, CPoint2.class, 0, 0, 0, 0);
+
+            Timer parseTime = Timer.timeThis(() -> parser.read(path.toString(), mesh)); //Time parsing
+            //UI.print("parse-time", parseTime.toString()); 
+            mesh.initCLBuffers();
+            setupMaterial();
+
+            //display material in ui
+            //controllerImplementation.displaySceneMaterial(parser.getSceneMaterialList());
+
+            //build accelerator
+            Timer buildTime = Timer.timeThis(() -> {                                   //Time building
+                this.setMessage("building accelerator");
+                this.bvhBuild = new CNormalBVH(configuration);
+                this.bvhBuild.build(mesh);      
+            });
+           // UI.print("build-time", buildTime.toString());
+
+            //set to device for rendering/raytracing
+            this.deviceRaytrace.set(mesh, bvhBuild);
+            this.deviceRender.set(mesh, bvhBuild);
+
+            //init various buffers and kernels to reflect on new model
+            deviceRender.setAPI(this);
+            deviceRaytrace.setAPI(this);
+            
+            this.repositionCameraToSceneRT();
+        }
+    }
+    
+    //this changes direction (by reseting direction to z axis)
+    public void repositionCameraToSceneRT()
+    {
+        CDeviceRT device = getDeviceRT();
+        CBound bound = device.getBound();
+        device.setPriorityBound(bound);
+        device.getCameraModel().set(bound.getCenter().add(new CVector3(0, 0, -3)), new CPoint3(), new CVector3(0, 1, 0), 45);
+        device.reposition(bound);
+    }
+   
+    
+    //this changes only position but direction remains intact
+    public void repositionCameraToBoundRT(CBound bound)
+    {
+        CDeviceRT device = getDeviceRT();
+        device.setPriorityBound(bound);
+        device.reposition(bound);
     }
     
     private void setupMaterial()
     {
         int matSize = mesh.clMaterials().getSize();
         
-        matFXArray = new MaterialFX[matSize];
+        matFXArray = new MaterialFX2[matSize];
         for(int i = 0; i<matFXArray.length; i++)
         {            
-            matFXArray[i] = new MaterialFX();
+            matFXArray[i] = new MaterialFX2();
             matFXArray[i].setCMaterial(mesh.clMaterials().get(i));
         }
     }
     
-    public void setMaterial(int index, MaterialFX matFX)
+    public void setMaterial(int index, MaterialFX2 matFX)
     {                
-        CMemory<CMaterial> materialsc = mesh.clMaterials();          
+        CMemory<CMaterial2> materialsc = mesh.clMaterials();          
         matFXArray[index].setMaterial(matFX);
-        materialsc.transferToDevice();        
+        materialsc.transferToDevice();  
+        materialsc.transferFromDevice();
     }
-   
+    
     @Override
     public void startDevice(DeviceType device) {
         if(device.equals(RAYTRACE))
@@ -571,19 +607,19 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX,
     }
 
     @Override
-    public void set(int index, MaterialFX material) {
+    public void set(int index, MaterialFX2 material) {
         //TODO 
         matFXArray[index].setMaterial(material);
     }
 
     @Override
-    public MaterialFX get(int index) {
+    public MaterialFX2 get(int index) {
         return matFXArray[index];
     }
 
     @Override
-    public void setEnvironmentMap(float[] rgb4, int width, int height) {
-        envmap.setEnvironmentMap(rgb4, width, height);
+    public void setEnvironmentMap(BitmapRGBE bitmap) {
+        envmap.setEnvironmentMap(bitmap);
         
         deviceRaytrace.setEnvMapInKernel();
         deviceRender.setEnvMapInKernel();

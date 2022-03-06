@@ -45,6 +45,7 @@ public class CImage {
     private CKernel initFrameARGBKernel;        
     private CKernel averageAccum1Kernel;    
     private CKernel updateImageFrameKernel;
+    private CKernel updateImageKernel;
     
     private PrefixSumFloat prefixSumLoglw;
     private PrefixSumInteger prefixSumloglwCount;
@@ -104,11 +105,12 @@ public class CImage {
     
     public final void createKernels()
     {
-        this.initFrameAccumKernel       = configuration.createKernel("InitFloat4DataXYZ", cFrameAccum);        
-        this.initFrameARGBKernel        = configuration.createKernel("InitIntDataRGB", cFrameARGB);   //introduce this kernel     
+        this.initFrameAccumKernel       = configuration.createKernel("InitFloat4DataXYZ", cFrameAccum, cFrameSize);        
+        this.initFrameARGBKernel        = configuration.createKernel("InitIntDataRGB", cFrameARGB, cFrameSize);   //introduce this kernel     
         
         this.averageAccum1Kernel        = configuration.createKernel("averageAccum", cFrameAccum, cFrameCount, cFrameBuffer, cloglw, cloglwcount, cFrameSize );
         this.updateImageFrameKernel     = configuration.createKernel("updateFrameImage", cFrameBuffer, cFrameARGB, cTotalLogLuminance, cTotalNumber, cFrameSize, cexposure, cgamma);
+        this.updateImageKernel          = configuration.createKernel("UpdateImage", cFrameAccum, cFrameCount, cFrameARGB, cFrameSize);
     }
     
     
@@ -130,7 +132,7 @@ public class CImage {
             this.prefixSumloglwCount.execute();
         }
         configuration.execute1DKernel(updateImageFrameKernel, globalSize, localSize);
-        
+        //configuration.execute1DKernel(updateImageKernel, globalSize, localSize);
     }
             
     public void updateImageFrameKernel()

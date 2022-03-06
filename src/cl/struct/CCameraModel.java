@@ -10,6 +10,7 @@ import cl.struct.CRay;
 import cl.data.CPoint3;
 import cl.data.CVector3;
 import coordinate.model.CameraModel;
+import coordinate.model.Transform;
 
 /**
  *
@@ -18,6 +19,15 @@ import coordinate.model.CameraModel;
 public class CCameraModel extends CameraModel <CPoint3, CVector3, CRay>{
     public CCameraModel(CPoint3 position, CPoint3 lookat, CVector3 up, float horizontalFOV) {
         super(position.copy(), lookat.copy(), up.copy(), horizontalFOV);
+    }
+    
+    public void set(CPoint3 position, CPoint3 lookat, CVector3 up, float horizontalFOV)
+    {
+        this.position = position.copy();
+        this.lookat = lookat.copy();
+        this.up = up.copy();
+        this.fov = horizontalFOV;
+        this.cameraTransform = new Transform<>();
     }
 
     @Override

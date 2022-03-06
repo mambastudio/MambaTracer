@@ -56,7 +56,8 @@ public class UtilityHandler {
     {
         if(!galleries.containsKey(name))
         {
-            galleries.put(name, new GalleryDialogFX("Gallery"));
+            GalleryDialogFX gallery = new GalleryDialogFX("Gallery");
+            galleries.put(name, gallery);
         }
         return galleries.get(name);
     }

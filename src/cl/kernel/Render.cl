@@ -1,41 +1,9 @@
-typedef struct
-{
-    float4 throughput;        //throughput (multiplied by emission)
-    float4 hitpoint;             //position of vertex
-    int    pathlength;           //path length or number of segment between source and vertex
-    int    lastSpecular;
-    float  lastPdfW;
-    int    active;               //is path active
-    BSDF   bsdf;                 //bsdf (stores local information together with incoming direction)
-
-}Path;
-
 void addAccum(__global float4* accum, float4 value)
 {
 
     if(isFloat4AbsValid(value))
         atomicAddFloat4(accum, value);
 
-}
-
-__kernel void InitPathData(
-    global Path* paths
-)
-{
-    //get global id
-    int global_id = get_global_id(0);
-    //get path
-    global Path* path = paths + global_id;
-    //initialize path
-    path->throughput          = makeFloat4(1, 1, 1, 1);
-    path->lastSpecular        = true;
-    path->lastPdfW            = 1;
-    path->active              = true;
-    path->bsdf.materialID     = -1;
-    path->bsdf.frame.mX       = makeFloat4(0, 0, 0, 0);
-    path->bsdf.frame.mY       = makeFloat4(0, 0, 0, 0);
-    path->bsdf.frame.mZ       = makeFloat4(0, 0, 0, 0);
-    path->bsdf.localDirFix    = makeFloat4(0, 0, 0, 0);
 }
 
 // this is where you select the required bsdf, portal for filtering later
@@ -57,7 +25,16 @@ __kernel void SetupBSDFPath(global Intersection* isects,
       
         if(isect->hit)
         {
-              path->bsdf           = setupBSDF(ray, isect, materials);
+              Bsdf bsdf            = setupBsdf(ray, isect, materials);
+              
+              if(isBsdfInvalid(bsdf))
+              {
+                  //we are done with this intersect and path
+                  isect->hit = false;
+                  return;
+              }
+              path->bsdf           = bsdf;
+
         }
     }
 }
@@ -82,7 +59,7 @@ __kernel void LightHitPass(global Intersection*     isects,
                            global float4*           envmap,
                            global float*            lum,
                            global float*            lumsat,
-                           global EnvironmentGrid*  envgrid)
+                           global LightGrid*        lightGrid)
 {
     int global_id = get_global_id(0);
     TriangleMesh mesh    = {points, uvs, normals, faces, size[0]};
@@ -97,15 +74,17 @@ __kernel void LightHitPass(global Intersection*     isects,
        if(isect->hit)
        {
            //deal with emitter
-           BSDF bsdf = path->bsdf;
-           if(bsdf.param.brdfType == EMITTER)
+           Bsdf bsdf = path->bsdf;
+           if(isBsdfEmitter(bsdf))
            {
               //light pick probability
               float lightPickProb = 1.f / *totalLights;
               //get area light and contribution
               AreaLight aLight = getAreaLight(bsdf, mesh, isect->id);
-              float directPdfA;
+              float directPdfA = 0;
               float4 contrib = getRadianceAreaLight(aLight, ray->d, isect->p, &directPdfA);
+
+
               if(isFloat3Zero(contrib.xyz))
                   return;
               
@@ -116,19 +95,20 @@ __kernel void LightHitPass(global Intersection*     isects,
                    float directPdfW = pdfAtoW(directPdfA, ray->tMax, bsdf.localDirFix.z);
                    misWeight = mis2(path->lastPdfW, directPdfW * lightPickProb);
               }
-             
+
               //accumulate radiance to screenspace buffer
               addAccum(&accum[*index], path->throughput * contrib * misWeight);
+
               //we are done with this intersect and path
               isect->hit = false;
            }
        }
-       else if(envgrid->isPresent)
+       else if(lightGrid->isPresent)
        {
-            EnvironmentLight aLight = getEnvironmentLight(envgrid, envmap,  lum, lumsat);
+            EnvironmentLight aLight = getEnvironmentLight(lightGrid, envmap,  lum, lumsat);
             float directPdfW;
-            
-            float4 contrib = getRadianceEnvironmentLight(aLight, ray->d, isect->p, &directPdfW);
+                     
+            float4 contrib = getRadianceEnvironmentLight(aLight, ray->d, path->hitpoint, &directPdfW);
             if(isFloat3Zero(contrib.xyz))
                  return;
         
@@ -162,24 +142,47 @@ __kernel void texturePassGI(
     global TextureData* tex    = texData + id;
     global Path* path          = paths + *index;
 
-    BSDF bsdf                  = path->bsdf;
+    Bsdf bsdf                  = path->bsdf;
 
+    tex->parameters.x = bsdf.materialID;               //to find image in CPU during texture lookup search in host code
 
     if(id < *count)
     {
-        if(bsdf.param.isTexture)
+        //diffuse
+        if(bsdf.param.isDiffuseTexture)
         {
-              tex->hasBaseTex        = true;
-              tex->materialID        = bsdf.materialID;            //to find image in CPU during texture lookup search in host code
-    
-              tex->baseTexture.x     = castFloatToInt(isect->uv.x);
-              tex->baseTexture.y     = castFloatToInt(isect->uv.y);
-            //tex->baseTexture.z is argb
+              tex->diffuseTexture.w = true;
+              tex->diffuseTexture.x = castFloatToInt(isect->uv.x);
+              tex->diffuseTexture.y = castFloatToInt(isect->uv.y);
         }
         else
         {
-              tex->hasBaseTex        = false;
-              tex->hasOpacity        = false;
+              tex->diffuseTexture.w = false;   //no texture
+        }
+        
+        //glossy
+        if(bsdf.param.isGlossyTexture)
+        {
+              tex->glossyTexture.w = true;
+              tex->glossyTexture.x = castFloatToInt(isect->uv.x);
+              tex->glossyTexture.y = castFloatToInt(isect->uv.y);
+        }
+        else
+        {
+              tex->glossyTexture.w = false;   //no texture
+        }
+        
+        //roughness
+        if(bsdf.param.isRoughnessTexture)
+        {
+    
+              tex->roughnessTexture.w = true;
+              tex->roughnessTexture.x = castFloatToInt(isect->uv.x);
+              tex->roughnessTexture.y = castFloatToInt(isect->uv.y);
+        }
+        else
+        {
+              tex->roughnessTexture.w = false;   //no texture
         }
     }
 }
@@ -200,13 +203,31 @@ __kernel void updateToTextureColorGI(
     global TextureData* tex    = texData + id;
     global Path* path          = paths + *index;
 
-    float4 texColor = getFloat4ARGB(tex->baseTexture.z);
-    
     if(id < *count)
-        if(tex->hasBaseTex)
-             path->bsdf.param.base_color     = texColor;
-    
-
+    {
+        //diffuse
+        if(tex->diffuseTexture.w)
+        {
+           float4 texColor = getFloat4ARGB(tex->diffuseTexture.z);
+           path->bsdf.param.diffuse_color     = texColor;
+        }
+        
+        //glossy
+        if(tex->glossyTexture.w)
+        {
+           float4 texColor = getFloat4ARGB(tex->glossyTexture.z);
+           path->bsdf.param.glossy_color     = texColor;
+        }
+        
+        //roughness
+        if(tex->roughnessTexture.w)
+        {
+           float4 texColor = getFloat4ARGB(tex->roughnessTexture.z);
+           path->bsdf.param.glossy_param.y  = max(0.001f, texColor.x);
+           path->bsdf.param.glossy_param.z  = max(0.001f, texColor.y);
+         //  printFloat(roughness);
+        }
+    }
 }
 
 __kernel void SampleBSDFRayDirection(global Intersection* isects,
@@ -226,7 +247,7 @@ __kernel void SampleBSDFRayDirection(global Intersection* isects,
     global int* path_index       = pixel_indices + global_id;
     global Path* path            = paths + *path_index;
     global Material* material    = materials + path->bsdf.materialID;
-    BSDF bsdf                    = path->bsdf;
+    Bsdf bsdf                    = path->bsdf;
 
     if(global_id < *num_rays)
     {     
@@ -234,12 +255,14 @@ __kernel void SampleBSDFRayDirection(global Intersection* isects,
         global Ray* ray              = rays + global_id;
 
         //random sample direction
-        float2 sample                = random_float2(&seed);
+        float3 sample                = random_float3(&seed);
 
         //bsdf  sampling
         float4 dir;
         float pdf, cosThetaOut;
-        float4 factor               = sampleBrdf(bsdf, sample, &dir, &cosThetaOut, &pdf);
+        float4 factor               = SampleBsdf(bsdf, sample, &dir, &pdf, &cosThetaOut);
+        
+
 
         //path contribution (light equation)
         path->throughput             *= factor * (cosThetaOut / pdf);
@@ -252,25 +275,28 @@ __kernel void SampleBSDFRayDirection(global Intersection* isects,
         path->lastSpecular           = false;
         path->lastPdfW               = pdf;
 
+        //last hit point (good for calculating the light grid cell)
+        path->hitpoint               = isect->p;
+
         //new ray direction
         initGlobalRay(ray, o, d);
         InitIsect(isect);
     }
 }
 
-float4 directAreaLight(global Intersection* isect,
-                       //mesh light
-                       TriangleMesh         mesh,
-                       global Material*     materials,
-                       global LightInfo*    lightInfo,
-                       global int*          totalLights,
-                       //other parameters for transport calculation
-                       float2               sample,
-                       float*               lightPickProb,
-                       int2*                seed,
-                       float4*              directionToLight,
-                       float*               distance,
-                       float*               directPdfW)
+float4 illuminateMeshLight(global Intersection* isect,
+                           //mesh light
+                           TriangleMesh         mesh,
+                           global Material*     materials,
+                           global LightInfo*    lightInfo,
+                           global int*          totalLights,
+                           //other parameters for transport calculation
+                           float2               sample,
+                           float*               lightPickProb,
+                           int2*                seed,
+                           float4*              directionToLight,
+                           float*               distance,
+                           float*               directPdfW)
 {
      //sample light index uniformly
      int lightIndex = random_int_range(seed, *totalLights);
@@ -280,7 +306,7 @@ float4 directAreaLight(global Intersection* isect,
      //light pick probability
      *lightPickProb *= 1.f / *totalLights;
      //light bsdf
-     BSDF lightBSDF = setupBSDFAreaLight(materials, mesh, triangleIndex);
+     Bsdf lightBSDF = setupBSDFAreaLight(materials, mesh, triangleIndex);
      //get area light
      AreaLight aLight = getAreaLight(lightBSDF, mesh, triangleIndex);
      //radiance from direct light
@@ -301,14 +327,16 @@ float4 illuminateLight( global Intersection* isect,
                         int2*                seed,
                         float4*              directionToLight,
                         float*               distance,
-                        float*               directPdfW)
+                        float*               directPdfW,
+                        float                *luminance,
+                        int                  *lightGridIndex)
 {
     *lightPickProb    =         1.f;
     //for light surface sample
-    float2 sample                = random_float2(seed);
+    float4 sample                = random_float4(seed);
 
     //sample either environment light or mesh light
-    if(eLight.envgrid->isPresent && (*totalLights > 0))
+    if(eLight.lightGrid->isPresent && (*totalLights > 0))
     {
          float rnd         = get_random(seed);
          bool sampleALight = (rnd < 0.5f);
@@ -318,30 +346,32 @@ float4 illuminateLight( global Intersection* isect,
 
          if(sampleALight)
          {
-              float4 radiance = directAreaLight(isect, mesh, materials, lightInfo, totalLights, 
-                                                       sample, lightPickProb, seed, directionToLight, distance, directPdfW);
+              float4 radiance = illuminateMeshLight(isect, mesh, materials, lightInfo, totalLights,
+                                                       sample.xy, lightPickProb, seed, directionToLight, distance, directPdfW);
               return radiance;
          }
          else
          {
-              float4 radiance = illuminateEnvironmentLight(eLight, isect->p, sample, directionToLight, distance, directPdfW);
+              float4 radiance = illuminateEnvironmentLight(eLight, isect->p, sample, directionToLight, distance, directPdfW, luminance, lightGridIndex);
               return radiance;
          }
     }
     //sample environment map if present
-    if(eLight.envgrid->isPresent)
+    if(eLight.lightGrid->isPresent)
     {
-        float4 radiance = illuminateEnvironmentLight(eLight, isect->p, sample, directionToLight, distance, directPdfW);
+        float4 radiance = illuminateEnvironmentLight(eLight, isect->p, sample, directionToLight, distance, directPdfW, luminance, lightGridIndex);
         return radiance;
     }
     //sample mesh light if present
     else if(*totalLights > 0)
     {
         //radiance from direct light
-        float4 radiance = directAreaLight(isect, mesh, materials, lightInfo, totalLights,
-                                                 sample, lightPickProb, seed, directionToLight, distance, directPdfW);
+        float4 radiance = illuminateMeshLight(isect, mesh, materials, lightInfo, totalLights,
+                                                 sample.xy, lightPickProb, seed, directionToLight, distance, directPdfW);
         return radiance;
     }
+    
+
 }
 
 __kernel void DirectLight(
@@ -374,20 +404,24 @@ __kernel void DirectLight(
     global float4*           envmap,
     global float*            lum,
     global float*            lumsat,
-    global EnvironmentGrid*  envgrid
+    global LightGrid*        lightGrid
 )
 {
 
     int global_id            = get_global_id(0);
     TriangleMesh mesh        = {points, uvs, normals, faces, size[0]};
-    EnvironmentLight eLight  = getEnvironmentLight(envgrid, envmap,  lum, lumsat);
+    EnvironmentLight eLight  = getEnvironmentLight(lightGrid, envmap,  lum, lumsat);
     
     //get intersection and path_index
     global Intersection* isect   = isects + global_id;
     global Ray* ray              = occlusRays + global_id;
     global int* pixel_index      = pixel_indices + global_id;
     global Path* path            = paths + *pixel_index;
-    BSDF bsdf                    = path->bsdf;
+    Bsdf bsdf                    = path->bsdf;
+    
+    float            luminance;
+    int              lightGridIndex;
+
 
     if(global_id < *activeCount)
     {        
@@ -399,16 +433,16 @@ __kernel void DirectLight(
 
         //get radiance from direct light sampling
         float4 radiance = illuminateLight(isect, eLight, mesh, materials, lights, totalLights,
-                                                 &lightPickProb, &seed, &directionToLight, &distance, &directPdfW);
+                                                 &lightPickProb, &seed, &directionToLight, &distance, &directPdfW, &luminance, &lightGridIndex);
 
         if(!isFloat3Zero(radiance.xyz))
         {
-            float bsdfPdfW, cosThetaOut;
-            float4 factor =  evaluateBrdf(path->bsdf, directionToLight, &cosThetaOut, &bsdfPdfW);
+            float bsdfPdfW = 0, cosThetaOut = 0;
+            float4 factor =  EvaluateBsdf(path->bsdf, directionToLight, &bsdfPdfW, &cosThetaOut);
 
             if(!isFloat3Zero(factor.xyz))
             {
-                float4 contrib = makeFloat4(0, 0, 0, 0);    //important since undeclared variable might have issues when used
+                float4 contrib = makeFloat4(0, 0, 0, 1);    //important since undeclared variable might have issues when used
                 float weight = 1.f;
                 //weight = mis2(directPdfW * lightPickProb, bsdfPdfW);
                 weight = mis2(directPdfW, bsdfPdfW);
@@ -421,6 +455,8 @@ __kernel void DirectLight(
                 //test occlusion
                 if(!testOcclusion(ray, mesh, nodes, bounds))
                 {
+                    //accumLightGrid(eLight);
+                    //accumLightGrid(eLight, luminance, lightGridIndex);
                     addAccum(&accum[*pixel_index], contrib);
                 }
             }

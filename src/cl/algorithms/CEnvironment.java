@@ -5,9 +5,10 @@
  */
 package cl.algorithms;
 
-import bitmap.Color;
+import bitmap.image.BitmapRGBE;
 import cl.data.CColor4;
-import cl.struct.CEnvironmentGrid;
+import cl.data.CPoint3;
+import cl.struct.CLightGrid;
 import coordinate.sampling.sat.SAT;
 import wrapper.core.CMemory;
 import static wrapper.core.CMemory.READ_ONLY;
@@ -21,7 +22,7 @@ import wrapper.core.memory.values.FloatValue;
  */
 public class CEnvironment {
     private final OpenCLConfiguration configuration;
-    private final CMemory<CEnvironmentGrid> cenvgrid;
+    private final CAdaptiveEnvironment adaptiveEnv;
     
     //env map
     private CMemory<CColor4> crgb4;
@@ -33,36 +34,27 @@ public class CEnvironment {
     public CEnvironment(OpenCLConfiguration configuration)
     {
         this.configuration  = configuration;
-        this.cenvgrid       = configuration.createBufferB(CEnvironmentGrid.class, 1, READ_WRITE);
         this.crgb4          = configuration.createBufferF(CColor4.class, 1, READ_ONLY);
         this.cenvlum        = configuration.createBufferF(FloatValue.class, 1, READ_WRITE);
         this.cenvlumsat     = configuration.createBufferF(FloatValue.class, 1, READ_WRITE);
+        this.adaptiveEnv    = new CAdaptiveEnvironment(configuration);
     }
     
-    public void setEnvironmentMap(float[] rgb4, int width, int height)
-    {
-        float[] lum = new float[width * height];
-        for(int i = 0; i<lum.length; i++)
-        {
-            float x = rgb4[i*4 + 0];
-            float y = rgb4[i*4 + 1];
-            float z = rgb4[i*4 + 2];
-            
-            Color col = new Color(x, y, z);
-            lum[i] = col.luminance();
-        }
-        sat = new SAT(width, height);
-        sat.setArray(lum);
+    public void setEnvironmentMap(BitmapRGBE bitmap)
+    {        
+        sat = new SAT(bitmap.getWidth(), bitmap.getHeight());
+        sat.setArray(bitmap.getLuminanceArray());
         
-        crgb4 = configuration.createFromF(CColor4.class, rgb4, READ_ONLY);
+        adaptiveEnv.setHDRLuminance(sat);
+        
+        crgb4 = configuration.createFromF(CColor4.class, bitmap.getFloat4Data(), READ_ONLY);
         cenvlum = configuration.createFromF(FloatValue.class, sat.getFuncArray(), READ_WRITE);
-        cenvlumsat = configuration.createFromF(FloatValue.class, sat.getSATArray(), READ_WRITE);
-        
-        cenvgrid.mapWriteMemory(cgrid->{
-            CEnvironmentGrid grid = cgrid.getCL();
-            grid.setWidth(width);
-            grid.setHeight(height);
-        });            
+        cenvlumsat = configuration.createFromF(FloatValue.class, sat.getSATArray(), READ_WRITE);        
+    }
+    
+    public void setCameraPosition(CPoint3 cameraPosition)
+    {
+        adaptiveEnv.setCameraPosition(cameraPosition);
     }
     
     public CMemory<CColor4> getRgbCL()
@@ -77,25 +69,31 @@ public class CEnvironment {
         
     public CMemory<FloatValue> getEnvLumSATCL()
     {
-        return cenvlumsat   ;
+        return cenvlumsat;
     }
     
     public void setIsPresent(boolean isPresent)
     {
-        cenvgrid.mapWriteMemory(cgrid->{
-            CEnvironmentGrid grid = cgrid.getCL();
-            grid.setIsPresent(isPresent);
-        });
+        adaptiveEnv.setIsPresent(isPresent);
     }
     
-    public CMemory<CEnvironmentGrid> getCEnvGrid()
+    public CMemory<CLightGrid> getLightGrid()
     {
-        return cenvgrid;
+        return adaptiveEnv.getLightGridCL();
     }
     
     public boolean isPresent()
     {
-        CEnvironmentGrid cgrid = cenvgrid.getCL();
-        return cgrid.isPresent;
+        return adaptiveEnv.isPresent();
+    }
+    
+    public void resetAdaptive()
+    {
+        adaptiveEnv.resetHDRLuminance();
+    }
+    
+    public void adaptiveUpdate()
+    {
+        adaptiveEnv.update();
     }
 }

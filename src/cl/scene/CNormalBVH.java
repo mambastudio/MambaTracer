@@ -47,23 +47,23 @@ public class CNormalBVH implements CAcceleratorInterface {
         long time1 = System.nanoTime();
         
         this.primitives = primitives; 
-        this.objects = new int[primitives.getCount()];
+        this.objects = new int[primitives.getSize()];
         
-        for(int i = 0; i<this.primitives.getCount(); i++)
+        for(int i = 0; i<this.primitives.getSize(); i++)
             objects[i] = i;
         
         //Release memory
         CResourceFactory.releaseMemory("nodes", "bounds");
         
         //Allocate BVH root node
-        nodes   = configuration.createBufferI(CNode.class, this.primitives.getCount() * 2 - 1,  READ_WRITE);
-        bounds  = configuration.createBufferF(CBound.class, this.primitives.getCount() * 2 - 1,  READ_WRITE);
+        nodes   = configuration.createBufferI(CNode.class, this.primitives.getSize() * 2 - 1,  READ_WRITE);
+        bounds  = configuration.createBufferF(CBound.class, this.primitives.getSize() * 2 - 1,  READ_WRITE);
         
         CNode root = new CNode();
         nodes.setCL(root);        
         nodesPtr = 1;
                 
-        subdivide(0, 0, primitives.getCount());
+        subdivide(0, 0, primitives.getSize());
         
         long time2 = System.nanoTime();
         

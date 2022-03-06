@@ -5,7 +5,9 @@
  */
 package cl.algorithms;
 
+import static cl.abstracts.MambaAPIInterface.getGlobal;
 import cl.scene.CMesh;
+import cl.struct.CCamera;
 import cl.struct.CLightInfo;
 import wrapper.core.CKernel;
 import wrapper.core.CMemory;
@@ -37,20 +39,37 @@ public class CLightConfiguration {
         this.configuration = configuration;
     }
     
+    //CCamera for adaptive environment
     public void initLights(CMesh cmesh, CEnvironment cenvmap)
     {
+        //clear references to make new ones
+        //if you don't do this, when dealing with large arrays, there is some data corruption. I don't know why
+        this.cmesh = null;
+        this.cenvmap = null;
+        this.lightPredicate = null;
+        this.lightcount = null;
+        this.lightInfoList = null;
+        
+        //start assigning
         this.cmesh = cmesh;
         this.cenvmap = cenvmap;
         
+        this.cenvmap.resetAdaptive();
+        
         //init cl variables
-        lightPredicate = configuration.createBufferI(IntValue.class, cmesh.getCount(), READ_WRITE);        
+        lightPredicate = configuration.createBufferI(IntValue.class, cmesh.getSize(), READ_WRITE);        
         lightcount = new PrefixSumInteger(configuration, lightPredicate);
         
         //init cl kernel
         identifyMeshLightsKernel = configuration.createKernel("identifyMeshLights", cmesh.clFaces(), cmesh.clSize(), cmesh.clMaterials(), lightPredicate);
         
         //execute kernels
-        configuration.execute1DKernel(identifyMeshLightsKernel, cmesh.getCount(), 100);
+        int size    = cmesh.getSize(); // sometimes the mesh size can be smaller than local memory allocation
+        int local   = 100;
+        int global  = getGlobal(size, local);
+        
+        
+        configuration.execute1DKernel(identifyMeshLightsKernel, global, local);
         lightcount.execute();
         
         int count = lightcount.getCount();
@@ -58,12 +77,13 @@ public class CLightConfiguration {
         {
             //create light info list buffer
             lightInfoList = configuration.createBufferB(CLightInfo.class, count, READ_WRITE);
-            
-                        
+                                    
             //init cl kernel
             prepareLightInfoKernel   = configuration.createKernel("prepareLightInfo", lightPredicate, lightcount.getPrefixSum(), cmesh.clSize(), lightInfoList);
-            configuration.execute1DKernel(prepareLightInfoKernel, cmesh.getCount(), 100);
+            configuration.execute1DKernel(prepareLightInfoKernel, global, local);
         }
+        configuration.finish();
+        configuration.flush();
     }
     
     public int getAreaLightCount()

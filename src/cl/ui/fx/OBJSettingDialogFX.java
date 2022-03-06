@@ -7,21 +7,16 @@ package cl.ui.fx;
 
 import coordinate.parser.obj.OBJInfo;
 import coordinate.parser.obj.OBJInfo.SplitOBJPolicy;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.geometry.Insets;
 import static javafx.scene.control.ButtonType.CANCEL;
 import static javafx.scene.control.ButtonType.OK;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
 import jfx.dialog.DialogAbstract;
 import jfx.form.Setting;
 import jfx.form.SimpleSetting;
@@ -73,6 +68,8 @@ public class OBJSettingDialogFX extends DialogAbstract<Boolean> {
         vbox.getChildren().addAll(fileStatistics, splitPolicy);
         this.setContent(vbox);
         
-        
+        this.setSupplier((buttonType)->{
+            return buttonType == OK && info.f() > 0;
+        });        
     }
 }

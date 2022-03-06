@@ -17,6 +17,7 @@ import coordinate.parser.attribute.MaterialT;
 public interface MaterialInterface <M extends MaterialInterface> {    
     public enum BRDFType{
         DIFFUSE, 
+        ANISOTROPIC,
         EMITTER;
     }
         

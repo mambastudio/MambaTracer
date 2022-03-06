@@ -12,18 +12,19 @@ import coordinate.struct.structint.IntStruct;
  *
  * @author user
  */
-public class CTextureData extends IntStruct{
-    public CInt4 baseTexture;
-    public CInt4 opacityTexture;
-    public int  hasOpacity, hasBaseTex, materialID, paramLevel;
-    
+public final class CTextureData extends IntStruct{
+    public CInt4 diffuseTexture;       //x, y-coord, argb, has_texture (0 or 1, false or true)
+    public CInt4 glossyTexture;
+    public CInt4 roughnessTexture;      
+    public CInt4 mirrorTexture;    
+    public CInt4 parameters; //x = materialID
+        
     public CTextureData()
     {
-        this.baseTexture = new CInt4();
-        this.opacityTexture = new CInt4();
-        this.hasOpacity = 0;
-        this.hasBaseTex = 0;
-        this.materialID = 0;
-        this.paramLevel = 0;
-    }
+        diffuseTexture = new CInt4();
+        glossyTexture = new CInt4();
+        roughnessTexture = new CInt4();
+        mirrorTexture = new CInt4();
+        parameters = new CInt4();
+    }    
 }
