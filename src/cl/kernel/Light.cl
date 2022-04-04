@@ -137,7 +137,7 @@ EnvironmentLight getEnvironmentLight(global LightGrid* lightGrid, global float4*
 }
 
 
-float4 illuminateEnvironmentLight(
+float4 illuminateEnvironmentLight1(
        EnvironmentLight aLight,
        float4           aReceivingPosition,
        float4           aSample,
@@ -192,7 +192,7 @@ float4 illuminateEnvironmentLight(
   return contrib;
 }
 
-float4 illuminateEnvironmentLight1(
+float4 illuminateEnvironmentLight(
        EnvironmentLight aLight,
        float4           aReceivingPosition,
        float4           aSample,
@@ -226,7 +226,7 @@ float4 illuminateEnvironmentLight1(
     return contrib;
 }
 
-float4 getRadianceEnvironmentLight(
+float4 getRadianceEnvironmentLight1(
        EnvironmentLight aLight,
        float4           aRayDirection,
        float4           aHitPoint,
@@ -267,7 +267,7 @@ float4 getRadianceEnvironmentLight(
     return contrib;
 }
 
-float4 getRadianceEnvironmentLight1(
+float4 getRadianceEnvironmentLight(
        EnvironmentLight aLight,
        float4           aRayDirection,
        float4           aHitPoint,

@@ -340,7 +340,7 @@ float4 illuminateLight( global Intersection* isect,
     {
          float rnd         = get_random(seed);
          bool sampleALight = (rnd < 0.5f);
-         
+
          //light mesh or infinite light
          *lightPickProb    *= 0.5f;
 
