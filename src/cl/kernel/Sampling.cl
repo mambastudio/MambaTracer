@@ -5,6 +5,11 @@ typedef struct
    float  frameCount;
 }State;
 
+typedef struct
+{
+   int seed;
+   float frameCount;
+}State2;
 
 /// Hash function
 unsigned int WangHash(int seed)
@@ -16,6 +21,11 @@ unsigned int WangHash(int seed)
     seed = seed ^ (seed >> 15);
     return seed;
 }
+
+int initRNG(global State2* state)
+{
+  
+}  
 
 //unique seed for each thread 
 //https://github.com/jbikker/lighthouse2/blob/master/lib/RenderCore_Optix7Filter/optix/.optix.cu

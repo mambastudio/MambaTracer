@@ -34,7 +34,6 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.StackPane;
-import jfx.dialog.DialogUtility;
 import cl.ui.fx.OBJSettingDialogFX;
 import cl.ui.fx.SingleTaskFX;
 import cl.ui.fx.TreeCellMaterialDestinationFX2;
@@ -61,8 +60,8 @@ import static javafx.scene.input.MouseButton.PRIMARY;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
 import jfx.IntegerStringConverter;
-import jfx.dialog.types.MessageDialog;
-import jfx.dialog.types.ProcessDialog;
+import jfx.dialog.type.DialogInformation;
+import jfx.dialog.type.DialogProcess;
 
 /**
  * FXML Controller class
@@ -70,6 +69,9 @@ import jfx.dialog.types.ProcessDialog;
  * @author user
  */
 public class UserInterfaceFXMLController implements Initializable, OutputInterface, RenderControllerInterface<TracerAPI, MaterialFX2> {
+    @FXML
+    StackPane rootPane;
+    
     @FXML
     StackPane viewportPane;
     @FXML
@@ -117,6 +119,8 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
     
     SingleTaskFX taskFX = new SingleTaskFX();
     
+    RenderDialog renderDialog = null;
+    
     @Override
     public void initialize(URL url, ResourceBundle rb) {  
         
@@ -141,7 +145,11 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
             api.setDevicePriority(RENDER);
             api.getDeviceGI().start();   
             api.getBlendDisplayGI().reset();
-            DialogUtility.showAndWait(mainPane, new RenderDialog(api));            
+            
+            if(renderDialog != null)
+                rootPane.getChildren().remove(renderDialog);
+            renderDialog = new RenderDialog(rootPane, api);        
+            rootPane.getChildren().add(renderDialog);
         });
         
         //field of view
@@ -161,7 +169,8 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
         });
         
         loadenvButton.setOnAction(e->{
-            Optional<Path> path = DialogUtility.showAndWait(UtilityHandler.getScene(), FactoryUtility.getHDRGallery());
+            
+            Optional<Path> path = FactoryUtility.getHDRGallery().showAndWait(UtilityHandler.getScene());
             HDRBitmapReader reader = new HDRBitmapReader();
             
             if(path.isPresent())
@@ -371,24 +380,23 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
     
     public boolean showOBJStatistics(OBJInfo info)
     {
-        Optional<Boolean> optional = DialogUtility.showAndWaitFX(Boolean.class, UtilityHandler.getScene(), new OBJSettingDialogFX(info)); 
+        OBJSettingDialogFX objSettingDialog = new OBJSettingDialogFX(info);
+        Optional<Boolean> optional = objSettingDialog.showAndWait(UtilityHandler.getScene()); 
         return optional.get();
     }
     
     public void openOBJFile(ActionEvent e)
-    {
-        
-        Optional<FileObject> fileOption = DialogUtility.showAndWait(
-                UtilityHandler.getScene().getWindow(), 
-                FactoryUtility.getOBJFileChooser());
+    {        
+        Optional<FileObject> fileOption = FactoryUtility.getOBJFileChooser().showAndWait(
+                UtilityHandler.getScene().getWindow());
         if(fileOption.isPresent())
         {
-            ProcessDialog dialog = new ProcessDialog();
-            DialogUtility.showAndWaitThread(UtilityHandler.getScene(), dialog, (type)->{
+            DialogProcess processDialog = new DialogProcess(300, 100);
+            processDialog.setRunnable(()->{
                 api.initMesh(fileOption.get().getFile().toURI());
                 api.getDeviceRT().resume();
-                return true;
             });
+            processDialog.showAndWait(UtilityHandler.getScene());
         }
     }
     
@@ -397,14 +405,14 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
         FontAwesomeIconView icon = new FontAwesomeIconView(FontAwesomeIcon.INFO_CIRCLE);
         icon.setSize("48");
         icon.setFill(Color.BLUE);
-        MessageDialog dialog = new MessageDialog(""
+        DialogInformation dialog = new DialogInformation(""
                 + "This is a simple java opencl ray tracer with monte-carlo path tracing"
                 + " which is designed to be intuitive as much as possible and user friendly."
                 + " Aim is to provide access of state of the art ray tracing with current GPU hardware in your computer."
                 + "\n\n"
-                + "Currently targeting OpenCL 1.2!");
-        dialog.setTop(icon, "Information");        
-        DialogUtility.showAndWait(UtilityHandler.getScene(), dialog);
+                + "Currently targeting OpenCL 1.2!", 300, 400);
+             
+        dialog.showAndWait(UtilityHandler.getScene());
     }
     
     public void applyRenderPortSize(ActionEvent e)

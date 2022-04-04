@@ -12,7 +12,6 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
 import javafx.scene.layout.StackPane;
-import jfx.dialog.DialogAbstract;
 import cl.ui.fx.main.TracerAPI;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -21,7 +20,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.BorderPane;
 import static jfx.util.BindingFX.bindBidirectionalStringAndDouble;
 import static jfx.util.ImplUtils.convertToTextFieldDouble;
 
@@ -29,7 +27,7 @@ import static jfx.util.ImplUtils.convertToTextFieldDouble;
  *
  * @author user
  */
-public class RenderDialog extends DialogAbstract{
+public class RenderDialog extends StackPane{
     @FXML
     Button resumeBtn;
     @FXML
@@ -67,31 +65,28 @@ public class RenderDialog extends DialogAbstract{
     
     @FXML
     ProgressIndicator denoiseIndicator;
-    
+        
     DoubleProperty gammaProperty;
     DoubleProperty exposureProperty = new SimpleDoubleProperty(0.18);
         
     private final TracerAPI api;
+    private final StackPane programRootPane;
     
-    public RenderDialog(TracerAPI api)
+    public RenderDialog(StackPane programRootPane, TracerAPI api)
     {
         this.api = api;
+        this.programRootPane = programRootPane;
         
-        BorderPane box = initFXMLComponent(); 
+        this.initFXMLComponent(); 
         this.renderPane.getChildren().add(api.getBlendDisplayGI());
-        
-        this.setContent(box);
-        this.setSupplier((buttonType)-> null);
-        this.removeBorder();        
     }
     
     
-    private BorderPane initFXMLComponent()
-    {
-        BorderPane box = new BorderPane();
+    private void initFXMLComponent()
+    {        
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource(
             "RenderDialogFXML.fxml"));
-        fxmlLoader.setRoot(box);
+        fxmlLoader.setRoot(this);
         fxmlLoader.setController(this);
 
         try {
@@ -133,7 +128,7 @@ public class RenderDialog extends DialogAbstract{
         });
         
         editBtn.setOnAction(e->{
-            resume();
+            programRootPane.getChildren().remove(this);
             api.setDevicePriority(RAYTRACE);
         });
         
@@ -166,9 +161,7 @@ public class RenderDialog extends DialogAbstract{
         colormapIndicator.setOpacity(0);
         normalmapIndicator.setOpacity(0);
         opacitymapIndicator.setOpacity(0);
-        denoiseIndicator.setOpacity(0);
-        
-        return box;
+        denoiseIndicator.setOpacity(0);        
     }
     
     public void resetFilmExposure(ActionEvent e)
@@ -185,5 +178,4 @@ public class RenderDialog extends DialogAbstract{
     {
         api.getBlendDisplayGI().reset();
     }
-    
 }

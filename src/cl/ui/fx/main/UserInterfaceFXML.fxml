@@ -24,256 +24,270 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="cl.ui.fx.main.UserInterfaceFXMLController">
-   <center>
-      <StackPane fx:id="displayPane">
-         <children>
-            <BorderPane fx:id="mainPane" prefHeight="600.0" prefWidth="870.0">
-               <center>
-                  <HBox prefHeight="500.0" prefWidth="800.0" spacing="3.0">
-                     <children>
-                        <TabPane prefHeight="566.0" prefWidth="259.0" side="LEFT" tabClosingPolicy="UNAVAILABLE">
-                           <tabs>
-                              <Tab text="Material">
-                                 <content>
-                                    <SplitPane dividerPositions="0.45180722891566266" minWidth="200.0" orientation="VERTICAL" prefHeight="440.0" prefWidth="112.0" style="-fx-border-color: LIGHTGRAY;">
-                                       <items>
-                                          <TreeView fx:id="destination" prefHeight="200.0" prefWidth="200.0" />
-                                          <TreeView fx:id="source" prefHeight="200.0" prefWidth="200.0" />
-                                       </items>
-                                       <padding>
-                                          <Insets left="5.0" right="5.0" />
-                                       </padding>
-                                    </SplitPane>
-                                 </content>
-                              </Tab>
-                              <Tab text="Viewport">
-                                 <content>
-                                    <VBox prefHeight="200.0" prefWidth="100.0" spacing="5.0">
-                                       <children>
-                                          <HBox alignment="CENTER_LEFT">
-                                             <children>
-                                                <Label prefHeight="17.0" prefWidth="128.0" text="Camera FoV">
-                                                   <font>
-                                                      <Font name="System Bold" size="12.0" />
-                                                   </font>
-                                                </Label>
-                                                <Separator prefWidth="200.0" />
-                                             </children>
-                                          </HBox>
-                                          <Slider fx:id="fovSlider" max="180.0" min="10.0" showTickLabels="true" showTickMarks="true" value="45.0">
-                                             <VBox.margin>
-                                                <Insets left="10.0" />
-                                             </VBox.margin></Slider>
-                                          <HBox alignment="CENTER_LEFT" prefHeight="29.0" prefWidth="190.0">
-                                             <children>
-                                                <Label fx:id="fovLabel" prefHeight="17.0" prefWidth="116.0" text="..." />
-                                                <Button fx:id="fovResetButton" mnemonicParsing="false" text="fov">
-                                                   <graphic>
-                                                      <MaterialDesignIconView glyphName="BACKUP_RESTORE" size="16" />
-                                                   </graphic></Button>
-                                             </children>
-                                             <VBox.margin>
-                                                <Insets left="10.0" />
-                                             </VBox.margin>
-                                          </HBox>
-                                          <HBox alignment="CENTER_LEFT" spacing="5.0">
-                                             <children>
-                                                <Label prefHeight="17.0" prefWidth="224.0" text="Reset view bound to">
-                                                   <font>
-                                                      <Font name="System Bold" size="12.0" />
-                                                   </font></Label>
-                                                <Separator prefWidth="200.0" />
-                                             </children>
-                                          </HBox>
-                                          <GridPane>
-                                            <columnConstraints>
-                                              <ColumnConstraints halignment="LEFT" hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                                              <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                                            </columnConstraints>
-                                            <rowConstraints>
-                                              <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                            </rowConstraints>
-                                             <children>
-                                                <Button fx:id="sceneboundButton" mnemonicParsing="false" text="scene">
-                                                   <graphic>
-                                                      <MaterialDesignIconView glyphName="BACKUP_RESTORE" size="16" />
-                                                   </graphic></Button>
-                                             </children>
-                                             <VBox.margin>
-                                                <Insets left="10.0" />
-                                             </VBox.margin>
-                                          </GridPane>
-                                          <HBox alignment="CENTER_LEFT">
-                                             <children>
-                                                <Label prefHeight="17.0" prefWidth="125.0" text="Render Port">
-                                                   <font>
-                                                      <Font name="System Bold" size="12.0" />
-                                                   </font>
-                                                </Label>
-                                                <Separator prefWidth="200.0" />
-                                             </children>
-                                          </HBox>
-                                          <GridPane>
-                                             <columnConstraints>
-                                                <ColumnConstraints hgrow="SOMETIMES" maxWidth="88.0" minWidth="10.0" prefWidth="75.0" />
-                                                <ColumnConstraints hgrow="SOMETIMES" maxWidth="115.0" minWidth="10.0" prefWidth="115.0" />
-                                             </columnConstraints>
-                                             <rowConstraints>
-                                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                             </rowConstraints>
-                                             <children>
-                                                <Label text="Width" />
-                                                <Label text="Height" GridPane.rowIndex="1" />
-                                                <Spinner fx:id="renderPortWidth" editable="true" prefHeight="25.0" prefWidth="246.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" />
-                                                <Spinner fx:id="renderPortHeight" editable="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                                             </children>
-                                             <VBox.margin>
-                                                <Insets left="10.0" />
-                                             </VBox.margin>
-                                          </GridPane>
-                                          <HBox spacing="5.0">
-                                             <children>
-                                                <Button mnemonicParsing="false" onAction="#applyRenderPortSize" text="Apply">
-                                                   <graphic>
-                                                      <MaterialDesignIconView glyphName="CROP" size="16" />
-                                                   </graphic>
-                                                </Button>
-                                                <ProgressIndicator fx:id="renderPortApplyIndicator" prefHeight="25.0" prefWidth="33.0" />
-                                             </children>
-                                          </HBox>
-                                       </children>
-                                       <padding>
-                                          <Insets left="5.0" right="5.0" top="5.0" />
-                                       </padding>
-                                    </VBox>
-                                 </content>
-                              </Tab>
-                              <Tab text="Environment">
-                                 <content>
-                                    <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="100.0" spacing="5.0">
-                                       <children>
-                                          <Label text="Environment Map">
-                                             <font>
-                                                <Font name="System Bold" size="12.0" />
-                                             </font>
-                                          </Label>
-                                          <StackPane style="-fx-background-color: lightgrey; -fx-background-radius: 7 7 7 7; -fx-border-color: lightblue; -fx-border-width: 3 3 3 3; -fx-border-radius: 5 5 5 5;">
-                                             <children>
-                                                <ImageView fx:id="envmapImageView" fitHeight="203.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true" />
-                                             </children>
-                                          </StackPane>
-                                          <HBox alignment="CENTER_LEFT" prefHeight="31.0" prefWidth="162.0" spacing="5.0">
-                                             <children>
-                                                <Label text="Longitude" />
-                                                <Slider blockIncrement="1.0" majorTickUnit="60.0" max="360.0" showTickLabels="true" showTickMarks="true" HBox.hgrow="ALWAYS" />
-                                             </children>
-                                          </HBox>
-                                          <HBox alignment="CENTER" prefHeight="31.0" prefWidth="200.0" spacing="5.0">
-                                             <children>
-                                                <Button fx:id="loadenvButton" mnemonicParsing="false" prefHeight="25.0" prefWidth="88.0" text="Envmap">
-                                                   <graphic>
-                                                      <MaterialDesignIconView glyphName="FILE_IMAGE" size="16" />
-                                                   </graphic></Button>
-                                                <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="88.0" text="Sunsky">
-                                                   <graphic>
-                                                      <MaterialDesignIconView glyphName="WHITE_BALANCE_SUNNY" size="16" />
-                                                   </graphic></Button>
-                                             </children>
-                                          </HBox>
-                                          <CheckBox fx:id="setenvmapCheckBox" mnemonicParsing="false" text="Set to Environment" />
-                                       </children>
-                                       <padding>
-                                          <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />
-                                       </padding>
-                                    </VBox>
-                                 </content>
-                              </Tab>
-                           </tabs>
-                        </TabPane>
-                        <BorderPane prefHeight="400.0" prefWidth="400.0" HBox.hgrow="ALWAYS">
-                           <center>
-                              <StackPane fx:id="viewportPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="500.0" style="-fx-border-color: LIGHTGRAY;" BorderPane.alignment="CENTER" />
-                           </center>
-                        </BorderPane>
-                     </children>
-                     <padding>
-                        <Insets right="3.0" />
-                     </padding>
-                  </HBox>
-               </center>
-               <top>
-                  <HBox alignment="CENTER_LEFT" prefHeight="34.0" prefWidth="800.0" spacing="5.0" BorderPane.alignment="CENTER_LEFT">
-                     <children>
-                        <Button mnemonicParsing="false" onAction="#openOBJFile" prefHeight="25.0" prefWidth="29.0">
-                           <graphic>
-                              <MaterialDesignIconView glyphName="FILE_OUTLINE" size="16" />
-                           </graphic>
-                           <tooltip>
-                              <Tooltip text="Open File" />
-                           </tooltip></Button>
-                        <Separator orientation="VERTICAL" prefHeight="200.0" />
-                        <Button fx:id="render" mnemonicParsing="false">
-                           <graphic>
-                              <MaterialDesignIconView glyphName="PLAY_CIRCLE" size="16" />
-                           </graphic>
-                           <tooltip>
-                              <Tooltip text="Render" />
-                           </tooltip></Button>
-                        <Separator orientation="VERTICAL" prefHeight="200.0" />
-                        <Button mnemonicParsing="false">
-                           <graphic>
-                              <MaterialDesignIconView glyphName="IMAGE" size="16.0" />
-                           </graphic>
-                        </Button>
-                        <Button mnemonicParsing="false">
-                           <graphic>
-                              <MaterialDesignIconView glyphName="SETTINGS" size="16" />
-                           </graphic>
-                        </Button>
-                        <Button mnemonicParsing="false" onAction="#showInformation">
-                           <graphic>
-                              <MaterialDesignIconView glyphName="INFORMATION_OUTLINE" size="16" />
-                           </graphic>
-                        </Button>
-                     </children>
-                     <BorderPane.margin>
-                        <Insets left="5.0" right="5.0" />
-                     </BorderPane.margin>
-                     <padding>
-                        <Insets bottom="2.0" top="2.0" />
-                     </padding>
-                  </HBox>
-               </top>
-            </BorderPane>
-         </children>
-      </StackPane>
-   </center>
-   <bottom>
-      <VBox BorderPane.alignment="CENTER">
-         <BorderPane.margin>
-            <Insets />
-         </BorderPane.margin>
-         <children>
-            <Separator prefWidth="200.0" />
-            <HBox alignment="CENTER_LEFT" prefHeight="25.0" prefWidth="839.0" spacing="5.0">
+
+<StackPane fx:id="rootPane" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="cl.ui.fx.main.UserInterfaceFXMLController">
+   <children>
+      <BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308">
+         <center>
+            <StackPane fx:id="displayPane">
                <children>
-                  <Label text="State Output:">
-                     <graphic>
-                        <MaterialDesignIconView glyphName="CONSOLE" size="16" />
-                     </graphic></Label>
-                  <Separator orientation="VERTICAL" prefHeight="200.0" />
-                  <Label maxWidth="1.7976931348623157E308" text="..." HBox.hgrow="ALWAYS" />
+                  <BorderPane fx:id="mainPane" prefHeight="600.0" prefWidth="870.0">
+                     <center>
+                        <HBox prefHeight="500.0" prefWidth="800.0" spacing="3.0">
+                           <children>
+                              <TabPane prefHeight="566.0" prefWidth="259.0" side="LEFT" tabClosingPolicy="UNAVAILABLE">
+                                 <tabs>
+                                    <Tab text="Material">
+                                       <content>
+                                          <SplitPane dividerPositions="0.45180722891566266" minWidth="200.0" orientation="VERTICAL" prefHeight="440.0" prefWidth="112.0" style="-fx-border-color: LIGHTGRAY;">
+                                             <items>
+                                                <TreeView fx:id="destination" prefHeight="200.0" prefWidth="200.0" />
+                                                <TreeView fx:id="source" prefHeight="200.0" prefWidth="200.0" />
+                                             </items>
+                                             <padding>
+                                                <Insets left="5.0" right="5.0" />
+                                             </padding>
+                                          </SplitPane>
+                                       </content>
+                                    </Tab>
+                                    <Tab text="Viewport">
+                                       <content>
+                                          <VBox prefHeight="200.0" prefWidth="100.0" spacing="5.0">
+                                             <children>
+                                                <HBox alignment="CENTER_LEFT">
+                                                   <children>
+                                                      <Label prefHeight="17.0" prefWidth="128.0" text="Camera FoV">
+                                                         <font>
+                                                            <Font name="System Bold" size="12.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <Separator prefWidth="200.0" />
+                                                   </children>
+                                                </HBox>
+                                                <Slider fx:id="fovSlider" max="180.0" min="10.0" showTickLabels="true" showTickMarks="true" value="45.0">
+                                                   <VBox.margin>
+                                                      <Insets left="10.0" />
+                                                   </VBox.margin>
+                                                </Slider>
+                                                <HBox alignment="CENTER_LEFT" prefHeight="29.0" prefWidth="190.0">
+                                                   <children>
+                                                      <Label fx:id="fovLabel" prefHeight="17.0" prefWidth="116.0" text="..." />
+                                                      <Button fx:id="fovResetButton" mnemonicParsing="false" text="fov">
+                                                         <graphic>
+                                                            <MaterialDesignIconView glyphName="BACKUP_RESTORE" size="16" />
+                                                         </graphic>
+                                                      </Button>
+                                                   </children>
+                                                   <VBox.margin>
+                                                      <Insets left="10.0" />
+                                                   </VBox.margin>
+                                                </HBox>
+                                                <HBox alignment="CENTER_LEFT" spacing="5.0">
+                                                   <children>
+                                                      <Label prefHeight="17.0" prefWidth="224.0" text="Reset view bound to">
+                                                         <font>
+                                                            <Font name="System Bold" size="12.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <Separator prefWidth="200.0" />
+                                                   </children>
+                                                </HBox>
+                                                <GridPane>
+                                                  <columnConstraints>
+                                                    <ColumnConstraints halignment="LEFT" hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                                                  </columnConstraints>
+                                                  <rowConstraints>
+                                                    <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                  </rowConstraints>
+                                                   <children>
+                                                      <Button fx:id="sceneboundButton" mnemonicParsing="false" text="scene">
+                                                         <graphic>
+                                                            <MaterialDesignIconView glyphName="BACKUP_RESTORE" size="16" />
+                                                         </graphic>
+                                                      </Button>
+                                                   </children>
+                                                   <VBox.margin>
+                                                      <Insets left="10.0" />
+                                                   </VBox.margin>
+                                                </GridPane>
+                                                <HBox alignment="CENTER_LEFT">
+                                                   <children>
+                                                      <Label prefHeight="17.0" prefWidth="125.0" text="Render Port">
+                                                         <font>
+                                                            <Font name="System Bold" size="12.0" />
+                                                         </font>
+                                                      </Label>
+                                                      <Separator prefWidth="200.0" />
+                                                   </children>
+                                                </HBox>
+                                                <GridPane>
+                                                   <columnConstraints>
+                                                      <ColumnConstraints hgrow="SOMETIMES" maxWidth="88.0" minWidth="10.0" prefWidth="75.0" />
+                                                      <ColumnConstraints hgrow="SOMETIMES" maxWidth="115.0" minWidth="10.0" prefWidth="115.0" />
+                                                   </columnConstraints>
+                                                   <rowConstraints>
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                                                   </rowConstraints>
+                                                   <children>
+                                                      <Label text="Width" />
+                                                      <Label text="Height" GridPane.rowIndex="1" />
+                                                      <Spinner fx:id="renderPortWidth" editable="true" prefHeight="25.0" prefWidth="246.0" GridPane.columnIndex="1" GridPane.hgrow="ALWAYS" />
+                                                      <Spinner fx:id="renderPortHeight" editable="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                                   </children>
+                                                   <VBox.margin>
+                                                      <Insets left="10.0" />
+                                                   </VBox.margin>
+                                                </GridPane>
+                                                <HBox spacing="5.0">
+                                                   <children>
+                                                      <Button mnemonicParsing="false" onAction="#applyRenderPortSize" text="Apply">
+                                                         <graphic>
+                                                            <MaterialDesignIconView glyphName="CROP" size="16" />
+                                                         </graphic>
+                                                      </Button>
+                                                      <ProgressIndicator fx:id="renderPortApplyIndicator" prefHeight="25.0" prefWidth="33.0" />
+                                                   </children>
+                                                </HBox>
+                                             </children>
+                                             <padding>
+                                                <Insets left="5.0" right="5.0" top="5.0" />
+                                             </padding>
+                                          </VBox>
+                                       </content>
+                                    </Tab>
+                                    <Tab text="Environment">
+                                       <content>
+                                          <VBox alignment="TOP_CENTER" prefHeight="200.0" prefWidth="100.0" spacing="5.0">
+                                             <children>
+                                                <Label text="Environment Map">
+                                                   <font>
+                                                      <Font name="System Bold" size="12.0" />
+                                                   </font>
+                                                </Label>
+                                                <StackPane style="-fx-background-color: lightgrey; -fx-background-radius: 7 7 7 7; -fx-border-color: lightblue; -fx-border-width: 3 3 3 3; -fx-border-radius: 5 5 5 5;">
+                                                   <children>
+                                                      <ImageView fx:id="envmapImageView" fitHeight="203.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true" />
+                                                   </children>
+                                                </StackPane>
+                                                <HBox alignment="CENTER_LEFT" prefHeight="31.0" prefWidth="162.0" spacing="5.0">
+                                                   <children>
+                                                      <Label text="Longitude" />
+                                                      <Slider blockIncrement="1.0" majorTickUnit="60.0" max="360.0" showTickLabels="true" showTickMarks="true" HBox.hgrow="ALWAYS" />
+                                                   </children>
+                                                </HBox>
+                                                <HBox alignment="CENTER" prefHeight="31.0" prefWidth="200.0" spacing="5.0">
+                                                   <children>
+                                                      <Button fx:id="loadenvButton" mnemonicParsing="false" prefHeight="25.0" prefWidth="88.0" text="Envmap">
+                                                         <graphic>
+                                                            <MaterialDesignIconView glyphName="FILE_IMAGE" size="16" />
+                                                         </graphic>
+                                                      </Button>
+                                                      <Button mnemonicParsing="false" prefHeight="25.0" prefWidth="88.0" text="Sunsky">
+                                                         <graphic>
+                                                            <MaterialDesignIconView glyphName="WHITE_BALANCE_SUNNY" size="16" />
+                                                         </graphic>
+                                                      </Button>
+                                                   </children>
+                                                </HBox>
+                                                <CheckBox fx:id="setenvmapCheckBox" mnemonicParsing="false" text="Set to Environment" />
+                                             </children>
+                                             <padding>
+                                                <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />
+                                             </padding>
+                                          </VBox>
+                                       </content>
+                                    </Tab>
+                                 </tabs>
+                              </TabPane>
+                              <BorderPane prefHeight="400.0" prefWidth="400.0" HBox.hgrow="ALWAYS">
+                                 <center>
+                                    <StackPane fx:id="viewportPane" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="500.0" style="-fx-border-color: LIGHTGRAY;" BorderPane.alignment="CENTER" />
+                                 </center>
+                              </BorderPane>
+                           </children>
+                           <padding>
+                              <Insets right="3.0" />
+                           </padding>
+                        </HBox>
+                     </center>
+                     <top>
+                        <HBox alignment="CENTER_LEFT" prefHeight="34.0" prefWidth="800.0" spacing="5.0" BorderPane.alignment="CENTER_LEFT">
+                           <children>
+                              <Button mnemonicParsing="false" onAction="#openOBJFile" prefHeight="25.0" prefWidth="29.0">
+                                 <graphic>
+                                    <MaterialDesignIconView glyphName="FILE_OUTLINE" size="16" />
+                                 </graphic>
+                                 <tooltip>
+                                    <Tooltip text="Open File" />
+                                 </tooltip>
+                              </Button>
+                              <Separator orientation="VERTICAL" prefHeight="200.0" />
+                              <Button fx:id="render" mnemonicParsing="false">
+                                 <graphic>
+                                    <MaterialDesignIconView glyphName="PLAY_CIRCLE" size="16" />
+                                 </graphic>
+                                 <tooltip>
+                                    <Tooltip text="Render" />
+                                 </tooltip>
+                              </Button>
+                              <Separator orientation="VERTICAL" prefHeight="200.0" />
+                              <Button mnemonicParsing="false">
+                                 <graphic>
+                                    <MaterialDesignIconView glyphName="IMAGE" size="16.0" />
+                                 </graphic>
+                              </Button>
+                              <Button mnemonicParsing="false">
+                                 <graphic>
+                                    <MaterialDesignIconView glyphName="SETTINGS" size="16" />
+                                 </graphic>
+                              </Button>
+                              <Button mnemonicParsing="false" onAction="#showInformation">
+                                 <graphic>
+                                    <MaterialDesignIconView glyphName="INFORMATION_OUTLINE" size="16" />
+                                 </graphic>
+                              </Button>
+                           </children>
+                           <BorderPane.margin>
+                              <Insets left="5.0" right="5.0" />
+                           </BorderPane.margin>
+                           <padding>
+                              <Insets bottom="2.0" top="2.0" />
+                           </padding>
+                        </HBox>
+                     </top>
+                  </BorderPane>
+               </children>
+            </StackPane>
+         </center>
+         <bottom>
+            <VBox BorderPane.alignment="CENTER">
+               <BorderPane.margin>
+                  <Insets />
+               </BorderPane.margin>
+               <children>
+                  <Separator prefWidth="200.0" />
+                  <HBox alignment="CENTER_LEFT" prefHeight="25.0" prefWidth="839.0" spacing="5.0">
+                     <children>
+                        <Label text="State Output:">
+                           <graphic>
+                              <MaterialDesignIconView glyphName="CONSOLE" size="16" />
+                           </graphic>
+                        </Label>
+                        <Separator orientation="VERTICAL" prefHeight="200.0" />
+                        <Label maxWidth="1.7976931348623157E308" text="..." HBox.hgrow="ALWAYS" />
+                     </children>
+                     <padding>
+                        <Insets left="5.0" />
+                     </padding>
+                  </HBox>
                </children>
                <padding>
-                  <Insets left="5.0" />
+                  <Insets top="3.0" />
                </padding>
-            </HBox>
-         </children>
-         <padding>
-            <Insets top="3.0" />
-         </padding>
-      </VBox>
-   </bottom>
-</BorderPane>
+            </VBox>
+         </bottom>
+      </BorderPane>
+   </children>
+</StackPane>

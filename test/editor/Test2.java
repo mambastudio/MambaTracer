@@ -7,10 +7,7 @@ package editor;
 
 import cl.fx.UtilityHandler;
 import cl.ui.fx.material.MaterialFX2;
-import cl.ui.fx.material.MaterialFX2Editor;
 import cl.ui.fx.material.MaterialFX2EditorDialog;
-import cl.ui.fx.material.SurfaceParameterFX2;
-import cl.ui.fx.material.SurfaceParameterFX2Editor;
 import java.util.Optional;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
@@ -18,7 +15,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import jfx.dialog.DialogUtility;
 
 /**
  *
@@ -49,7 +45,8 @@ public class Test2 extends Application{
         UtilityHandler.setScene(scene);
         
         button.setOnAction(e->{
-            Optional<MaterialFX2> option = DialogUtility.showAndWait(UtilityHandler.getScene(), new MaterialFX2EditorDialog(null, UtilityHandler.getGallery("texture")));
+            MaterialFX2EditorDialog materialDialog = new MaterialFX2EditorDialog(new MaterialFX2(), UtilityHandler.getGallery("texture"));
+            Optional<MaterialFX2> option = materialDialog.showAndWait(UtilityHandler.getScene());
         });
         
         primaryStage.setTitle("Hello World!");

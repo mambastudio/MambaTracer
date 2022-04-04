@@ -9,19 +9,23 @@ import filesystem.core.file.FileObject;
 import filesystem.core.file.FileObject.ExploreType;
 import static filesystem.core.file.FileObject.ExploreType.FILE;
 import filesystem.explorer.FileExplorer;
+import java.util.Arrays;
+import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import static javafx.scene.control.ButtonType.CANCEL;
 import static javafx.scene.control.ButtonType.OK;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
-import jfx.dialog.DialogAbstract;
+import jfx.dialog.DialogContent;
+import jfx.dialog.DialogExtend;
 
 /**
  *
  * @author user
  */
-public class FileChooser extends DialogAbstract<FileObject>{
+public class FileChooser extends DialogExtend<FileObject>{
     private FileExplorer explorer = null;
+    private int width, height;
     
     public FileChooser()
     {
@@ -36,15 +40,33 @@ public class FileChooser extends DialogAbstract<FileObject>{
     
     public FileChooser(ExploreType exploreType, int width, int height)
     {
+        
         explorer = new FileExplorer(exploreType);
+        this.width = width;
+        this.height = height;
+        setup();
+    }
+    
+    public void addExtensions(FileExplorer.ExtensionFilter... filters)
+    {
+        explorer.addExtensions(filters);
+    }
+       
+
+    @Override
+    public void setup() {
+        //dialog content
+        DialogContent<Boolean> settingContent = new DialogContent<>();
+        settingContent.setContent(explorer, DialogContent.DialogStructure.HEADER_FOOTER);
         
-        StackPane display = new StackPane();
-        display.getChildren().add(explorer);
-        
-        
-        this.setContent(display);
-        
-        this.setSize(width, height);
+        //dialog pane (main window)
+        init(
+                settingContent,                
+                Arrays.asList(
+                        new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE),
+                        new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE)), 
+                width, height, 
+                false);
         
         //set buttons and click type return
         this.setSupplier((buttonType)->{
@@ -56,38 +78,5 @@ public class FileChooser extends DialogAbstract<FileObject>{
             else
                 return null;
         });
-        this.setButtons(OK, CANCEL);
-        
-        //set file click in table as a return
-        explorer.setTableFileClick(e->{
-            if(e.getClickCount() == 2)
-            {
-                setButtonType(ButtonType.OK);
-                resume();
-            }
-        });
-        
-        
-        this.setOnKeyPressed(e->{
-            if(e.getCode() == KeyCode.ENTER)
-            {       
-                resume();
-            }
-            else if(e.getCode() == KeyCode.ESCAPE)
-            {                
-                resume();
-            }
-        });
-    }
-    
-    public void addExtensions(FileExplorer.ExtensionFilter... filters)
-    {
-        explorer.addExtensions(filters);
-    }
-       
-    @Override
-    public void initDefault()
-    {
-        explorer.setFileNull();
     }
 }

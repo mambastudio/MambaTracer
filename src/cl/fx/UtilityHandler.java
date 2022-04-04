@@ -5,7 +5,15 @@
  */
 package cl.fx;
 
+import cl.ui.fx.main.TracerAPI;
+import coordinate.parser.obj.OBJInfo;
 import java.util.HashMap;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Scene;
@@ -67,4 +75,17 @@ public class UtilityHandler {
     {
         return object.getClass().getEnclosingClass().getSimpleName().equals(name);
     }
+    
+    public static <T> T runJavaFXThread(Callable<T> callable)
+    {
+        final FutureTask<T> query = new FutureTask(callable);
+        Platform.runLater(query);
+        try {
+            return query.get();
+        } catch (InterruptedException | ExecutionException ex) {
+            Logger.getLogger(TracerAPI.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return null;
+    }
+   
 }

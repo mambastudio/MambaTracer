@@ -20,7 +20,6 @@ import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
-import jfx.dialog.DialogUtility;
 import jfx.tree.TreeCellFactory;
 
 /**
@@ -115,7 +114,8 @@ public class TreeCellMaterialDestinationFX2 implements TreeCellFactory<MaterialF
         if(e.getClickCount() == 2)
         { 
             MaterialFX2 defMat = cell.getItem();
-            Optional<MaterialFX2> option = DialogUtility.showAndWait(UtilityHandler.getScene(), new MaterialFX2EditorDialog(defMat, UtilityHandler.getGallery("texture")));
+            MaterialFX2EditorDialog materialDialog = new MaterialFX2EditorDialog(defMat, UtilityHandler.getGallery("texture"));
+            Optional<MaterialFX2> option = materialDialog.showAndWait(UtilityHandler.getScene());
             if(option.isPresent())
             {                
                 defMat.setMaterial(option.get());

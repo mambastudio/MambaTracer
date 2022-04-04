@@ -22,6 +22,7 @@ import cl.algorithms.CEnvironment;
 import cl.data.CPoint2;
 import cl.data.CPoint3;
 import cl.data.CVector3;
+import cl.fx.UtilityHandler;
 import coordinate.parser.obj.OBJParser;
 import coordinate.utility.Value2Di;
 import java.nio.file.Path;
@@ -33,6 +34,11 @@ import cl.ui.fx.material.MaterialFX2;
 import coordinate.parser.obj.OBJInfo;
 import coordinate.parser.obj.OBJMappedParser;
 import coordinate.utility.Timer;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javafx.application.Platform;
 import wrapper.core.CMemory;
 import wrapper.core.OpenCLConfiguration;
 
@@ -411,15 +417,16 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX2
     //TODO: Make sure the output is displayed in the most adequate console
     @Override
     public void initMesh(Path path) {
-        //load mesh and init mesh variables
-        
+        //load mesh and init mesh variables        
         OBJMappedParser parser = new OBJMappedParser();        
         parser.readAttributes(path.toUri());
         
-        //init size (estimate) of coordinate list/array
-        OBJInfo info = parser.getInfo();
-        boolean succeed = controllerImplementation.showOBJStatistics(info);
-        
+        boolean succeed = UtilityHandler.runJavaFXThread(()->{
+            //init size (estimate) of coordinate list/array
+            OBJInfo info = parser.getInfo();
+            return controllerImplementation.showOBJStatistics(info);
+        });
+                        
         if(succeed)
         {
             mesh = null;

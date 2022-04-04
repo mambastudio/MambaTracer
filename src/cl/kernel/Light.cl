@@ -179,7 +179,7 @@ float4 illuminateEnvironmentLight(
   
   float sinTheta = sin(uvSS[1] * M_PI);
 
-  *oDirectPdfW = 1;//pdfLL[0]*pdfSS[0] /(2 * M_PI * M_PI * sin(uvSS[1] * M_PI));
+  *oDirectPdfW = pdfSS[0] /(2 * M_PI * M_PI * sin(uvSS[1] * M_PI));
   *oDistance = FLOATMAX;
  
   if(sinTheta == 0)
@@ -240,9 +240,6 @@ float4 getRadianceEnvironmentLight(
     int2 tileXY         = tileIndexXYFromCamera(aLight.lightGrid, aRayDirection);
     int offsetLL[2]     = {tileXY.x, tileXY.y};
 
-    //pdf in light grid
-    float pdfLL         = getSubgridPdfContinuous(aLight.lightGrid, subgridIndex, tileXY.x, tileXY.y);
-    
     //get unit bound of tile withing cell
     float4 unitBound    = getSubgridUnitBound(aLight.lightGrid, offsetLL);
 
@@ -256,14 +253,14 @@ float4 getRadianceEnvironmentLight(
     
     //overall pdf
     float s             = offsetSS[1]/(float)(lengthY(aLight.region));
-    *oDirectPdfA        = 1;//pdfSS * pdfLL /(2 * M_PI * M_PI * sin(s * M_PI));
+    *oDirectPdfA        = pdfSS /(2 * M_PI * M_PI * sin(s * M_PI));
 
     //get contribution and return
     int index           = getSphericalGridIndex(aLight.lightGrid->width, aLight.lightGrid->height, aRayDirection);
     float4 contrib      = aLight.envmap[index];
     
     //calculate light grid accumulations
-    float luminance       = 1; //Luminance(contrib.xyz);
+    float luminance       = Luminance(contrib.xyz);
     int   lightGridIndex  = globalIndexInSubgrid(aLight.lightGrid, subgridIndex, offsetLL[0], offsetLL[1]);
     accumLightGrid(aLight, luminance, lightGridIndex);
 

@@ -8,19 +8,13 @@ package obj;
 import cl.ui.fx.OBJSettingDialogFX;
 import coordinate.parser.obj.OBJInfo;
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import jfx.dialog.DialogUtility;
-import jfx.form.Setting;
-import jfx.form.SimpleSetting;
 
 /**
  *
@@ -49,7 +43,8 @@ public class UILoader extends Application {
            {
                 OBJInfo info = new OBJInfo(file.toURI());
                 info.read();
-                DialogUtility.showAndWait(primaryStage, new OBJSettingDialogFX(info));
+                OBJSettingDialogFX dialog = new OBJSettingDialogFX(info);
+                dialog.showAndWait(primaryStage);
                 System.out.println(info);
                 
            }

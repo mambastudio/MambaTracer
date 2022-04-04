@@ -7,17 +7,20 @@ package cl.ui.fx;
 
 import coordinate.parser.obj.OBJInfo;
 import coordinate.parser.obj.OBJInfo.SplitOBJPolicy;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import static javafx.scene.control.ButtonType.CANCEL;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import static javafx.scene.control.ButtonType.OK;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.VBox;
-import jfx.dialog.DialogAbstract;
+import jfx.dialog.DialogContent;
+import jfx.dialog.DialogExtend;
 import jfx.form.Setting;
 import jfx.form.SimpleSetting;
 
@@ -25,17 +28,23 @@ import jfx.form.SimpleSetting;
  *
  * @author user
  */
-public class OBJSettingDialogFX extends DialogAbstract<Boolean> {
+public class OBJSettingDialogFX extends DialogExtend<Boolean> {
+    
+    double width = 300;
+    double height = 340;
+    
+    OBJInfo info;    
     
     public OBJSettingDialogFX(OBJInfo info)
     {
-        //this.setContent(label);
-        this.setSize(300, 340);
-        this.setButtons(OK, CANCEL);
-        
-        this.setSupplier((buttonType)->{
-            return buttonType == OK;
-        });
+        this.info = info;
+        this.setup();
+    }
+
+    @Override
+    public void setup() {
+        //dialog content
+        DialogContent<Boolean> settingContent = new DialogContent<>();
         
         //file statistics
         HashMap<String, String> stateObj = info.getInfoString();
@@ -66,10 +75,19 @@ public class OBJSettingDialogFX extends DialogAbstract<Boolean> {
         splitPolicy.setCollapsible(false);
         
         vbox.getChildren().addAll(fileStatistics, splitPolicy);
-        this.setContent(vbox);
+        settingContent.setContent(vbox, DialogContent.DialogStructure.HEADER_FOOTER);
+        
+        //dialog pane (main window)
+        init(
+                settingContent,                
+                Arrays.asList(
+                        new ButtonType("Ok", ButtonBar.ButtonData.OK_DONE),
+                        new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE)), 
+                width, height, 
+                false);
         
         this.setSupplier((buttonType)->{
             return buttonType == OK && info.f() > 0;
-        });        
+        });      
     }
 }

@@ -12,7 +12,6 @@ import filesystem.core.file.FileObject;
 import static filesystem.core.file.FileObject.ExploreType.FOLDER;
 import filesystem.explorer.FileExplorer;
 import java.util.Optional;
-import jfx.dialog.DialogUtility;
 
 /**
  *
@@ -57,7 +56,7 @@ public class FactoryUtility {
         {
             hdrGallery = new GalleryDialogFX("environment", HDR);
             hdrGallery.setLaunchDialog(()->{
-                Optional<FileObject> fileOption = DialogUtility.showAndWait(UtilityHandler.getScene(), getHDRFileChooser());
+                Optional<FileObject> fileOption =  getHDRFileChooser().showAndWait(UtilityHandler.getScene());
                 if(fileOption.isPresent())
                 {
                     System.out.println(fileOption.get().getPath());

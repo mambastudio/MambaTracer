@@ -18,7 +18,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
-import jfx.dialog.DialogUtility;
 
 /**
  *
@@ -53,7 +52,7 @@ public class DialogFXMain extends Application {
                 System.out.println("empty");
             */
             
-            Optional<FileObject> fileOptional = DialogUtility.showAndWait(root, chooser);
+            Optional<FileObject> fileOptional = chooser.showAndWait(root);
             if(fileOptional.isPresent())
             {
                 System.out.println(fileOptional.get().getName());
