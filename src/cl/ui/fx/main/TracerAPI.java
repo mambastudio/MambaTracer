@@ -10,7 +10,7 @@ import cl.device.CDeviceGI;
 import cl.scene.CNormalBVH;
 import cl.scene.CMesh;
 import bitmap.core.AbstractDisplay;
-import bitmap.display.BlendDisplay;
+import cl.ui.fx.BlendDisplay;
 import bitmap.display.ImageDisplay;
 import bitmap.image.BitmapRGBE;
 import cl.abstracts.MambaAPIInterface;
@@ -34,11 +34,6 @@ import cl.ui.fx.material.MaterialFX2;
 import coordinate.parser.obj.OBJInfo;
 import coordinate.parser.obj.OBJMappedParser;
 import coordinate.utility.Timer;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.FutureTask;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javafx.application.Platform;
 import wrapper.core.CMemory;
 import wrapper.core.OpenCLConfiguration;
 
@@ -46,7 +41,7 @@ import wrapper.core.OpenCLConfiguration;
  *
  * @author user
  */
-public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX2, UserInterfaceFXMLController>  {
+public class TracerAPI implements MambaAPIInterface<MaterialFX2, UserInterfaceFXMLController>  {
 
     //Opencl configuration for running single ray tracing program (might add one for future material editor)
     private OpenCLConfiguration configuration = null;
@@ -128,50 +123,29 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX2
         deviceRender.setAPI(this);
         deviceRaytrace.setAPI(this);
         
-       
-                        
         //start ray tracing
         deviceRaytrace.start();
         
     }
 
-    public BlendDisplay getBlendDisplayRT()
-    {
-        return (BlendDisplay) this.getBlendDisplay(RAYTRACE);
-    }
-    
-    public ImageDisplay getBlendDisplayGI()
-    {
-        return (ImageDisplay) this.getBlendDisplay(RENDER);
-    }
-
-    
     @Override
-    public AbstractDisplay getBlendDisplay(DeviceType type) {
-        switch (type) 
-        {
-            case RAYTRACE:
-                return displayRT;
-            case RENDER:
-                return displayGI;
-            default:
-                return null;
-        }
+    public <D extends AbstractDisplay> D getDisplay(Class<D> displayClass) {
+        if(BlendDisplay.class.isAssignableFrom(displayClass))        
+            return (D) displayRT;
+        else if(ImageDisplay.class.isAssignableFrom(displayClass))
+            return (D) displayGI;
+        else
+            throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public void setBlendDisplay(DeviceType type, AbstractDisplay display) {
-        switch (type) 
-        {
-            case RAYTRACE:
-                displayRT = (BlendDisplay) display;
-                break;
-            case RENDER:
-                displayGI = (ImageDisplay) display;
-                break;
-            default:
-                break;
-        }
+    public <D extends AbstractDisplay> void setDisplay(Class<D> displayClass, D display) {
+        if(BlendDisplay.class.isAssignableFrom(displayClass))        
+            displayRT = (BlendDisplay) display;
+        else if(ImageDisplay.class.isAssignableFrom(displayClass))
+            displayGI = (ImageDisplay) display;
+        else
+            throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
@@ -494,13 +468,6 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX2
         }
     }
     
-    public void setMaterial(int index, MaterialFX2 matFX)
-    {                
-        CMemory<CMaterial2> materialsc = mesh.clMaterials();          
-        matFXArray[index].setMaterial(matFX);
-        materialsc.transferToDevice();  
-        materialsc.transferFromDevice();
-    }
     
     @Override
     public void startDevice(DeviceType device) {
@@ -614,13 +581,13 @@ public class TracerAPI implements MambaAPIInterface<AbstractDisplay, MaterialFX2
     }
 
     @Override
-    public void set(int index, MaterialFX2 material) {
+    public void setMaterial(int index, MaterialFX2 material) {
         //TODO 
         matFXArray[index].setMaterial(material);
     }
 
     @Override
-    public MaterialFX2 get(int index) {
+    public MaterialFX2 getMaterial(int index) {
         return matFXArray[index];
     }
 

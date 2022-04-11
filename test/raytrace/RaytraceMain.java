@@ -5,7 +5,11 @@
  */
 package raytrace;
 
+import cl.ui.fx.BlendDisplay;
 import bitmap.display.gallery.HDRImageLoaderFactory;
+import static cl.abstracts.MambaAPIInterface.DeviceType.RAYTRACE;
+import static cl.abstracts.MambaAPIInterface.ImageType.OVERLAY_IMAGE;
+import static cl.abstracts.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
 import cl.fx.UtilityHandler;
 import java.io.IOException;
 import javafx.application.Application;
@@ -34,23 +38,20 @@ public class RaytraceMain extends Application {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("RaytraceUI.fxml"));
         Parent root = loader.load();
         
-        /*
-        /START EVERYTHING HERE/
+        
+       
+        //START EVERYTHING HERE
         //create api and set display
-        TracerAPI api = new TracerAPI();       
-        api.setBlendDisplay(RAYTRACE, new BlendDisplay(RAYTRACE_IMAGE.name(), OVERLAY_IMAGE.name()));
-        api.setBlendDisplay(RENDER, new ImageDisplay());
-        
+        RaytraceAPI api = new RaytraceAPI();       
+        api.setDisplay(BlendDisplay.class, new BlendDisplay(RAYTRACE_IMAGE.name(), OVERLAY_IMAGE.name()));
+                
         //set controller (which sets display inside)
-        UserInterfaceFXMLController controller = (UserInterfaceFXMLController)loader.getController();  
-        api.set("controller", controller);
-        
-        UI.setConsole(controller);
+        RaytraceUIController controller = (RaytraceUIController)loader.getController();
+        api.set("controller", controller);        
         
         //init mesh, device, images
         api.init();
-        */
-        
+               
         //complete launch of ui
         Scene scene = new Scene(root);
         primaryStage.setScene(scene);

@@ -13,7 +13,7 @@ import cl.struct.CCamera;
 import cl.struct.CIntersection;
 import cl.struct.CRay;
 import cl.struct.CBound;
-import bitmap.display.BlendDisplay;
+import cl.ui.fx.BlendDisplay;
 import bitmap.image.BitmapARGB;
 import static cl.abstracts.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
 import static cl.abstracts.MambaAPIInterface.getGlobal;
@@ -315,7 +315,7 @@ public class CDeviceRT implements RayDeviceInterface<
     @Override
     public void setAPI(TracerAPI api) {
         this.api = api;
-        init(api.getConfigurationCL(), api.getBlendDisplayRT());
+        init(api.getConfigurationCL(), api.getDisplay(BlendDisplay.class));
     }
     
     private void init(OpenCLConfiguration platform, BlendDisplay display)

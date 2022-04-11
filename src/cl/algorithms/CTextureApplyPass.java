@@ -5,6 +5,7 @@
  */
 package cl.algorithms;
 
+import cl.abstracts.MambaAPIInterface;
 import cl.ui.fx.main.TracerAPI;
 import cl.struct.CTextureData;
 import javafx.scene.image.Image;
@@ -20,12 +21,12 @@ public class CTextureApplyPass {
     private int[] texIntBuffer = null;    
     private CMemory<IntValue> count = null;
     private int[] countIntBuffer = null;
-    private TracerAPI api = null;
+    private MambaAPIInterface api = null;
     
     private final TextureData textureData;
     
     
-    public CTextureApplyPass(TracerAPI api, CMemory<CTextureData> texBuffer, CMemory<IntValue> count) {
+    public CTextureApplyPass(MambaAPIInterface api, CMemory<CTextureData> texBuffer, CMemory<IntValue> count) {
         this.texBuffer = texBuffer;
         this.count = count;
         this.texIntBuffer = (int[]) texBuffer.getBufferArray();
@@ -44,7 +45,7 @@ public class CTextureApplyPass {
             textureData.setIndex(index);
             if(textureData.hasDiffuseTexture())
             {
-                Image image = api.get(textureData.getMaterialIndex()).param.diffuseTexture.get().getImage(); //TO CORRECT/UPDATE
+                Image image = api.getMaterial(textureData.getMaterialIndex()).getDiffuseTexture(); //TO CORRECT/UPDATE
                 float x = textureData.getDiffuseTextureU();
                 float y = textureData.getDiffuseTextureV();
                              
@@ -59,7 +60,7 @@ public class CTextureApplyPass {
             
             if(textureData.hasGlossyTexture())
             {   
-                Image image = api.get(textureData.getMaterialIndex()).param.glossyTexture.get().getImage(); //TO CORRECT/UPDATE
+                Image image = api.getMaterial(textureData.getMaterialIndex()).getGlossyTexture(); //TO CORRECT/UPDATE
                 float x = textureData.getGlossyTextureU();
                 float y = textureData.getGlossyTextureV();
                 
@@ -74,7 +75,7 @@ public class CTextureApplyPass {
             
             if(textureData.hasRoughnessTexture())
             {   
-                Image image = api.get(textureData.getMaterialIndex()).param.roughnessTexture.get().getImage(); //TO CORRECT/UPDATE
+                Image image = api.getMaterial(textureData.getMaterialIndex()).getRoughnessTexture(); //TO CORRECT/UPDATE
                 float x = textureData.getRoughnessTextureU();
                 float y = textureData.getRoughnessTextureV();
                 

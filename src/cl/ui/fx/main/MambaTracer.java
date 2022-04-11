@@ -5,12 +5,10 @@
  */
 package cl.ui.fx.main;
 
-import bitmap.display.BlendDisplay;
+import cl.ui.fx.BlendDisplay;
 import bitmap.display.ImageDisplay;
 import static bitmap.display.gallery.GalleryCanvas.ImageType.HDR;
 import bitmap.display.gallery.HDRImageLoaderFactory;
-import static cl.abstracts.MambaAPIInterface.DeviceType.RAYTRACE;
-import static cl.abstracts.MambaAPIInterface.DeviceType.RENDER;
 import static cl.abstracts.MambaAPIInterface.ImageType.OVERLAY_IMAGE;
 import static cl.abstracts.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
 import cl.fx.GalleryDialogFX;
@@ -48,8 +46,8 @@ public class MambaTracer extends Application {
         /*START EVERYTHING HERE*/
         //create api and set display
         TracerAPI api = new TracerAPI();       
-        api.setBlendDisplay(RAYTRACE, new BlendDisplay(RAYTRACE_IMAGE.name(), OVERLAY_IMAGE.name()));
-        api.setBlendDisplay(RENDER, new ImageDisplay());
+        api.setDisplay(BlendDisplay.class, new BlendDisplay(RAYTRACE_IMAGE.name(), OVERLAY_IMAGE.name()));
+        api.setDisplay(ImageDisplay.class, new ImageDisplay());
         
         //set controller (which sets display inside)
         UserInterfaceFXMLController controller = (UserInterfaceFXMLController)loader.getController();  

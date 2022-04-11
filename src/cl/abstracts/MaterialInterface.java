@@ -8,6 +8,7 @@ package cl.abstracts;
 
 
 import coordinate.parser.attribute.MaterialT;
+import javafx.scene.image.Image;
 
 /**
  *
@@ -24,4 +25,7 @@ public interface MaterialInterface <M extends MaterialInterface> {
     public void setMaterial(M m);
     public M copy();
     public void setMaterialT(MaterialT t);
+    default Image getDiffuseTexture(){return null;}
+    default Image getGlossyTexture(){return null;}
+    default Image getRoughnessTexture(){return null;}
 }

@@ -5,8 +5,10 @@
  */
 package cl.ui.fx.render;
 
+import bitmap.display.ImageDisplay;
 import cl.abstracts.MambaAPIInterface;
 import static cl.abstracts.MambaAPIInterface.DeviceType.RAYTRACE;
+import cl.ui.fx.BlendDisplay;
 import java.io.IOException;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -78,7 +80,7 @@ public class RenderDialog extends StackPane{
         this.programRootPane = programRootPane;
         
         this.initFXMLComponent(); 
-        this.renderPane.getChildren().add(api.getBlendDisplayGI());
+        this.renderPane.getChildren().add(api.getDisplay(ImageDisplay.class));
     }
     
     
@@ -176,6 +178,6 @@ public class RenderDialog extends StackPane{
     
     public void resetRenderFrame(ActionEvent e)
     {
-        api.getBlendDisplayGI().reset();
+        api.getDisplay(ImageDisplay.class).reset();
     }
 }

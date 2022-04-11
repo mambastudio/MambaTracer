@@ -5,6 +5,7 @@
  */
 package cl.ui.fx.main;
 
+import bitmap.display.ImageDisplay;
 import cl.struct.CRay;
 import cl.struct.CBound;
 import bitmap.image.BitmapARGB;
@@ -19,6 +20,7 @@ import cl.abstracts.RenderControllerInterface;
 import cl.data.CPoint3;
 import cl.data.CVector3;
 import cl.fx.UtilityHandler;
+import cl.ui.fx.BlendDisplay;
 import cl.ui.fx.FactoryUtility;
 import cl.ui.fx.render.RenderDialog;
 import coordinate.model.OrientationModel;
@@ -144,7 +146,7 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
         render.setOnAction(e -> {
             api.setDevicePriority(RENDER);
             api.getDeviceGI().start();   
-            api.getBlendDisplayGI().reset();
+            api.getDisplay(ImageDisplay.class).reset();
             
             if(renderDialog != null)
                 rootPane.getChildren().remove(renderDialog);
@@ -264,7 +266,7 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
 
     private void setupDisplay(TracerAPI api)
     {
-        api.getBlendDisplayRT().translationDepth.addListener((observable, old_value, new_value) -> {  
+        api.getDisplay(BlendDisplay.class).translationDepth.addListener((observable, old_value, new_value) -> {  
             //current device that is rendering is raytrace
             if(!api.isDevicePriority(RAYTRACE)) return;
             
@@ -273,7 +275,7 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
             api.getDeviceRT().resume();
         });
         
-        api.getBlendDisplayRT().translationXY.addListener((observable, old_value, new_value) -> {   
+        api.getDisplay(BlendDisplay.class).translationXY.addListener((observable, old_value, new_value) -> {   
             //current device that is rendering is raytrace
             if(!api.isDevicePriority(RAYTRACE)) return;
             
@@ -283,11 +285,11 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
         });
         
         //enter drag component
-        api.getBlendDisplayRT().setOnDragOver(e -> {
+        api.getDisplay(BlendDisplay.class).setOnDragOver(e -> {
             //current device that is rendering is raytrace
             if(!api.isDevicePriority(RAYTRACE)) return;   
             
-            Point2D xy = api.getBlendDisplayRT().getDragOverXY(e, RAYTRACE_IMAGE.name());
+            Point2D xy = api.getDisplay(BlendDisplay.class).getDragOverXY(e, RAYTRACE_IMAGE.name());
             
             //precisely for material 
             if(e.getDragboard().hasContent(MATERIAL_DEST))            
@@ -306,7 +308,7 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
                 if(true)
                 {
                     BitmapARGB selectionBitmap = api.getDeviceRT().getOverlay().getNull();
-                    api.getBlendDisplayRT().set(ImageType.OVERLAY_IMAGE.name(), selectionBitmap);            
+                    api.getDisplay(BlendDisplay.class).set(ImageType.OVERLAY_IMAGE.name(), selectionBitmap);            
                     currentInstance = -2;
                     return;
                 }
@@ -323,21 +325,21 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
             {
                 currentInstance = instance;
                 BitmapARGB selectionBitmap = api.getDeviceRT().getOverlay().getDragOverlay(instance);
-                api.getBlendDisplayRT().set(ImageType.OVERLAY_IMAGE.name(), selectionBitmap);                
+                api.getDisplay(BlendDisplay.class).set(ImageType.OVERLAY_IMAGE.name(), selectionBitmap);                
             }
         });
         
         //exit drag
-        api.getBlendDisplayRT().setOnDragExited(e -> {
+        api.getDisplay(BlendDisplay.class).setOnDragExited(e -> {
             if(!api.isDevicePriority(RAYTRACE)) return;
             
             BitmapARGB selectionBitmap = api.getDeviceRT().getOverlay().getNull();
-            api.getBlendDisplayRT().set(ImageType.OVERLAY_IMAGE.name(), selectionBitmap);            
+            api.getDisplay(BlendDisplay.class).set(ImageType.OVERLAY_IMAGE.name(), selectionBitmap);            
             currentInstance = -2;
         });
         
         //drop material in
-        api.getBlendDisplayRT().setOnDragDropped(e -> {
+        api.getDisplay(BlendDisplay.class).setOnDragDropped(e -> {
             
             if(!api.isDevicePriority(RAYTRACE)) return;
            
@@ -350,10 +352,10 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
             }
         });
         
-        api.getBlendDisplayRT().setOnMouseClicked(e->{
+        api.getDisplay(BlendDisplay.class).setOnMouseClicked(e->{
             if(e.getClickCount() == 2 && e.getButton() == PRIMARY)
             {
-                Point2D xy = api.getBlendDisplayRT().getMouseOverXY(e, RAYTRACE_IMAGE.name());
+                Point2D xy = api.getDisplay(BlendDisplay.class).getMouseOverXY(e, RAYTRACE_IMAGE.name());
                 
                 //get instance in current pixel
                 int instance = api.getDeviceRT().getInstanceValue(xy.getX(), xy.getY());
@@ -369,7 +371,7 @@ public class UserInterfaceFXMLController implements Initializable, OutputInterfa
         });
         
         //add display component
-        viewportPane.getChildren().add(api.getBlendDisplayRT());
+        viewportPane.getChildren().add(api.getDisplay(BlendDisplay.class));
     }
 
     @Override

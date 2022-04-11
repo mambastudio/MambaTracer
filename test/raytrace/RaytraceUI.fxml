@@ -2,22 +2,33 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.RadioButton?>
 <?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-
-<StackPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1">
+<StackPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefHeight="439.0" prefWidth="836.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="raytrace.RaytraceUIController">
    <children>
-      <BorderPane prefHeight="200.0" prefWidth="200.0">
+      <BorderPane maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="200.0" prefWidth="200.0">
          <top>
             <VBox BorderPane.alignment="CENTER">
                <children>
-                  <HBox spacing="3.0">
+                  <HBox alignment="CENTER_LEFT" spacing="3.0">
                      <children>
-                        <Button mnemonicParsing="false" text="Open" />
+                        <Button minWidth="89.0" mnemonicParsing="false" onAction="#openOBJFile" text="Load Scene" />
+                        <Button minWidth="89.0" mnemonicParsing="false" text="Load Env" />
+                        <Button mnemonicParsing="false" text="Reset Camera" />
+                        <Separator orientation="VERTICAL" prefHeight="0.0" prefWidth="7.0" />
+                        <RadioButton minWidth="69.0" mnemonicParsing="false" selected="true" text="Shade">
+                           <toggleGroup>
+                              <ToggleGroup fx:id="raytraceType" />
+                           </toggleGroup>
+                        </RadioButton>
+                        <RadioButton minWidth="69.0" mnemonicParsing="false" text="Normals " toggleGroup="$raytraceType" />
+                        <RadioButton minWidth="69.0" mnemonicParsing="false" text="Textures" toggleGroup="$raytraceType" />
                      </children>
                      <padding>
                         <Insets bottom="3.0" left="3.0" top="3.0" />
@@ -28,7 +39,7 @@
             </VBox>
          </top>
          <center>
-            <StackPane prefHeight="150.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+            <StackPane fx:id="viewportPane" prefHeight="150.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
          </center>
       </BorderPane>
    </children>

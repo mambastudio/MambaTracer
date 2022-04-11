@@ -7,11 +7,12 @@
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/raytrace/RaytraceUIController.java</file>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/raytrace/RaytraceAPI.java</file>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/ui/fx/main/TracerAPI.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/raytrace/RaytraceUI.fxml</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/raytrace/cl/RaytraceSource.java</file>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/ui/fx/main/MambaTracer.java</file>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/ui/fx/main/UserInterfaceFXMLController.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/device/CDeviceRT.java</file>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/raytrace/RaytraceDevice.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/abstracts/MambaAPIInterface.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/kernel/CSource.java</file>
         </group>
     </open-files>
 </project-private>

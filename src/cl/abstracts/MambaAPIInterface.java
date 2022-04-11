@@ -23,11 +23,12 @@ import wrapper.core.OpenCLConfiguration;
 /**
  *
  * @author user
- * @param <D>
  * @param <I>
  * @param <M>
  */
-public interface MambaAPIInterface <D extends AbstractDisplay, M extends MaterialInterface, I extends RenderControllerInterface>
+public interface MambaAPIInterface <
+        M extends MaterialInterface, 
+        I extends RenderControllerInterface>
 {
     enum ImageType{
         RAYTRACE_IMAGE, 
@@ -80,9 +81,9 @@ public interface MambaAPIInterface <D extends AbstractDisplay, M extends Materia
         
     default BitmapARGB getBitmap(ImageType imageType){return null;}; //TO DELETE
     default void setBitmap(ImageType name, BitmapARGB bitmap){}; //TO DELETE
-    default void initBitmap(ImageType name){}; //TO DELETE
-    public D getBlendDisplay(DeviceType type);
-    public void setBlendDisplay(DeviceType type, D display);    
+    default void initBitmap(ImageType name){}; //TO DELETE    
+    public <D extends AbstractDisplay> D getDisplay(Class<D> displayClass);
+    public <D extends AbstractDisplay> void setDisplay(Class<D> displayClass, D display);    
     public Value2Di getImageSize(ImageType imageType);    
     public void setImageSize(ImageType name, int width, int height);
     
@@ -115,8 +116,8 @@ public interface MambaAPIInterface <D extends AbstractDisplay, M extends Materia
     public I getController(String controller);
     public void set(String controller, I controllerImplementation);
     
-    public void set(int index, M material);
-    public M get(int index);
+    public void setMaterial(int index, M material);
+    public M getMaterial(int index);
     
     public void setEnvironmentMap(BitmapRGBE bitmap);
     

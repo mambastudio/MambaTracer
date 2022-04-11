@@ -14,6 +14,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import jfx.dnd.ReadObjectsHelper;
 import jfx.dnd.WriteObjectsHelper;
@@ -38,6 +39,30 @@ public class MaterialFX2 implements Serializable, MaterialInterface<MaterialFX2>
     {
         param = new SurfaceParameterFX2();        
         name = new SimpleStringProperty("default");
+    }
+    
+    @Override
+    public Image getDiffuseTexture()
+    {
+        if(param.diffuseTexture.get() != null)
+            return param.diffuseTexture.get().getImage();
+        return null;
+    }
+    
+    @Override
+    public Image getGlossyTexture()
+    {
+        if(param.glossyTexture.get() != null)
+            return param.glossyTexture.get().getImage();
+        return null;
+    }
+    
+    @Override
+    public Image getRoughnessTexture()
+    {
+        if(param.roughnessTexture.get() != null)
+            return param.roughnessTexture.get().getImage();
+        return null;
     }
     
     public final void init()

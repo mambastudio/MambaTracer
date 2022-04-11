@@ -378,7 +378,7 @@ public class CDeviceGI implements RayDeviceInterface<
     @Override
     public void setAPI(TracerAPI api) {
         this.api = api;        
-        init(api.getConfigurationCL(), api.getBlendDisplayGI());        
+        init(api.getConfigurationCL(), api.getDisplay(ImageDisplay.class));        
     }
     
     private void init(OpenCLConfiguration platform, ImageDisplay display)
