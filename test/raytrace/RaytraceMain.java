@@ -55,7 +55,7 @@ public class RaytraceMain extends Application {
         //complete launch of ui
         Scene scene = new Scene(root);
         primaryStage.setScene(scene);
-        primaryStage.setTitle("Mamba Tracer");
+        primaryStage.setTitle("RaytraceGPU");
         primaryStage.setMinWidth(900);
         primaryStage.setMinHeight(650);
         primaryStage.show();

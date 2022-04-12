@@ -43,13 +43,7 @@ public interface RayDeviceInterface <
         GROUP_BUFFER,
         RENDER_BUFFER
     }
-    
-
-    enum ShadeType{
-        NORMAL_SHADE,
-        RAYTRACE_SHADE
-    };
-        
+            
     public void setAPI(A api);
     
     public void set(MS mesh, AC bvhBuild);        
@@ -89,10 +83,4 @@ public interface RayDeviceInterface <
     default void setPriorityBound(BB bound){};
     default BB getBound(){return null;}; 
     default BB getGroupBound(int value){return null;};
-    
-    //different modes of render like normal map, occlusion map, object id map
-    default void setShadeType(ShadeType type){};
-    default ShadeType getShadeType(){return null;};
-    
-   
 }

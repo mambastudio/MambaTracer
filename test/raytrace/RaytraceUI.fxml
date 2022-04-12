@@ -22,13 +22,13 @@
                         <Button minWidth="89.0" mnemonicParsing="false" text="Load Env" />
                         <Button mnemonicParsing="false" text="Reset Camera" />
                         <Separator orientation="VERTICAL" prefHeight="0.0" prefWidth="7.0" />
-                        <RadioButton minWidth="69.0" mnemonicParsing="false" selected="true" text="Shade">
+                        <RadioButton fx:id="shadeRadioButton" minWidth="69.0" mnemonicParsing="false" selected="true" text="Shade">
                            <toggleGroup>
-                              <ToggleGroup fx:id="raytraceType" />
+                              <ToggleGroup fx:id="shadeTypeGroup" />
                            </toggleGroup>
                         </RadioButton>
-                        <RadioButton minWidth="69.0" mnemonicParsing="false" text="Normals " toggleGroup="$raytraceType" />
-                        <RadioButton minWidth="69.0" mnemonicParsing="false" text="Textures" toggleGroup="$raytraceType" />
+                        <RadioButton fx:id="normalRadioButton" minWidth="69.0" mnemonicParsing="false" text="Normals " toggleGroup="$shadeTypeGroup" />
+                        <RadioButton fx:id="textureRadioButton" minWidth="69.0" mnemonicParsing="false" text="Textures" toggleGroup="$shadeTypeGroup" />
                      </children>
                      <padding>
                         <Insets bottom="3.0" left="3.0" top="3.0" />

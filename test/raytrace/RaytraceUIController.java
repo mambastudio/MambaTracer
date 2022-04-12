@@ -7,6 +7,7 @@ package raytrace;
 
 import static cl.abstracts.MambaAPIInterface.DeviceType.RAYTRACE;
 import static cl.abstracts.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
+import cl.abstracts.RayDeviceInterface;
 import cl.abstracts.RenderControllerInterface;
 import cl.data.CPoint3;
 import cl.data.CVector3;
@@ -29,9 +30,14 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Point2D;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.ToggleGroup;
 import static javafx.scene.input.MouseButton.PRIMARY;
 import javafx.scene.layout.StackPane;
 import jfx.dialog.type.DialogProcess;
+import static raytrace.RaytraceDevice.ShadeType.COLOR_SHADE;
+import static raytrace.RaytraceDevice.ShadeType.NORMAL_SHADE;
+import static raytrace.RaytraceDevice.ShadeType.TEXTURE_SHADE;
 
 /**
  * FXML Controller class
@@ -45,6 +51,14 @@ public class RaytraceUIController implements Initializable, RenderControllerInte
      */    
     @FXML
     StackPane viewportPane;
+    @FXML
+    ToggleGroup shadeTypeGroup;
+    @FXML
+    RadioButton shadeRadioButton;
+    @FXML
+    RadioButton normalRadioButton;
+    @FXML
+    RadioButton textureRadioButton;
     
     
     private RaytraceAPI api;     
@@ -53,7 +67,21 @@ public class RaytraceUIController implements Initializable, RenderControllerInte
     
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        // TODO
+        shadeRadioButton.setUserData(COLOR_SHADE);
+        normalRadioButton.setUserData(NORMAL_SHADE);
+        textureRadioButton.setUserData(TEXTURE_SHADE);
+        
+        shadeTypeGroup.selectedToggleProperty().addListener((o, ov, nv)->{
+            if(nv != null)
+            {
+                if(nv.getUserData() == COLOR_SHADE)
+                    api.getDevice(RaytraceDevice.class).setShadeType(COLOR_SHADE);
+                else if(nv.getUserData() == NORMAL_SHADE)
+                    api.getDevice(RaytraceDevice.class).setShadeType(NORMAL_SHADE);
+                else if(nv.getUserData() == TEXTURE_SHADE)
+                    api.getDevice(RaytraceDevice.class).setShadeType(TEXTURE_SHADE);
+            }
+        });
     }    
 
     @Override

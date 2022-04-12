@@ -28,6 +28,8 @@ import cl.struct.CTextureData;
 import cl.ui.fx.Overlay;
 import coordinate.model.OrientationModel;
 import javafx.application.Platform;
+import static raytrace.RaytraceDevice.ShadeType.COLOR_SHADE;
+import static raytrace.RaytraceDevice.ShadeType.NORMAL_SHADE;
 import thread.model.LambdaThread;
 import wrapper.core.CKernel;
 import wrapper.core.CMemory;
@@ -52,6 +54,9 @@ public class RaytraceDevice implements RayDeviceInterface<
     
     OpenCLConfiguration configuration;
     BlendDisplay display;
+    
+    public enum ShadeType{COLOR_SHADE, NORMAL_SHADE, TEXTURE_SHADE};    
+    ShadeType shadeType = NORMAL_SHADE;
     
     //API
     RaytraceAPI api;
@@ -85,13 +90,14 @@ public class RaytraceDevice implements RayDeviceInterface<
     CMemory<CBsdf> bsdfBuffer = null;
     
     CKernel initCameraRaysKernel = null;
-    CKernel intersectPrimitivesKernel = null;
-    CKernel fastShadeKernel = null;
+    CKernel intersectPrimitivesKernel = null;    
     CKernel backgroundShadeKernel = null;
     CKernel updateGroupbufferShadeImageKernel = null;
     CKernel textureInitPassKernel = null;
     CKernel updateToTextureColorRTKernel = null;
     CKernel setupBSDFRaytraceKernel = null;
+    CKernel fastShadeKernel = null;
+    CKernel fastShadeNormalsKernel = null;
     
     CTextureApplyPass texApplyPass = null;
     
@@ -140,6 +146,7 @@ public class RaytraceDevice implements RayDeviceInterface<
         initCameraRaysKernel                = configuration.createKernel("InitCameraRayData", cameraBuffer, raysBuffer);
         intersectPrimitivesKernel           = configuration.createKernel("IntersectPrimitives", raysBuffer, isectBuffer, count, mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
         fastShadeKernel                     = configuration.createKernel("fastShade", isectBuffer, bsdfBuffer, imageBuffer);
+        fastShadeNormalsKernel              = configuration.createKernel("fastShadeNormals", isectBuffer, imageBuffer);
         backgroundShadeKernel               = configuration.createKernel("backgroundShade", isectBuffer, cameraBuffer, imageBuffer, raysBuffer, envmap.getRgbCL(), envmap.getEnvMapSize());
         updateGroupbufferShadeImageKernel   = api.getConfigurationCL().createKernel("updateGroupbufferShadeImage", isectBuffer, cameraBuffer, groupBuffer);
         textureInitPassKernel               = configuration.createKernel("textureInitPassRT", bsdfBuffer, isectBuffer, texBuffer);
@@ -345,7 +352,22 @@ public class RaytraceDevice implements RayDeviceInterface<
         configuration.execute1DKernel(updateToTextureColorRTKernel, globalWorkSize, localWorkSize);
         
         configuration.execute1DKernel(backgroundShadeKernel, globalWorkSize, localWorkSize); 
-        configuration.execute1DKernel(fastShadeKernel, globalWorkSize, localWorkSize);
+        
+        //shade type
+        if(null == shadeType)
+            configuration.execute1DKernel(fastShadeKernel, globalWorkSize, localWorkSize);
+        else switch (shadeType) {
+            case COLOR_SHADE:
+                configuration.execute1DKernel(fastShadeKernel, globalWorkSize, localWorkSize);
+                break;
+            case NORMAL_SHADE:
+                configuration.execute1DKernel(fastShadeNormalsKernel, globalWorkSize, localWorkSize);
+                break;
+            default:
+                configuration.execute1DKernel(fastShadeKernel, globalWorkSize, localWorkSize);
+                break;
+        }
+        
         configuration.execute1DKernel(updateGroupbufferShadeImageKernel, globalWorkSize, localWorkSize);
         outputImage();
         configuration.finish();
@@ -355,4 +377,10 @@ public class RaytraceDevice implements RayDeviceInterface<
         //raytraceThread.chill();
     }
     
+    
+    public void setShadeType(ShadeType shadeType)
+    {
+        this.shadeType = shadeType;
+        this.resume();
+    }
 }
