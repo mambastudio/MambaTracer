@@ -258,7 +258,7 @@ public class CDeviceGI implements RayDeviceInterface<
         }
         //configuration.execute1DKernel(gUpdateImageKernel, globalWorkSize, localWorkSize);
         image.processImage();
-        outputImage();
+        updateImage();
         
         if(i < 5)
             this.envmap.adaptiveUpdate();
@@ -331,7 +331,7 @@ public class CDeviceGI implements RayDeviceInterface<
     {
         image.setGamma(value);
         image.processImage();
-        outputImage();
+        updateImage();
     }
     
     public float getGamma()
@@ -343,7 +343,7 @@ public class CDeviceGI implements RayDeviceInterface<
     {
         image.setExposure(value);
         image.processImage();
-        outputImage();
+        updateImage();
     }
     
     public float getExposure()
@@ -352,7 +352,7 @@ public class CDeviceGI implements RayDeviceInterface<
     }
    
     @Override
-    public void outputImage() {      
+    public void updateImage() {      
         //transfer data from opencl to cpu
         image.getFrameARGB().transferFromDevice();
         //write to bitmap

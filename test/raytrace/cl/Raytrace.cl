@@ -197,6 +197,30 @@ __kernel void fastShadeNormals(
     }
 }
 
+__kernel void fastShadeTextureUV(
+    global Intersection* isects,
+    global int*          imageBuffer
+)
+{
+    //get thread id
+    int id = get_global_id( 0 );
+    
+    //default color
+    float4 color = (float4)(0, 0, 0, 1);
+    float4 color1 = (float4)(1, 1, 1, 1);
+    
+    //get intersect
+    global Intersection* isect = isects + id;
+
+
+    if(isect->hit)
+    {
+        color.x = isect->uv.x;
+        color.y = isect->uv.y;
+        imageBuffer[id] = getIntARGB(color);
+    }
+}
+
 __kernel void backgroundShade(
     global Intersection*      isects,
     global CameraStruct*      camera,

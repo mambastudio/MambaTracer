@@ -4,9 +4,7 @@
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
             <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/raytrace/RaytraceUIController.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/test/raytrace/RaytraceAPI.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/ui/fx/main/TracerAPI.java</file>
-            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/ui/fx/main/UserInterfaceFXMLController.java</file>
+            <file>file:/C:/Users/user/Documents/GitHub/MambaTracer/src/cl/abstracts/RayDeviceInterface.java</file>
         </group>
     </open-files>
 </project-private>

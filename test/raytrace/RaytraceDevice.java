@@ -10,7 +10,6 @@ import bitmap.image.BitmapARGB;
 import static cl.abstracts.MambaAPIInterface.ImageType.RAYTRACE_IMAGE;
 import static cl.abstracts.MambaAPIInterface.getGlobal;
 import cl.abstracts.RayDeviceInterface;
-import cl.algorithms.CEnvironment;
 import cl.algorithms.CTextureApplyPass;
 import cl.data.CPoint2;
 import cl.data.CPoint3;
@@ -56,7 +55,7 @@ public class RaytraceDevice implements RayDeviceInterface<
     BlendDisplay display;
     
     public enum ShadeType{COLOR_SHADE, NORMAL_SHADE, TEXTURE_SHADE};    
-    ShadeType shadeType = NORMAL_SHADE;
+    ShadeType shadeType = COLOR_SHADE;
     
     //API
     RaytraceAPI api;
@@ -98,6 +97,7 @@ public class RaytraceDevice implements RayDeviceInterface<
     CKernel setupBSDFRaytraceKernel = null;
     CKernel fastShadeKernel = null;
     CKernel fastShadeNormalsKernel = null;
+    CKernel fastShadeTextureUVKernel = null;
     
     CTextureApplyPass texApplyPass = null;
     
@@ -147,6 +147,7 @@ public class RaytraceDevice implements RayDeviceInterface<
         intersectPrimitivesKernel           = configuration.createKernel("IntersectPrimitives", raysBuffer, isectBuffer, count, mesh.clPoints(), mesh.clTexCoords(), mesh.clNormals(), mesh.clFaces(), mesh.clSize(), bvh.getNodes(), bvh.getBounds());
         fastShadeKernel                     = configuration.createKernel("fastShade", isectBuffer, bsdfBuffer, imageBuffer);
         fastShadeNormalsKernel              = configuration.createKernel("fastShadeNormals", isectBuffer, imageBuffer);
+        fastShadeTextureUVKernel            = configuration.createKernel("fastShadeTextureUV", isectBuffer, imageBuffer);
         backgroundShadeKernel               = configuration.createKernel("backgroundShade", isectBuffer, cameraBuffer, imageBuffer, raysBuffer, envmap.getRgbCL(), envmap.getEnvMapSize());
         updateGroupbufferShadeImageKernel   = api.getConfigurationCL().createKernel("updateGroupbufferShadeImage", isectBuffer, cameraBuffer, groupBuffer);
         textureInitPassKernel               = configuration.createKernel("textureInitPassRT", bsdfBuffer, isectBuffer, texBuffer);
@@ -210,7 +211,7 @@ public class RaytraceDevice implements RayDeviceInterface<
     }
     
     @Override
-    public void outputImage() {      
+    public void updateImage() {      
         //transfer data from opencl to cpu
         imageBuffer.transferFromDevice();
         groupBuffer.transferFromDevice();
@@ -363,13 +364,16 @@ public class RaytraceDevice implements RayDeviceInterface<
             case NORMAL_SHADE:
                 configuration.execute1DKernel(fastShadeNormalsKernel, globalWorkSize, localWorkSize);
                 break;
+            case TEXTURE_SHADE:
+                configuration.execute1DKernel(fastShadeTextureUVKernel, globalWorkSize, localWorkSize);
+                break;                
             default:
                 configuration.execute1DKernel(fastShadeKernel, globalWorkSize, localWorkSize);
                 break;
         }
         
         configuration.execute1DKernel(updateGroupbufferShadeImageKernel, globalWorkSize, localWorkSize);
-        outputImage();
+        updateImage();
         configuration.finish();
       
         

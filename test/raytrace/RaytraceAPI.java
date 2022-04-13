@@ -12,7 +12,6 @@ import cl.abstracts.MambaAPIInterface;
 import static cl.abstracts.MambaAPIInterface.DeviceType.RAYTRACE;
 import static cl.abstracts.MambaAPIInterface.ImageType.ALL_RAYTRACE_IMAGE;
 import cl.abstracts.RayDeviceInterface;
-import cl.algorithms.CEnvironment;
 import cl.data.CPoint2;
 import cl.data.CPoint3;
 import cl.data.CVector3;
@@ -36,6 +35,9 @@ import wrapper.core.OpenCLConfiguration;
 /**
  *
  * @author user
+ * 
+ * Class to link between raydevice, ui and any other frameworks e.g. I/O
+ * 
  */
 public class RaytraceAPI implements MambaAPIInterface<MaterialFX2, RaytraceUIController>{
     //Opencl configuration for running single ray tracing program 

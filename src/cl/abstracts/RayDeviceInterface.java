@@ -12,10 +12,6 @@ import coordinate.generic.AbstractBound;
 import coordinate.generic.AbstractMesh;
 import coordinate.generic.raytrace.AbstractAccelerator;
 import coordinate.model.CameraModel;
-import coordinate.parser.attribute.MaterialT;
-import wrapper.core.CMemory;
-import wrapper.core.CallBackFunction;
-import wrapper.core.memory.values.IntValue;
 
 /**
  *
@@ -59,28 +55,17 @@ public interface RayDeviceInterface <
     public boolean isPaused();
     public boolean isRunning();
     public boolean isStopped();
-    
-    //reading image buffers
-    //DEPRECATE THESE
-    default void readBuffer(DeviceBuffer name, CallBackFunction<CMemory<IntValue>> callback) {    }
-    
-    //rename to update bitmap
-    default void outputImage()
-    {
         
-    }
+    default void updateImage(){}
     
-    //TO REMOVE
-    default void setMaterialT(int index, MaterialT material)
-    {
-        throw new UnsupportedOperationException("currently not implemented");
-    }
-    default void setMaterial(int index, M material){};
     public void updateCamera();    
     public void setCamera(CD cameraData);    
     public CM getCameraModel(); 
+    
     default BB getPriorityBound(){return null;}; //specific bound in mind, like selected by mouse
     default void setPriorityBound(BB bound){};
     default BB getBound(){return null;}; 
+    
+    //selected object or specific object bounds
     default BB getGroupBound(int value){return null;};
 }

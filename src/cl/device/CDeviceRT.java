@@ -184,7 +184,7 @@ public class CDeviceRT implements RayDeviceInterface<
         configuration.execute1DKernel(backgroundShadeKernel, globalWorkSize, localWorkSize); 
         configuration.execute1DKernel(fastShadeKernel, globalWorkSize, localWorkSize);
         configuration.execute1DKernel(updateGroupbufferShadeImageKernel, globalWorkSize, localWorkSize);
-        outputImage();
+        updateImage();
         configuration.finish();
       
         
@@ -193,7 +193,7 @@ public class CDeviceRT implements RayDeviceInterface<
     }
     
     @Override
-    public void outputImage() {      
+    public void updateImage() {      
         //transfer data from opencl to cpu
         imageBuffer.transferFromDevice();
         groupBuffer.transferFromDevice();
