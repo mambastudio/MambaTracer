@@ -6,7 +6,6 @@
 package cl.algorithms;
 
 import cl.abstracts.MambaAPIInterface;
-import cl.ui.fx.main.TracerAPI;
 import cl.struct.CTextureData;
 import javafx.scene.image.Image;
 import wrapper.core.CMemory;
@@ -23,7 +22,7 @@ public class CTextureApplyPass {
     private int[] countIntBuffer = null;
     private MambaAPIInterface api = null;
     
-    private final TextureData textureData;
+    private final TextureInfoCache textureInfoCache;
     
     
     public CTextureApplyPass(MambaAPIInterface api, CMemory<CTextureData> texBuffer, CMemory<IntValue> count) {
@@ -32,7 +31,7 @@ public class CTextureApplyPass {
         this.texIntBuffer = (int[]) texBuffer.getBufferArray();
         this.countIntBuffer = (int[]) count.getBufferArray();
         this.api = api;
-        this.textureData = new TextureData(texIntBuffer);
+        this.textureInfoCache = new TextureInfoCache(texIntBuffer);
     }
    
     public void process()
@@ -42,49 +41,49 @@ public class CTextureApplyPass {
                
         for(int index = 0; index < countIntBuffer[0]; index++)
         {            
-            textureData.setIndex(index);
-            if(textureData.hasDiffuseTexture())
+            textureInfoCache.setIndex(index);
+            if(textureInfoCache.hasDiffuseTexture())
             {
-                Image image = api.getMaterial(textureData.getMaterialIndex()).getDiffuseTexture(); //TO CORRECT/UPDATE
-                float x = textureData.getDiffuseTextureU();
-                float y = textureData.getDiffuseTextureV();
+                Image image = api.getMaterial(textureInfoCache.getMaterialIndex()).getDiffuseTexture(); //TO CORRECT/UPDATE
+                float x = textureInfoCache.getDiffuseTextureU();
+                float y = textureInfoCache.getDiffuseTextureV();
                              
                 if(image != null)
                 {
                     float dx = (float) x * ((float)image.getWidth() - 1);
                     float dy = (float) y * ((float)image.getHeight() - 1);
 
-                    textureData.setDiffuseArgb(image, (int) dx, (int)dy);
+                    textureInfoCache.setDiffuseArgb(image, (int) dx, (int)dy);
                 }
             }
             
-            if(textureData.hasGlossyTexture())
+            if(textureInfoCache.hasGlossyTexture())
             {   
-                Image image = api.getMaterial(textureData.getMaterialIndex()).getGlossyTexture(); //TO CORRECT/UPDATE
-                float x = textureData.getGlossyTextureU();
-                float y = textureData.getGlossyTextureV();
+                Image image = api.getMaterial(textureInfoCache.getMaterialIndex()).getGlossyTexture(); //TO CORRECT/UPDATE
+                float x = textureInfoCache.getGlossyTextureU();
+                float y = textureInfoCache.getGlossyTextureV();
                 
                 if(image != null)
                 {
                     float dx = (float) x * ((float)image.getWidth() - 1);
                     float dy = (float) y * ((float)image.getHeight() - 1);
 
-                    textureData.setGlossyArgb(image, (int) dx, (int)dy);
+                    textureInfoCache.setGlossyArgb(image, (int) dx, (int)dy);
                 }
             }
             
-            if(textureData.hasRoughnessTexture())
+            if(textureInfoCache.hasRoughnessTexture())
             {   
-                Image image = api.getMaterial(textureData.getMaterialIndex()).getRoughnessTexture(); //TO CORRECT/UPDATE
-                float x = textureData.getRoughnessTextureU();
-                float y = textureData.getRoughnessTextureV();
+                Image image = api.getMaterial(textureInfoCache.getMaterialIndex()).getRoughnessTexture(); //TO CORRECT/UPDATE
+                float x = textureInfoCache.getRoughnessTextureU();
+                float y = textureInfoCache.getRoughnessTextureV();
                 
                 if(image != null)
                 {
                     float dx = (float) x * ((float)image.getWidth() - 1);
                     float dy = (float) y * ((float)image.getHeight() - 1);
 
-                    textureData.setRoughnessArgb(image, (int) dx, (int)dy);
+                    textureInfoCache.setRoughnessArgb(image, (int) dx, (int)dy);
                 }
             }
            

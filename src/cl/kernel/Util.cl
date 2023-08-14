@@ -922,7 +922,7 @@ void koggeStoneInt(__global const int* in, __global int* out, __global int* grou
      int idgr = get_group_id(0);
      int lSize = get_local_size(0);
 
-     aux[idl] = GET_INT(in, idg, arbitraryLength);
+     aux[idl] = GET_INT(in, idg, *arbitraryLength);
      barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);  //read to local first
 
      for(int offset = 1; offset < lSize; offset *= 2)
@@ -939,9 +939,9 @@ void koggeStoneInt(__global const int* in, __global int* out, __global int* grou
        groupSum[idgr] = aux[idl];
 
      if(aux[idl] > 0)
-       SET_INT(out, aux[idl - 1], idg, arbitraryLength);
+       SET_INT(out, aux[idl - 1], idg, *arbitraryLength);
      else
-       SET_INT(out, aux[0], idg, arbitraryLength);
+       SET_INT(out, aux[0], idg, *arbitraryLength);
 }
 
 //arbitrary length means not confined to the power of 2
@@ -968,9 +968,9 @@ __kernel void globalScanInteger(__global int* out, __global int* groupSum, __glo
       int idgr = get_group_id(0);
       int idg  = get_global_id(0);
       
-      int value = GET_INT(out, idg, arbitraryLength);
+      int value = GET_INT(out, idg, *arbitraryLength);
       int sum   = groupSum[idgr] + value;
-      SET_INT(out, sum, idg, arbitraryLength);
+      SET_INT(out, sum, idg, *arbitraryLength);
 }
 
 //get total, where 'in' is raw data, and 'out' is global scan (exclusive). global = 1, local = 1
@@ -987,7 +987,7 @@ void koggeStoneFloat(__global const float* in, __global float* out, __global flo
      int idgr = get_group_id(0);
      int lSize = get_local_size(0);
 
-     aux[idl] = GET_FLOAT(in, idg, arbitraryLength);
+     aux[idl] = GET_FLOAT(in, idg, *arbitraryLength);
      barrier(CLK_LOCAL_MEM_FENCE|CLK_GLOBAL_MEM_FENCE);  //read to local first
 
      for(int offset = 1; offset < lSize; offset *= 2)
@@ -1003,9 +1003,9 @@ void koggeStoneFloat(__global const float* in, __global float* out, __global flo
        groupSum[idgr] = aux[idl];
 
      if(aux[idl] > 0)
-       SET_FLOAT(out, aux[idl - 1], idg, arbitraryLength);
+       SET_FLOAT(out, aux[idl - 1], idg, *arbitraryLength);
      else
-       SET_FLOAT(out, aux[0], idg, arbitraryLength);
+       SET_FLOAT(out, aux[0], idg, *arbitraryLength);
 }
 
 //arbitrary length means not confined to the power of 2
@@ -1032,9 +1032,9 @@ __kernel void globalScanFloat(__global float* out, __global float* groupSum, __g
       int idgr = get_group_id(0);
       int idg  = get_global_id(0);
       
-      int value = GET_FLOAT(out, idg, arbitraryLength);
+      int value = GET_FLOAT(out, idg, *arbitraryLength);
       int sum   = groupSum[idgr] + value;
-      SET_FLOAT(out, sum, idg, arbitraryLength);
+      SET_FLOAT(out, sum, idg, *arbitraryLength);
 }
 //get total, where 'in' is raw data, and 'out' is global scan (exclusive). global = 1, local = 1
 __kernel void globalTotalFloat(__global float* in, __global float* out,  __global float *total, __global int* arbitraryLength)

@@ -12,10 +12,7 @@ import filesystem.explorer.FileExplorer;
 import java.util.Arrays;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
-import static javafx.scene.control.ButtonType.CANCEL;
 import static javafx.scene.control.ButtonType.OK;
-import javafx.scene.input.KeyCode;
-import javafx.scene.layout.StackPane;
 import jfx.dialog.DialogContent;
 import jfx.dialog.DialogExtend;
 

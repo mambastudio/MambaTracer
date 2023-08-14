@@ -56,7 +56,7 @@ __kernel void InitIntersection(
     {
         global Intersection* isect = isects + global_id;
         
-        InitIsect(isect);
+        initIsect(isect);
     }
 }
 

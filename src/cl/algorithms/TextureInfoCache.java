@@ -12,7 +12,7 @@ import javafx.scene.image.Image;
  *
  * @author user
  */
-public final class TextureData {
+public final class TextureInfoCache {
     
     AtomicInteger globalIndex = new AtomicInteger(0);       
     
@@ -22,7 +22,7 @@ public final class TextureData {
     public Int4 mirrorTexture;
     public Int4 parameters;             //x = materialID;
         
-    public TextureData()
+    public TextureInfoCache()
     {
         diffuseTexture = new Int4(null, 0, globalIndex);        
         glossyTexture = new Int4(null, 1, globalIndex);        
@@ -32,7 +32,7 @@ public final class TextureData {
         
     }
     
-    public TextureData(int[] array)
+    public TextureInfoCache(int[] array)
     {
         this();
         setArray(array);

@@ -13,7 +13,7 @@ import wrapper.core.CKernel;
 import wrapper.core.CMemory;
 import static wrapper.core.CMemory.READ_WRITE;
 import wrapper.core.OpenCLConfiguration;
-import static wrapper.core.memory.LocalMemory.LOCALFLOAT;
+import static wrapper.core.memory.CLocalMemory.LOCALFLOAT;
 
 /**
  *
